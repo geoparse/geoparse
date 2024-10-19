@@ -1,5 +1,4 @@
 # So that notebooks are only included _intentionally_
-*.ipynb
 .cache
 # Byte-compiled / optimized / DLL files
 __pycache__/
