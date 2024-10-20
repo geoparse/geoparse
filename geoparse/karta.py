@@ -1,3 +1,4 @@
+import math
 import re
 from typing import List, Optional, Union
 
@@ -243,6 +244,9 @@ def points(
     except Exception:
         # If geometry is not present, use x and y columns for location
         location = [row[y], row[x]]  # x, y: lon, lat column names in DataFrame
+
+    if any(math.isnan(item) for item in location):
+        return 0
 
     # Determine color if column is specified
     if color in row.index:  # color in DataFrame columns
