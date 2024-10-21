@@ -474,7 +474,7 @@ def plp(  # plp: points, lines, polygons
     compact: bool = False,
     cells: Optional[List[str]] = None,
     cell_type: Optional[str] = None,  # list of geohash, S2 or H3 cell IDs
-    ways: Optional[List[int]] = None,  # list of OSM way IDs (lines or polygons) and Overpass API URL to query from
+    osm_ways: Optional[List[int]] = None,  # list of OSM way IDs (lines or polygons) and Overpass API URL to query from
     url: Optional[str] = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
 ) -> folium.Map:
     """
@@ -603,11 +603,11 @@ def plp(  # plp: points, lines, polygons
     cell_type : str, optional
         Type of cells used in `cells` parameter. Can be 'geohash', 's2', or 'h3'.
 
-    ways : list of str, optional
+    osm_ways : list of int, optional
         List of OSM way IDs to visualize as lines or polygons.
 
     url : str, optional
-        Overpass API URL to query OSM geometries by `ways` parameter.
+        Overpass API URL to query OSM geometries by `osm_ways` parameter.
 
     Returns
     -------
@@ -628,14 +628,14 @@ def plp(  # plp: points, lines, polygons
         karta = plp(gdf, polygon_popup={"ID": "id", "Resolution": "res"})
         return karta
 
-    # Handle `ways` input by converting OSM way IDs to geometries
-    if ways:
-        geoms = osm.ways_to_geom(ways, url)
-        gdf = gpd.GeoDataFrame({"way_id": ways, "geometry": geoms}, crs="EPSG:4326")
+    # Handle `osm_ways` input by converting OSM way IDs to geometries
+    if osm_ways:
+        geoms = osm.ways_to_geom(osm_ways, url)
+        gdf = gpd.GeoDataFrame({"way_id": osm_ways, "geometry": geoms}, crs="EPSG:4326")
         if isinstance(gdf.geometry[0], LineString):
-            karta = plp(gdf, line_popup={"way_id": "way_id"}, line_color="way_id")
+            karta = plp(gdf, line_popup={"way_id": "way_id"}, line_color="red")
         else:
-            karta = plp(gdf, polygon_popup={"way_id": "way_id"}, fill_color="way_id")
+            karta = plp(gdf, polygon_popup={"way_id": "way_id"}, fill_color="red")
         return karta
 
     # Ensure `gdf_list` is always a list of GeoDataFrames or DataFrames
