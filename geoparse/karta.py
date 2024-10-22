@@ -635,7 +635,16 @@ def plp(  # plp: points, lines, polygons
         if isinstance(gdf.geometry[0], LineString):
             karta = plp(gdf, line_popup={"way_id": "way_id"}, line_color="red")
         else:
-            karta = plp(gdf, polygon_popup={"way_id": "way_id"}, fill_color="red")
+            karta = plp(
+                gdf,
+                geohash_res=geohash_res,
+                s2_res=s2_res,
+                h3_res=h3_res,
+                geohash_inner=geohash_inner,
+                compact=compact,
+                polygon_popup={"way_id": "way_id"},
+                fill_color="red",
+            )
         return karta
 
     # Ensure `gdf_list` is always a list of GeoDataFrames or DataFrames
