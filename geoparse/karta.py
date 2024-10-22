@@ -441,7 +441,7 @@ def plp(  # plp: points, lines, polygons
     heatmap: bool = False,
     line: bool = False,
     antpath: bool = False,
-    point_color: str = "blue",
+    point_color: str = "blue",    #TODO: different colours based on speed
     color_head: Optional[str] = None,
     color_tail: Optional[str] = None,  # color_head and color_tail: substring indices
     point_opacity: float = 0.5,
