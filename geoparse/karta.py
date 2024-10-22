@@ -864,7 +864,7 @@ def plp(  # plp: points, lines, polygons
         cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
 
         # Add geohash cells to the map as a polygon layer
-        group_geohash = folium.FeatureGroup(name="Geohash")
+        group_geohash = folium.FeatureGroup(name="{i} - Geohash")
         polygons(
             karta=group_geohash,
             mdf=cdf,
@@ -890,7 +890,7 @@ def plp(  # plp: points, lines, polygons
         cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
 
         # Add S2 cells to the map as a polygon layer
-        group_s2 = folium.FeatureGroup(name="Google S2")
+        group_s2 = folium.FeatureGroup(name="{i} - Google S2")
         polygons(
             karta=group_s2,
             mdf=cdf,
@@ -916,7 +916,7 @@ def plp(  # plp: points, lines, polygons
         cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
 
         # Add H3 cells to the map as a polygon layer
-        group_h3 = folium.FeatureGroup(name="Uber H3")
+        group_h3 = folium.FeatureGroup(name="{i} - Uber H3")
         polygons(
             karta=group_h3,
             mdf=cdf,
