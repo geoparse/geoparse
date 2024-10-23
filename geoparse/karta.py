@@ -198,8 +198,10 @@ def points(
         A Folium map object to which the marker will be added.
 
     color : str
-        Column name to determine the color of the marker. If the column is present in the row, a color from the color map
-        will be used.
+        Specifies the color of the marker. If "speed" is passed, the marker color is determined by comparing
+        the 'speed' and 'speedlimit' values in the row (e.g., blue for under the speed limit, black for very high speeds).
+        Otherwise, it can be a column name in the `row` that determines the color based on the `color_head` and
+        `color_tail` parameters to create a unique color from that column's value.
 
     color_head : int, optional
         Starting index for substring extraction from the `color` column value to create a unique color (default is None).
@@ -248,8 +250,21 @@ def points(
     if any(math.isnan(item) for item in location):
         return 0
 
+    if color == "speed":
+        if row.speed <= row.speedlimit:
+            color = "blue"
+        elif row.speed <= 1.1 * row.speedlimit:
+            color = "green"
+        elif row.speed <= 1.2 * row.speedlimit:
+            color = "yellow"
+        elif row.speed <= 1.3 * row.speedlimit:
+            color = "orange"
+        elif row.speed <= 1.4 * row.speedlimit:
+            color = "red"
+        else:
+            color = "black"
     # Determine color if column is specified
-    if color in row.index:  # color in DataFrame columns
+    elif color in row.index:  # color in DataFrame columns
         color = color_map(row[color], color_head, color_tail)
 
     # Create a popup HTML if popup_dict is provided
@@ -441,7 +456,7 @@ def plp(  # plp: points, lines, polygons
     heatmap: bool = False,
     line: bool = False,
     antpath: bool = False,
-    point_color: str = "blue",    #TODO: different colours based on speed
+    point_color: str = "blue",
     color_head: Optional[str] = None,
     color_tail: Optional[str] = None,  # color_head and color_tail: substring indices
     point_opacity: float = 0.5,
