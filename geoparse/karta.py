@@ -198,8 +198,10 @@ def points(
         A Folium map object to which the marker will be added.
 
     color : str
-        Column name to determine the color of the marker. If the column is present in the row, a color from the color map
-        will be used.
+        Specifies the color of the marker. If "speed" is passed, the marker color is determined by comparing
+        the 'speed' and 'speedlimit' values in the row (e.g., blue for under the speed limit, black for very high speeds).
+        Otherwise, it can be a column name in the `row` that determines the color based on the `color_head` and
+        `color_tail` parameters to create a unique color from that column's value.
 
     color_head : int, optional
         Starting index for substring extraction from the `color` column value to create a unique color (default is None).
@@ -454,7 +456,7 @@ def plp(  # plp: points, lines, polygons
     heatmap: bool = False,
     line: bool = False,
     antpath: bool = False,
-    point_color: str = "blue",  # TODO: different colours based on speed
+    point_color: str = "blue",
     color_head: Optional[str] = None,
     color_tail: Optional[str] = None,  # color_head and color_tail: substring indices
     point_opacity: float = 0.5,
