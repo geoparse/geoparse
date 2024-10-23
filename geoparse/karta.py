@@ -248,8 +248,13 @@ def points(
     if any(math.isnan(item) for item in location):
         return 0
 
+    if color == "speed":
+        if row.speed <= row.speedlimit:
+            color = "green"
+        else:
+            color = "red"
     # Determine color if column is specified
-    if color in row.index:  # color in DataFrame columns
+    elif color in row.index:  # color in DataFrame columns
         color = color_map(row[color], color_head, color_tail)
 
     # Create a popup HTML if popup_dict is provided
@@ -441,7 +446,7 @@ def plp(  # plp: points, lines, polygons
     heatmap: bool = False,
     line: bool = False,
     antpath: bool = False,
-    point_color: str = "blue",    #TODO: different colours based on speed
+    point_color: str = "blue",  # TODO: different colours based on speed
     color_head: Optional[str] = None,
     color_tail: Optional[str] = None,  # color_head and color_tail: substring indices
     point_opacity: float = 0.5,
