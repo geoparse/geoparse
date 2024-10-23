@@ -250,9 +250,17 @@ def points(
 
     if color == "speed":
         if row.speed <= row.speedlimit:
+            color = "blue"
+        elif row.speed < 1.1 * row.speedlimit:
             color = "green"
-        else:
+        elif row.speed < 1.2 * row.speedlimit:
+            color = "yellow"
+        elif row.speed < 1.3 * row.speedlimit:
+            color = "orange"
+        elif row.speed < 1.4 * row.speedlimit:
             color = "red"
+        else:
+            color = "black"
     # Determine color if column is specified
     elif color in row.index:  # color in DataFrame columns
         color = color_map(row[color], color_head, color_tail)
