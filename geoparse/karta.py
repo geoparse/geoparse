@@ -251,13 +251,13 @@ def points(
     if color == "speed":
         if row.speed <= row.speedlimit:
             color = "blue"
-        elif row.speed < 1.1 * row.speedlimit:
+        elif row.speed <= 1.1 * row.speedlimit:
             color = "green"
-        elif row.speed < 1.2 * row.speedlimit:
+        elif row.speed <= 1.2 * row.speedlimit:
             color = "yellow"
-        elif row.speed < 1.3 * row.speedlimit:
+        elif row.speed <= 1.3 * row.speedlimit:
             color = "orange"
-        elif row.speed < 1.4 * row.speedlimit:
+        elif row.speed <= 1.4 * row.speedlimit:
             color = "red"
         else:
             color = "black"
