@@ -251,7 +251,9 @@ def points(
         return 0
 
     if color == "speed":
-        if row.speed <= row.speedlimit:
+        if pd.isna(row.speedlimit) or row.speedlimit < 0:
+            color = "violet"
+        elif row.speed <= row.speedlimit:
             color = "blue"
         elif row.speed <= 1.1 * row.speedlimit:
             color = "green"
