@@ -105,6 +105,46 @@ def color_map(col: int or str, head: int = None, tail: int = None) -> str:
     return palettet[idx]
 
 
+def grad_colors(row, gradient=None, grad_bin=None, grad_colors=None):
+    """
+    Determines the color based on the speed and speed limit values in the row.
+
+    Parameters
+    ----------
+    row : pd.Series
+        Data row containing 'speed' and 'speedlimit' values.
+    gradient : list of str
+        List of column names used for speed comparison.
+    grad_bin : list of float
+        List of bin boundaries (multipliers of speed limit).
+    grad_colors : list of str
+        List of color strings corresponding to each bin.
+
+    Returns
+    -------
+    str
+        The color corresponding to the speed and speed limit values.
+    """
+    # Check if speed limit is invalid or NaN
+    if grad_colors is None:
+        grad_colors = ["blue", "green", "yellow", "orange", "red", "black"]
+    if grad_bin is None:
+        grad_bin = [1, 1.1, 1.2, 1.3, 1.4]
+    if gradient is None:
+        gradient = ["speed", "speedlimit"]
+    if pd.isna(row[gradient[1]]) or row[gradient[1]] < 0:
+        return "violet"
+
+    # Determine the color based on speed ratio
+    speed_ratio = row[gradient[0]] / row[gradient[1]]
+    for i, threshold in enumerate(grad_bin):
+        if speed_ratio <= threshold:
+            return grad_colors[i]
+
+    # If above all thresholds, return the last color
+    return grad_colors[-1]
+
+
 def base_map(sw: list or tuple, ne: list or tuple) -> folium.Map:
     """
     Creates a base map with multiple tile layers and fits the map to the specified bounding box.
