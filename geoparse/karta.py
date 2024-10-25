@@ -956,7 +956,7 @@ def plp(  # plp: points, lines, polygons
         cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
 
         # Add S2 cells to the map as a polygon layer
-        group_s2 = folium.FeatureGroup(name="f{i} - Google S2")
+        group_s2 = folium.FeatureGroup(name=f"{i} - Google S2")
         polygons(
             karta=group_s2,
             mdf=cdf,
