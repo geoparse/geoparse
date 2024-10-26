@@ -15,9 +15,6 @@ from s2 import s2
 from shapely.geometry import MultiPolygon, Polygon
 from shapely.geometry.base import BaseGeometry
 
-# s2.polyfill() function covers the hole in a polygon too (which is not correct).
-# ppolycell() function splits a polygon to smaller polygons without holes
-
 
 def polycell(geoms: List[Union[Polygon, MultiPolygon]], cell_type: str, res: int, dump: str = None) -> Union[List[str], None]:
     """
