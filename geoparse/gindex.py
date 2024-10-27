@@ -9,6 +9,7 @@ from typing import List, Tuple, Union
 
 import geopandas as gpd
 import numpy as np
+import pygeohash
 from h3 import h3
 from polygon_geohasher.polygon_geohasher import geohash_to_polygon, polygon_to_geohashes
 from s2 import s2
@@ -52,16 +53,16 @@ def pointcell(lats: list[float], lons: list[float], cell_type: str, res: int) ->
     --------
     >>> lats = [37.7749, 34.0522]
     >>> lons = [-122.4194, -118.2437]
-    >>> pointcell(lats, lons, 'geohash', 6)
+    >>> pointcell(lats, lons, "geohash", 6)
     ['9q8yy', '9qh0b']
     """
-    if cell_type == 'geohash':
-        return [pygeohash.encode(lat, lon, geo_res) for lat, lon in zip(lats, lons)]
-    elif cell_type == 's2':
-        return [s2.geo_to_s2(lat, lon, res) for lat, lon in zip(lats, lons)]           # string
-    elif cell_type == 's2_int':
+    if cell_type == "geohash":
+        return [pygeohash.encode(lat, lon, res) for lat, lon in zip(lats, lons)]
+    elif cell_type == "s2":
+        return [s2.geo_to_s2(lat, lon, res) for lat, lon in zip(lats, lons)]  # string
+    elif cell_type == "s2_int":
         return [int(s2.geo_to_s2(lat, lon, res), 16) for lat, lon in zip(lats, lons)]  # int data type requires less memory
-    elif cell_type == 'h3':
+    elif cell_type == "h3":
         return [h3.geo_to_h3(lat, lon, res) for lat, lon in zip(lats, lons)]
     else:
         raise ValueError(f"Unsupported cell type: {cell_type}. Choose 'geohash', 's2', 's2_int', or 'h3'.")
