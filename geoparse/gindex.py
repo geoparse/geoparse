@@ -16,6 +16,57 @@ from shapely.geometry import MultiPolygon, Polygon
 from shapely.geometry.base import BaseGeometry
 
 
+def pointcell(lats: list[float], lons: list[float], cell_type: str, res: int) -> list:
+    """
+    Convert latitude and longitude coordinates into spatial index representations using various cell encoding types.
+
+    Parameters:
+    -----------
+    lats : list[float]
+        A list of latitude values (in decimal degrees) for each point to encode.
+    lons : list[float]
+        A list of longitude values (in decimal degrees) for each point to encode.
+    cell_type : str
+        The type of spatial encoding to use. Options are:
+            - 'geohash': Encodes the coordinates using the geohash format.
+            - 's2': Encodes the coordinates using the S2 library, outputting a string representation.
+            - 's2_int': Encodes the coordinates using the S2 library, outputting an integer representation.
+            - 'h3': Encodes the coordinates using the H3 library, outputting a hex string.
+    res : int
+        The resolution or precision level for the encoding, specific to each encoding type.
+
+    Returns:
+    --------
+    list
+        A list of encoded cell identifiers. The data type of each identifier depends on `cell_type`:
+            - 'geohash' and 's2': list of str
+            - 's2_int': list of int
+            - 'h3': list of str
+
+    Raises:
+    -------
+    ValueError
+        If `cell_type` is not one of 'geohash', 's2', 's2_int', or 'h3'.
+
+    Example:
+    --------
+    >>> lats = [37.7749, 34.0522]
+    >>> lons = [-122.4194, -118.2437]
+    >>> pointcell(lats, lons, 'geohash', 6)
+    ['9q8yy', '9qh0b']
+    """
+    if cell_type == 'geohash':
+        return [pygeohash.encode(lat, lon, geo_res) for lat, lon in zip(lats, lons)]
+    elif cell_type == 's2':
+        return [s2.geo_to_s2(lat, lon, res) for lat, lon in zip(lats, lons)]           # string
+    elif cell_type == 's2_int':
+        return [int(s2.geo_to_s2(lat, lon, res), 16) for lat, lon in zip(lats, lons)]  # int data type requires less memory
+    elif cell_type == 'h3':
+        return [h3.geo_to_h3(lat, lon, res) for lat, lon in zip(lats, lons)]
+    else:
+        raise ValueError(f"Unsupported cell type: {cell_type}. Choose 'geohash', 's2', 's2_int', or 'h3'.")
+
+
 def polycell(geoms: List[Union[Polygon, MultiPolygon]], cell_type: str, res: int, dump: str = None) -> Union[List[str], None]:
     """
     Converts a list of geometries into a set of unique spatial cells based on the specified cell type and resolution.
