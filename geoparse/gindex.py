@@ -70,7 +70,7 @@ def pointcell(lats: list[float], lons: list[float], cell_type: str, res: int) ->
 
 def cellpoint(cells, cell_type):
     if cell_type == "s2":
-        return [(s2.CellId(cell).to_lat_lng().lat().degrees, s2.CellId(cell).to_lat_lng().lng().degrees) for cell in cells]
+        return [(s2.CellId.from_token(cell).to_lat_lng().lat().degrees, s2.CellId.from_token(cell).to_lat_lng().lng().degrees) for cell in cells]
 
 
 def polycell(geoms: List[Union[Polygon, MultiPolygon]], cell_type: str, res: int, dump: str = None) -> Union[List[str], None]:
