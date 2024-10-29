@@ -68,9 +68,67 @@ def pointcell(lats: list[float], lons: list[float], cell_type: str, res: int) ->
         raise ValueError(f"Unsupported cell type: {cell_type}. Choose 'geohash', 's2', 's2_int', or 'h3'.")
 
 
-def cellpoint(cells, cell_type):
-    if cell_type == "s2":
+def cellpoint(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float, float]]:
+    """
+    Converts a list of cell IDs into their corresponding latitude and longitude points.
+
+    This function supports various cell ID types: 'geohash', 'h3', 's2_int' (integer-based S2 cells),
+    and 's2' (token-based S2 cells). For each cell in the list, it returns the latitude and longitude
+    of the cell's center.
+
+    Parameters
+    ----------
+    cells : list of str or int
+        List of cell identifiers. The format of each cell ID depends on the specified `cell_type`:
+        - For 'geohash': `cells` should be a list of geohash strings.
+        - For 'h3': `cells` should be a list of H3 cell ID strings.
+        - For 's2_int': `cells` should be a list of integer-based S2 cell IDs.
+        - For 's2': `cells` should be a list of S2 token strings.
+    cell_type : str
+        Type of the cell ID format. Should be one of the following:
+        - 'geohash': Geohash encoding.
+        - 'h3': H3 hexagonal grid encoding.
+        - 's2_int': Integer-based S2 cell ID.
+        - 's2': S2 token (string-based cell ID).
+
+    Returns
+    -------
+    list of tuple of float
+        A list of tuples where each tuple contains the latitude and longitude (in degrees) of the
+        center point for each cell ID.
+
+    Raises
+    ------
+    ValueError
+        If the `cell_type` is not one of 'geohash', 'h3', 's2', or 's2_int'.
+
+    Examples
+    --------
+    >>> cellpoint(["ezs42", "u4pruydqqvj"], cell_type="geohash")
+    [(42.6, -5.6), (57.64911, 10.40744)]
+
+    >>> cellpoint(["8928308280fffff"], cell_type="h3")
+    [(37.775938728915946, -122.41795063018799)]
+
+    >>> cellpoint([9744573459660040192], cell_type="s2_int")
+    [(37.7749, -122.4194)]
+
+    >>> cellpoint(["89c25c"], cell_type="s2")
+    [(37.7749, -122.4194)]
+    """
+    if cell_type == "geohash":
+        return [pygeohash.decode(cell) for cell in cells]
+    elif cell_type == "h3":
+        return [h3.h3_to_geo(cell) for cell in cells]
+    elif cell_type == "s2_int":
         return [(s2.CellId(cell).to_lat_lng().lat().degrees, s2.CellId(cell).to_lat_lng().lng().degrees) for cell in cells]
+    elif cell_type == "s2":
+        return [
+            (s2.CellId.from_token(cell).to_lat_lng().lat().degrees, s2.CellId.from_token(cell).to_lat_lng().lng().degrees)
+            for cell in cells
+        ]
+    else:
+        raise ValueError(f"Unsupported cell type: {cell_type}. Choose 'geohash', 's2', 's2_int', or 'h3'.")
 
 
 def polycell(geoms: List[Union[Polygon, MultiPolygon]], cell_type: str, res: int, dump: str = None) -> Union[List[str], None]:
