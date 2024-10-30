@@ -68,70 +68,6 @@ def pointcell(lats: list[float], lons: list[float], cell_type: str, res: int) ->
         raise ValueError(f"Unsupported cell type: {cell_type}. Choose 'geohash', 's2', 's2_int', or 'h3'.")
 
 
-def ppointcell(lats: list[float], lons: list[float], cell_type: str, res: int) -> list:
-    """
-    Converts lists of latitude and longitude points to cell identifiers in parallel.
-
-    This function takes lists of latitude and longitude points and converts each pair
-    into a cell identifier based on the specified `cell_type` and resolution `res`.
-    It leverages parallel processing to speed up the conversion, dividing the data
-    into chunks and using `Pool.starmap` for concurrent execution.
-
-    Parameters
-    ----------
-    lats : list of float
-        List of latitude values.
-    lons : list of float
-        List of longitude values, corresponding element-wise to the latitude list.
-    cell_type : str
-        The type of spatial encoding to use. Options are:
-            - 'geohash': Encodes the coordinates using the geohash format.
-            - 's2': Encodes the coordinates using the S2 library, outputting a string representation.
-            - 's2_int': Encodes the coordinates using the S2 library, outputting an integer representation.
-            - 'h3': Encodes the coordinates using the H3 library, outputting a hex string.
-    res : int
-        Resolution or precision level for the cell identifiers. Higher values indicate finer precision.
-
-    Returns
-    -------
-    list
-        A list of cell identifiers corresponding to the input latitude and longitude points.
-
-    Raises
-    ------
-    ValueError
-        If `cell_type` is not one of 'geohash', 's2', 's2_int', or 'h3'.
-
-    Notes
-    -----
-    This function splits the input latitude and longitude lists into chunks and performs the cell
-    conversion in parallel, with each chunk processed by a separate CPU core. This can significantly
-    reduce processing time for large datasets.
-
-    Examples
-    --------
-    >>> lats = [37.7749, 40.7128]
-    >>> lons = [-122.4194, -74.0060]
-    >>> cell_type = "h3"
-    >>> res = 9
-    >>> ppointcell(lats, lons, cell_type, res)
-    ['8928308280fffff', '8a28308280fffff']
-    """
-    n_cores = cpu_count()
-
-    # Prepare arguments for parallel processing
-    lat_chunks = np.array_split(lats, 4 * n_cores)
-    lon_chunks = np.array_split(lons, 4 * n_cores)
-    args = zip(lat_chunks, lon_chunks, [cell_type] * 4 * n_cores, [res] * 4 * n_cores)
-
-    # Parallelize the conversion using Pool.starmap
-    with Pool(n_cores) as pool:
-        cells = pool.starmap(pointcell, args)
-    cells = [item for sublist in cells for item in sublist]  # Flatten the list of cells
-
-    return cells
-
-
 def cellpoint(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float, float]]:
     """
     Converts a list of cell IDs into their corresponding latitude and longitude points.
@@ -193,36 +129,6 @@ def cellpoint(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float,
         ]
     else:
         raise ValueError(f"Unsupported cell type: {cell_type}. Choose 'geohash', 's2', 's2_int', or 'h3'.")
-
-
-def pcellpoint(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float, float]]:
-    """
-    Converts a list of cell IDs into their corresponding latitude and longitude points in parallel.
-
-    Parameters
-    ----------
-    cells : list of str or int
-        List of cell identifiers.
-    cell_type : str
-        Type of the cell ID format.
-
-    Returns
-    -------
-    list of tuple of float
-        List of tuples containing the latitude and longitude (in degrees) of each cell ID.
-    """
-    n_cores = cpu_count()
-
-    # Prepare arguments for parallel processing
-    cell_chunks = np.array_split(cells, 4 * n_cores)
-    args = zip(cell_chunks, [cell_type] * 4 * n_cores)
-
-    # Parallelize the conversion using Pool.starmap
-    with Pool(n_cores) as pool:
-        points = pool.starmap(cellpoint, args)
-    points = [item for sublist in points for item in sublist]  # Flatten the list of cells
-
-    return points
 
 
 def polycell(geoms: List[Union[Polygon, MultiPolygon]], cell_type: str, res: int, dump: str = None) -> Union[List[str], None]:
@@ -303,6 +209,180 @@ def polycell(geoms: List[Union[Polygon, MultiPolygon]], cell_type: str, res: int
         with open(f"{cells_path}/{datetime.now()}.txt", "w") as json_file:
             json.dump(cells, json_file)
         return None
+
+
+def cellpoly(cells: list, cell_type: str) -> tuple:
+    """
+    Converts a list of spatial cells to their corresponding geometries and resolution levels.
+
+    The function takes a list of spatial cells (e.g., Geohash, H3, or S2) and converts each cell
+    into a geometry object (Polygon) based on the specified cell type. It also calculates the resolution
+    level for each cell.
+
+    Parameters
+    ----------
+    cells : list
+        A list of spatial cells represented as strings. Each cell corresponds to a spatial area
+        in a specific grid system (e.g., Geohash, H3, or S2).
+
+    cell_type : str
+        The type of spatial cell system used. Accepted values are:
+        - "geohash" : Geohash spatial indexing system.
+        - "h3"      : H3 hexagonal spatial indexing system.
+        - "s2"      : S2 spherical spatial indexing system.
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - `res` : list of int
+            A list of resolution levels corresponding to each cell in the input.
+        - `geoms` : list of shapely.geometry.Polygon
+            A list of Polygon geometries representing the spatial boundaries of the input cells.
+
+    Raises
+    ------
+    ValueError
+        If `cell_type` is not one of "geohash", "h3", or "s2".
+
+    Example
+    -------
+    >>> from shapely.geometry import Polygon
+    >>> cells = ["ezs42", "ezs43"]  # Geohash cells
+    >>> cell_type = "geohash"
+    >>> res, geoms = cellpoly(cells, cell_type)
+    >>> print(res)
+    [5, 5]  # Resolution levels of the input cells
+    >>> print(geoms)
+    [<shapely.geometry.polygon.Polygon object at 0x...>, <shapely.geometry.polygon.Polygon object at 0x...>]
+    # Polygon geometries representing the spatial boundaries of the cells
+
+    Notes
+    -----
+    The function supports three spatial indexing systems:
+    - Geohash: Uses rectangular bounding boxes to represent cells.
+    - H3: Uses hexagonal grid cells.
+    - S2: Uses spherical grid cells.
+    """
+    # Check for valid cell_type
+    if cell_type not in {"geohash", "h3", "s2"}:
+        raise ValueError(f"Invalid cell_type '{cell_type}'. Accepted values are: 'geohash', 'h3', 's2'.")
+
+    # Determine resolution level based on cell type
+    res = [
+        len(cell)
+        if cell_type == "geohash"
+        else cell[1]
+        if cell_type == "h3"
+        else s2.CellId.from_token(cell).level()  # cell = token
+        for cell in cells
+    ]
+
+    # Create geometry objects based on cell type
+    geoms = [
+        geohash_to_polygon(cell)
+        if cell_type == "geohash"
+        else Polygon(s2.s2_to_geo_boundary(cell, geo_json_conformant=True))
+        if cell_type == "s2"
+        else Polygon(h3.h3_to_geo_boundary(cell, geo_json=True))
+        for cell in cells
+    ]
+
+    return res, geoms
+
+
+def ppointcell(lats: list[float], lons: list[float], cell_type: str, res: int) -> list:
+    """
+    Converts lists of latitude and longitude points to cell identifiers in parallel.
+
+    This function takes lists of latitude and longitude points and converts each pair
+    into a cell identifier based on the specified `cell_type` and resolution `res`.
+    It leverages parallel processing to speed up the conversion, dividing the data
+    into chunks and using `Pool.starmap` for concurrent execution.
+
+    Parameters
+    ----------
+    lats : list of float
+        List of latitude values.
+    lons : list of float
+        List of longitude values, corresponding element-wise to the latitude list.
+    cell_type : str
+        The type of spatial encoding to use. Options are:
+            - 'geohash': Encodes the coordinates using the geohash format.
+            - 's2': Encodes the coordinates using the S2 library, outputting a string representation.
+            - 's2_int': Encodes the coordinates using the S2 library, outputting an integer representation.
+            - 'h3': Encodes the coordinates using the H3 library, outputting a hex string.
+    res : int
+        Resolution or precision level for the cell identifiers. Higher values indicate finer precision.
+
+    Returns
+    -------
+    list
+        A list of cell identifiers corresponding to the input latitude and longitude points.
+
+    Raises
+    ------
+    ValueError
+        If `cell_type` is not one of 'geohash', 's2', 's2_int', or 'h3'.
+
+    Notes
+    -----
+    This function splits the input latitude and longitude lists into chunks and performs the cell
+    conversion in parallel, with each chunk processed by a separate CPU core. This can significantly
+    reduce processing time for large datasets.
+
+    Examples
+    --------
+    >>> lats = [37.7749, 40.7128]
+    >>> lons = [-122.4194, -74.0060]
+    >>> cell_type = "h3"
+    >>> res = 9
+    >>> ppointcell(lats, lons, cell_type, res)
+    ['8928308280fffff', '8a28308280fffff']
+    """
+    n_cores = cpu_count()
+
+    # Prepare arguments for parallel processing
+    lat_chunks = np.array_split(lats, 4 * n_cores)
+    lon_chunks = np.array_split(lons, 4 * n_cores)
+    args = zip(lat_chunks, lon_chunks, [cell_type] * 4 * n_cores, [res] * 4 * n_cores)
+
+    # Parallelize the conversion using Pool.starmap
+    with Pool(n_cores) as pool:
+        cells = pool.starmap(pointcell, args)
+    cells = [item for sublist in cells for item in sublist]  # Flatten the list of cells
+
+    return cells
+
+
+def pcellpoint(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float, float]]:
+    """
+    Converts a list of cell IDs into their corresponding latitude and longitude points in parallel.
+
+    Parameters
+    ----------
+    cells : list of str or int
+        List of cell identifiers.
+    cell_type : str
+        Type of the cell ID format.
+
+    Returns
+    -------
+    list of tuple of float
+        List of tuples containing the latitude and longitude (in degrees) of each cell ID.
+    """
+    n_cores = cpu_count()
+
+    # Prepare arguments for parallel processing
+    cell_chunks = np.array_split(cells, 4 * n_cores)
+    args = zip(cell_chunks, [cell_type] * 4 * n_cores)
+
+    # Parallelize the conversion using Pool.starmap
+    with Pool(n_cores) as pool:
+        points = pool.starmap(cellpoint, args)
+    points = [item for sublist in points for item in sublist]  # Flatten the list of cells
+
+    return points
 
 
 def ppolycell(
@@ -456,86 +536,6 @@ def ppolycell(
                 print(f"{elapsed_time} seconds.")
 
         return cells, cell_counts
-
-
-def cellpoly(cells: list, cell_type: str) -> tuple:
-    """
-    Converts a list of spatial cells to their corresponding geometries and resolution levels.
-
-    The function takes a list of spatial cells (e.g., Geohash, H3, or S2) and converts each cell
-    into a geometry object (Polygon) based on the specified cell type. It also calculates the resolution
-    level for each cell.
-
-    Parameters
-    ----------
-    cells : list
-        A list of spatial cells represented as strings. Each cell corresponds to a spatial area
-        in a specific grid system (e.g., Geohash, H3, or S2).
-
-    cell_type : str
-        The type of spatial cell system used. Accepted values are:
-        - "geohash" : Geohash spatial indexing system.
-        - "h3"      : H3 hexagonal spatial indexing system.
-        - "s2"      : S2 spherical spatial indexing system.
-
-    Returns
-    -------
-    tuple
-        A tuple containing:
-        - `res` : list of int
-            A list of resolution levels corresponding to each cell in the input.
-        - `geoms` : list of shapely.geometry.Polygon
-            A list of Polygon geometries representing the spatial boundaries of the input cells.
-
-    Raises
-    ------
-    ValueError
-        If `cell_type` is not one of "geohash", "h3", or "s2".
-
-    Example
-    -------
-    >>> from shapely.geometry import Polygon
-    >>> cells = ["ezs42", "ezs43"]  # Geohash cells
-    >>> cell_type = "geohash"
-    >>> res, geoms = cellpoly(cells, cell_type)
-    >>> print(res)
-    [5, 5]  # Resolution levels of the input cells
-    >>> print(geoms)
-    [<shapely.geometry.polygon.Polygon object at 0x...>, <shapely.geometry.polygon.Polygon object at 0x...>]
-    # Polygon geometries representing the spatial boundaries of the cells
-
-    Notes
-    -----
-    The function supports three spatial indexing systems:
-    - Geohash: Uses rectangular bounding boxes to represent cells.
-    - H3: Uses hexagonal grid cells.
-    - S2: Uses spherical grid cells.
-    """
-    # Check for valid cell_type
-    if cell_type not in {"geohash", "h3", "s2"}:
-        raise ValueError(f"Invalid cell_type '{cell_type}'. Accepted values are: 'geohash', 'h3', 's2'.")
-
-    # Determine resolution level based on cell type
-    res = [
-        len(cell)
-        if cell_type == "geohash"
-        else cell[1]
-        if cell_type == "h3"
-        else s2.CellId.from_token(cell).level()  # cell = token
-        for cell in cells
-    ]
-
-    # Create geometry objects based on cell type
-    geoms = [
-        geohash_to_polygon(cell)
-        if cell_type == "geohash"
-        else Polygon(s2.s2_to_geo_boundary(cell, geo_json_conformant=True))
-        if cell_type == "s2"
-        else Polygon(h3.h3_to_geo_boundary(cell, geo_json=True))
-        for cell in cells
-    ]
-
-    return res, geoms
 
 
 def compact_cells(cells: list, cell_type: str) -> list:
