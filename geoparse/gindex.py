@@ -130,8 +130,9 @@ def cellpoint(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float,
     else:
         raise ValueError(f"Unsupported cell type: {cell_type}. Choose 'geohash', 's2', 's2_int', or 'h3'.")
 
+
 def pcellpoint(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float, float]]:
-    " ""
+    """
     Converts a list of cell IDs into their corresponding latitude and longitude points in parallel.
 
     Parameters
@@ -148,7 +149,7 @@ def pcellpoint(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float
     """
     # Determine the number of CPU cores for parallel processing
     n_cores = min(cpu_count(), len(cells))
-    
+
     # Prepare arguments for parallel processing
     args = [(cell, cell_type) for cell in cells]
 
@@ -158,6 +159,7 @@ def pcellpoint(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float
     cells = [item for sublist in cells for item in sublist]  # Flatten the list of cells
 
     return cells
+
 
 def polycell(geoms: List[Union[Polygon, MultiPolygon]], cell_type: str, res: int, dump: str = None) -> Union[List[str], None]:
     """
