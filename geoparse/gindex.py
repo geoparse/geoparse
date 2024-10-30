@@ -151,7 +151,8 @@ def pcellpoint(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float
     n_cores = min(cpu_count(), len(cells))
 
     # Prepare arguments for parallel processing
-    args = [(cell, cell_type) for cell in cells]
+    cell_chunks = np.array_split(cells, 4 * n_cores)
+    args = zip(cell_chunks, [cell_type] * 4 * n_cores)
 
     # Parallelize the conversion using Pool.starmap
     with Pool(n_cores) as pool:
