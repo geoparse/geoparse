@@ -72,9 +72,9 @@ def ppointcell(lats: list[float], lons: list[float], cell_type: str, res: int) -
     """
     Converts lists of latitude and longitude points to cell identifiers in parallel.
 
-    This function takes lists of latitude and longitude points and converts each pair 
-    into a cell identifier based on the specified `cell_type` and resolution `res`. 
-    It leverages parallel processing to speed up the conversion, dividing the data 
+    This function takes lists of latitude and longitude points and converts each pair
+    into a cell identifier based on the specified `cell_type` and resolution `res`.
+    It leverages parallel processing to speed up the conversion, dividing the data
     into chunks and using `Pool.starmap` for concurrent execution.
 
     Parameters
@@ -96,7 +96,7 @@ def ppointcell(lats: list[float], lons: list[float], cell_type: str, res: int) -
     -------
     list
         A list of cell identifiers corresponding to the input latitude and longitude points.
-    
+
     Raises
     ------
     ValueError
@@ -107,7 +107,7 @@ def ppointcell(lats: list[float], lons: list[float], cell_type: str, res: int) -
     This function splits the input latitude and longitude lists into chunks and performs the cell
     conversion in parallel, with each chunk processed by a separate CPU core. This can significantly
     reduce processing time for large datasets.
-    
+
     Examples
     --------
     >>> lats = [37.7749, 40.7128]
