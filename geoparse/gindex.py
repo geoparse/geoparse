@@ -130,6 +130,34 @@ def cellpoint(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float,
     else:
         raise ValueError(f"Unsupported cell type: {cell_type}. Choose 'geohash', 's2', 's2_int', or 'h3'.")
 
+def pcellpoint(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float, float]]:
+    " ""
+    Converts a list of cell IDs into their corresponding latitude and longitude points in parallel.
+
+    Parameters
+    ----------
+    cells : list of str or int
+        List of cell identifiers.
+    cell_type : str
+        Type of the cell ID format.
+
+    Returns
+    -------
+    list of tuple of float
+        List of tuples containing the latitude and longitude (in degrees) of each cell ID.
+    """
+    # Determine the number of CPU cores for parallel processing
+    n_cores = min(cpu_count(), len(cells))
+    
+    # Prepare arguments for parallel processing
+    args = [(cell, cell_type) for cell in cells]
+
+    # Parallelize the conversion using Pool.starmap
+    with Pool(n_cores) as pool:
+        cells = pool.starmap(cellpoint, args)
+    cells = [item for sublist in cells for item in sublist]  # Flatten the list of cells
+
+    return cells
 
 def polycell(geoms: List[Union[Polygon, MultiPolygon]], cell_type: str, res: int, dump: str = None) -> Union[List[str], None]:
     """
@@ -320,19 +348,19 @@ def ppolycell(
     # Shuffle geometries for even load distribution across chunks
     gmdf = gmdf.sample(frac=1)
     geom_chunks = np.array_split(list(gmdf.geometry), 4 * n_cores)
-    inputs = zip(geom_chunks, [cell_type] * 4 * n_cores, [res] * 4 * n_cores, [dump] * 4 * n_cores)
+    args = zip(geom_chunks, [cell_type] * 4 * n_cores, [res] * 4 * n_cores, [dump] * 4 * n_cores)
 
     # Parallel processing to generate cells
     if dump:
         with Pool(n_cores) as pool:
-            pool.starmap(polycell, inputs)
+            pool.starmap(polycell, args)
         if verbose:
             elapsed_time = round(time() - start_time)
             print(f"{elapsed_time} seconds.")
         return
     else:
         with Pool(n_cores) as pool:
-            cells = pool.starmap(polycell, inputs)
+            cells = pool.starmap(polycell, args)
         cells = [item for sublist in cells for item in sublist]  # Flatten the list of cells
 
         if verbose:
