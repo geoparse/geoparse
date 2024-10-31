@@ -272,7 +272,7 @@ def cellpoly(cells: list, cell_type: str) -> tuple:
     res = [
         len(cell)
         if cell_type == "geohash"
-        else cell[1]
+        else int(cell[1], 16)
         if cell_type == "h3"
         else s2.CellId.from_token(cell).level()  # cell = token
         for cell in cells
