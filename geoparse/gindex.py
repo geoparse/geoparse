@@ -291,6 +291,44 @@ def cellpoly(cells: list, cell_type: str) -> tuple:
     return res, geoms
 
 
+def pcellpoly(cells: List[Union[str, int]], cell_type: str) -> tuple:
+    """
+    Parallelized version of `cellpoly`, converting a list of spatial cells to geometries and resolution levels.
+
+    Parameters
+    ----------
+    cells : list of str or int
+        List of spatial cells in a specific grid system.
+
+    cell_type : str
+        Type of spatial cell system ("geohash", "h3", or "s2").
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - `res` : list of int
+            Resolution levels for each cell in the input.
+        - `geoms` : list of shapely.geometry.Polygon
+            Polygon geometries representing the boundaries of input cells.
+    """
+    n_cores = cpu_count()
+
+    cell_chunks = np.array_split(cells, 4 * n_cores)
+    # Convert each numpy array to a list which converts numpy.str_ to str
+    cell_chunks = [arr.tolist() for arr in cell_chunks]
+    args = zip(cell_chunks, [cell_type] * 4 * n_cores)
+
+    with Pool(n_cores) as pool:
+        results = pool.starmap(cellpoly, args)
+
+    # Unpack `res` and `geoms` from the result tuples
+    res = [r for result in results for r in result[0]]
+    geoms = [g for result in results for g in result[1]]
+
+    return res, geoms
+
+
 def ppointcell(lats: list[float], lons: list[float], cell_type: str, res: int) -> list:
     """
     Converts lists of latitude and longitude points to cell identifiers in parallel.
