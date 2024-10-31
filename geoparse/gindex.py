@@ -736,7 +736,7 @@ def h3_stats(geom: BaseGeometry, h3_res: int, compact: bool = False) -> Tuple[in
     The function utilizes the H3 library for generating and compacting H3 cells and for calculating cell area. The area
     is always returned in square kilometers ("km^2").
     """
-    cells = polycell(geom, cell="h3", res=h3_res)
+    cells = polycell([geom], cell_type="h3", res=h3_res)
     area = h3.hex_area(h3_res, unit="km^2")
     if compact:
         cells = h3.compact(cells)
