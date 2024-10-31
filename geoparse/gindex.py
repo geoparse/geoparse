@@ -315,8 +315,8 @@ def pcellpoly(cells: List[Union[str, int]], cell_type: str) -> tuple:
     n_cores = cpu_count()
 
     cell_chunks = np.array_split(cells, 4 * n_cores)
-    # Convert each numpy array to a list which convertsnumpy.str_ to str 
-    cell_chunks = [arr.tolist() for arr in cell_chunks]     
+    # Convert each numpy array to a list which converts numpy.str_ to str
+    cell_chunks = [arr.tolist() for arr in cell_chunks]
     args = zip(cell_chunks, [cell_type] * 4 * n_cores)
 
     with Pool(n_cores) as pool:
