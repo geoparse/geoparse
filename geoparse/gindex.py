@@ -268,6 +268,7 @@ def cellpoly(cells: list, cell_type: str) -> tuple:
     if cell_type not in {"geohash", "h3", "s2"}:
         raise ValueError(f"Invalid cell_type '{cell_type}'. Accepted values are: 'geohash', 'h3', 's2'.")
 
+    cell = str(cell)
     # Determine resolution level based on cell type
     res = [
         len(cell)
@@ -315,11 +316,12 @@ def pcellpoly(cells: List[Union[str, int]], cell_type: str) -> tuple:
     n_cores = cpu_count()
 
     cell_chunks = np.array_split(cells, 4 * n_cores)
+    # Convert each numpy array to a list which convertsnumpy.str_ to str 
+    cell_chunks = [arr.tolist() for arr in cell_chunks]     
     args = zip(cell_chunks, [cell_type] * 4 * n_cores)
 
     with Pool(n_cores) as pool:
         results = pool.starmap(cellpoly, args)
-    results = [item for sublist in results for item in sublist]  # Flatten the list
 
     # Unpack `res` and `geoms` from the result tuples
     res = [r for result in results for r in result[0]]
