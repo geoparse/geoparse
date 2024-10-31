@@ -268,7 +268,6 @@ def cellpoly(cells: list, cell_type: str) -> tuple:
     if cell_type not in {"geohash", "h3", "s2"}:
         raise ValueError(f"Invalid cell_type '{cell_type}'. Accepted values are: 'geohash', 'h3', 's2'.")
 
-    cell = str(cell)
     # Determine resolution level based on cell type
     res = [
         len(cell)
