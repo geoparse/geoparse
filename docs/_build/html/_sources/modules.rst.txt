@@ -1,7 +1,7 @@
-geospatial
-==========
+geoparse
+========
 
 .. toctree::
    :maxdepth: 4
 
-   geospatial
+   geoparse
