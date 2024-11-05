@@ -23,7 +23,7 @@ GeoParse is a Python library designed for geospatial data analysis and visualiza
 
 ### Key Features
 ---
-* Efficient geospatial indexing using grid-based systems (Geohash, S2, H3)
+* Efficient geospatial indexing using grid-based systems (H3, S2, Geohash)
 * Data visualization using Folium maps
 * Utilities for working with OpenStreetMap (OSM) data
 * Geometry manipulations and conversions between formats
