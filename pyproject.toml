@@ -29,7 +29,6 @@ dependencies = [
     "pygeohash>=1.2.0",
 ]
 
-
 [tool.uv]
 dev-dependencies = [
 #    "pre-commit>=4.0.0",
@@ -37,17 +36,4 @@ dev-dependencies = [
 #    "pytest>=8.3.3",
     "ruff>=0.6.9",
 ]
-
-[tool.ruff]
-line-length = 128  # Set the maximum line length to 128.
-show-fixes = true
-unsafe-fixes = true
-
-[tool.ruff.lint]
-select = ["E", "F", "W", "B", "N"]
-ignore = ["E203", "E501"]   # Ignore rules that conflict with Black
-extend-select = ["I001"]    # Ensure Ruff enforces isort rules
-
-[tool.ruff.format]
-docstring-code-format = true
 

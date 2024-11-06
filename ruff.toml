@@ -1,0 +1,41 @@
+line-length = 128  # Set the maximum line length to 128.
+show-fixes = true
+unsafe-fixes = true
+
+[lint]
+select = ["E", "F", "W", "B", "N"]
+ignore = ["E203", "E501"]   # Ignore rules that conflict with Black
+extend-select = ["I001"]    # Ensure Ruff enforces isort rules
+
+[format]
+docstring-code-format = true
+
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
