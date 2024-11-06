@@ -1,11 +1,10 @@
-[tool.poetry]
-name = "geoparse"
+[project]
+name = "GeoParse"
 version = "0.2.0"
 description = "A collection of Python functions for performing geospatial analysis and creating visualisations. "
-authors = ["Abbas Kiasari <kiasari@gmail.com>"]
-license = "MIT"
+authors = [{name = "Abbas Kiasari", email = "kiasari@gmail.com"}]
+license = {file = "LICENSE"}
 readme = "README.md"
-repository = "https://github.com/geoparse/geoparse/"
 keywords = [
     "Geospatial",
     "GIS",
@@ -17,19 +16,27 @@ keywords = [
     "folium"
 ]
 
-[tool.poetry.dependencies]
-python = "^3.9"  # Specify the Python version you are using
-numpy = "1.26.4"
-geopandas = "1.0.1"
-folium = "0.17.0"
-polygon_geohasher = "0.0.1"
-s2 = "0.1.9"
-h3 = "3.7.7"
-tqdm = "^4.66.5"
+requires-python = ">=3.9"
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+dependencies = [
+    "numpy==1.26.4",
+    "geopandas==1.0.1",
+    "folium==0.17.0",
+    "polygon_geohasher==0.0.1",
+    "s2==0.1.9",
+    "h3==3.7.7",
+    "tqdm>=4.66.5",
+    "pygeohash>=1.2.0",
+]
+
+
+[tool.uv]
+dev-dependencies = [
+#    "pre-commit>=4.0.0",
+#    "pyright>=1.1.383",
+#    "pytest>=8.3.3",
+    "ruff>=0.6.9",
+]
 
 [tool.ruff]
 line-length = 128  # Set the maximum line length to 128.
