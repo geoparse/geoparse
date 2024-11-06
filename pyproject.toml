@@ -16,7 +16,7 @@ keywords = [
     "folium"
 ]
 
-requires-python = ">=3.9"
+requires-python = ">=3.9,<4.0"
 
 dependencies = [
     "numpy==1.26.4",
@@ -31,9 +31,8 @@ dependencies = [
 
 [tool.uv]
 dev-dependencies = [
-#    "pre-commit>=4.0.0",
-#    "pyright>=1.1.383",
-#    "pytest>=8.3.3",
+    "pre-commit>=4.0.0",
+    "pytest>=8.3.3",
     "ruff>=0.6.9",
 ]
 
