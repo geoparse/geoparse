@@ -494,7 +494,7 @@ wheels = [
 
 [[package]]
 name = "geoparse"
-version = "0.2.0"
+version = "0.3.1"
 source = { virtual = "." }
 dependencies = [
     { name = "folium" },
@@ -519,7 +519,7 @@ dev = [
 requires-dist = [
     { name = "folium", specifier = ">=0.14.0" },
     { name = "geopandas", specifier = ">=1.0.1" },
-    { name = "h3", specifier = ">=3.7.7" },
+    { name = "h3", specifier = ">=4.0.0" },
     { name = "jupyterlab", specifier = ">=4.0.5" },
     { name = "numpy", specifier = ">=1.26.4" },
     { name = "polygon-geohasher", specifier = ">=0.0.1" },
