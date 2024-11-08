@@ -12,7 +12,7 @@
 
 
 [![License](https://img.shields.io/github/license/geoparse/geospatial)](https://github.com/geoparse/geospatial/blob/main/LICENSE)
-[![PythonVersion]( https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/)
+[![PythonVersion]( https://img.shields.io/badge/3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/)
 [![Contributors](https://img.shields.io/github/contributors/geoparse/geospatial)](https://github.com/geoparse/geospatial/graphs/contributors)
 
 
