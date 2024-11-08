@@ -1,6 +1,6 @@
 [project]
 name = "GeoParse"
-version = "0.2.0"
+version = "0.3.1"
 description = "A collection of Python functions for performing geospatial analysis and creating visualisations. "
 authors = [{name = "Abbas Kiasari", email = "kiasari@gmail.com"}]
 license = {file = "LICENSE"}
@@ -24,7 +24,7 @@ dependencies = [
     "folium>=0.14.0",
     "pygeohash>=1.2.0",
     "s2>=0.1.9",
-    "h3>=3.7.7",
+    "h3>=4.0.0",
     "polygon_geohasher>=0.0.1",
     "tqdm>=4.66.5",
     "jupyterlab>=4.0.5",
