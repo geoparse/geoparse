@@ -8,9 +8,9 @@ from time import time
 from typing import List, Tuple, Union
 
 import geopandas as gpd
+import h3
 import numpy as np
 import pygeohash
-from h3 import h3
 from polygon_geohasher.polygon_geohasher import geohash_to_polygon, polygon_to_geohashes
 from s2 import s2
 from shapely.geometry import MultiPolygon, Polygon
@@ -195,7 +195,8 @@ def polycell(geoms: List[Union[Polygon, MultiPolygon]], cell_type: str, res: int
 
     elif cell_type == "h3":
         for poly in polys:
-            cells += h3.polyfill(poly, res, geo_json_conformant=True)  # Use H3 to fill each Polygon
+            h3shape = h3.geo_to_h3shape(poly)   # Convert Polygon and MultiPolygon to h3shape object.
+            cells += h3.polygon_to_cells(h3shape, res)
 
     else:
         raise ValueError(f"Unsupported cell type: {cell_type}. Choose 'geohash', 's2', or 'h3'.")
@@ -284,7 +285,7 @@ def cellpoly(cells: list, cell_type: str) -> tuple:
         if cell_type == "geohash"
         else Polygon(s2.s2_to_geo_boundary(cell, geo_json_conformant=True))
         if cell_type == "s2"
-        else Polygon(h3.h3_to_geo_boundary(cell, geo_json=True))
+        else Polygon(h3.cell_to_boundary(cell))
         for cell in cells
     ]
 
