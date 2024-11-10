@@ -195,8 +195,7 @@ def polycell(geoms: List[Union[Polygon, MultiPolygon]], cell_type: str, res: int
 
     elif cell_type == "h3":
         for poly in polys:
-            h3shape = h3.geo_to_h3shape(poly)   # Convert Polygon and MultiPolygon to h3shape object.
-            cells += h3.polygon_to_cells(h3shape, res)
+            cells += h3.geo_to_cells(poly, res)
 
     else:
         raise ValueError(f"Unsupported cell type: {cell_type}. Choose 'geohash', 's2', or 'h3'.")
@@ -285,7 +284,8 @@ def cellpoly(cells: list, cell_type: str) -> tuple:
         if cell_type == "geohash"
         else Polygon(s2.s2_to_geo_boundary(cell, geo_json_conformant=True))
         if cell_type == "s2"
-        else Polygon(h3.cell_to_boundary(cell))
+        # Shapely expects (lng, lat) format, so we reverse the coordinates returned by cell_to_boundary
+        else Polygon([(lng, lat) for lat, lng in h3.cell_to_boundary(cell)])
         for cell in cells
     ]
 
