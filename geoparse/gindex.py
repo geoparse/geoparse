@@ -615,7 +615,7 @@ def compact_cells(cells: list, cell_type: str) -> list:
     - For `geohash`, cells are merged based on shared prefixes.
     """
     if cell_type == "h3":
-        return list(h3.compact(cells))
+        return h3.compact_cells(cells)
     elif cell_type == "s2":
         # Convert S2 cell IDs from tokens
         cells = [s2.CellId.from_token(item) for item in cells]
