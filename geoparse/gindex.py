@@ -70,7 +70,7 @@ def pointcell(lats: list[float], lons: list[float], cell_type: str, res: int) ->
 
 def cellpoint(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float, float]]:
     """
-    Converts a list of cell IDs into their corresponding centroid points, represented by latitude and longitude coordinates.
+    Converts a list of cell IDs into their corresponding centroids.
 
     This function supports various cell ID types: 'geohash', 'h3', 's2_int' (integer-based S2 cells),
     and 's2' (token-based S2 cells). For each cell in the list, it returns the latitude and longitude
