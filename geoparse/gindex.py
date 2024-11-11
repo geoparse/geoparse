@@ -63,14 +63,14 @@ def pointcell(lats: list[float], lons: list[float], cell_type: str, res: int) ->
     elif cell_type == "s2_int":
         return [int(s2.geo_to_s2(lat, lon, res), 16) for lat, lon in zip(lats, lons)]  # int data type requires less memory
     elif cell_type == "h3":
-        return [h3.geo_to_h3(lat, lon, res) for lat, lon in zip(lats, lons)]
+        return [h3.latlng_to_cell(lat, lon, res) for lat, lon in zip(lats, lons)]
     else:
         raise ValueError(f"Unsupported cell type: {cell_type}. Choose 'geohash', 's2', 's2_int', or 'h3'.")
 
 
 def cellpoint(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float, float]]:
     """
-    Converts a list of cell IDs into their corresponding latitude and longitude points.
+    Converts a list of cell IDs into their corresponding centroids.
 
     This function supports various cell ID types: 'geohash', 'h3', 's2_int' (integer-based S2 cells),
     and 's2' (token-based S2 cells). For each cell in the list, it returns the latitude and longitude
@@ -119,7 +119,7 @@ def cellpoint(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float,
     if cell_type == "geohash":
         return [pygeohash.decode(cell) for cell in cells]
     elif cell_type == "h3":
-        return [h3.h3_to_geo(cell) for cell in cells]
+        return [h3.cell_to_latlng(cell) for cell in cells]
     elif cell_type == "s2_int":
         return [(s2.CellId(cell).to_lat_lng().lat().degrees, s2.CellId(cell).to_lat_lng().lng().degrees) for cell in cells]
     elif cell_type == "s2":
@@ -173,6 +173,7 @@ def polycell(geoms: List[Union[Polygon, MultiPolygon]], cell_type: str, res: int
     >>> # Convert geometries to S2 cells and save to a directory
     >>> polycell(geometries, cell_type="s2", res=10, dump="~/Desktop/spatial_cells")
     """
+
     polys = []
     for geom in geoms:
         if geom.geom_type == "Polygon":
@@ -180,23 +181,12 @@ def polycell(geoms: List[Union[Polygon, MultiPolygon]], cell_type: str, res: int
         elif geom.geom_type == "MultiPolygon":  # If MultiPolygon, extract each Polygon separately
             polys += [g.__geo_interface__ for g in geom.geoms]
 
-    cells = []
     if cell_type == "geohash":
-        cells = set()
-        for geom in geoms:
-            cells |= polygon_to_geohashes(geom, precision=res, inner=False)  # Collect Geohashes for each Polygon
-        cells = list(cells)
-
+        cells = list({geohash for geom in geoms for geohash in polygon_to_geohashes(geom, precision=res, inner=False)})
     elif cell_type == "s2":
-        for poly in polys:
-            cells += s2.polyfill(poly, res, geo_json_conformant=True, with_id=True)  # Use S2 to fill each Polygon
-        cells = [item["id"] for item in cells]  # Keep only the cell IDs
-        cells = list(set(cells))  # Remove duplicates
-
+        cells = list({item["id"] for poly in polys for item in s2.polyfill(poly, res, geo_json_conformant=True, with_id=True)})
     elif cell_type == "h3":
-        for poly in polys:
-            cells += h3.geo_to_cells(poly, res)
-
+        cells = [cell for poly in polys for cell in h3.geo_to_cells(poly, res)]
     else:
         raise ValueError(f"Unsupported cell type: {cell_type}. Choose 'geohash', 's2', or 'h3'.")
 
