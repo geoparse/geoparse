@@ -92,10 +92,7 @@
 <li><a class="reference internal" href="#geoparse.osm.ways_to_geom"><code class="docutils literal notranslate"><span class="pre">ways_to_geom()</span></code></a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#module-geoparse.pprocessing">geoparse.pprocessing module</a><ul>
-<li><a class="reference internal" href="#geoparse.pprocessing.parallelize"><code class="docutils literal notranslate"><span class="pre">parallelize()</span></code></a></li>
-</ul>
-</li>
+<li><a class="reference internal" href="#geoparse-pprocessing-module">geoparse.pprocessing module</a></li>
 <li><a class="reference internal" href="#module-geoparse">Module contents</a></li>
 </ul>
 </li>
@@ -135,7 +132,7 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="geoparse.gindex.cellpoint">
 <span class="sig-prename descclassname"><span class="pre">geoparse.gindex.</span></span><span class="sig-name descname"><span class="pre">cellpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cells</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/geoparse/gindex.html#cellpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#geoparse.gindex.cellpoint" title="Link to this definition"></a></dt>
-<dd><p>Converts a list of cell IDs into their corresponding latitude and longitude points.</p>
+<dd><p>Converts a list of cell IDs into their corresponding centroids.</p>
 <p>This function supports various cell ID types: ‘geohash’, ‘h3’, ‘s2_int’ (integer-based S2 cells),
 and ‘s2’ (token-based S2 cells). For each cell in the list, it returns the latitude and longitude
 of the cell’s center.</p>
@@ -1601,62 +1598,8 @@ the “geometry” attribute to contain the coordinates.</p></li>
 </dd></dl>
 
 </section>
-<section id="module-geoparse.pprocessing">
-<span id="geoparse-pprocessing-module"></span><h2>geoparse.pprocessing module<a class="headerlink" href="#module-geoparse.pprocessing" title="Link to this heading"></a></h2>
-<dl class="py function">
-<dt class="sig sig-object py" id="geoparse.pprocessing.parallelize">
-<span class="sig-prename descclassname"><span class="pre">geoparse.pprocessing.</span></span><span class="sig-name descname"><span class="pre">parallelize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">function</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/geoparse/pprocessing.html#parallelize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#geoparse.pprocessing.parallelize" title="Link to this definition"></a></dt>
-<dd><p>Parallelizes the execution of a function across multiple CPU cores for a given DataFrame.</p>
-<p>This function splits the input DataFrame into chunks based on the number of available CPU cores
-and applies the specified function in parallel to each chunk using the <cite>multiprocess</cite> library.
-It then concatenates the results back into a single DataFrame.</p>
-<p>The <cite>multiprocessing</cite> module has a major limitation when it comes to IPython use.
-<cite>multiprocess</cite> is a fork of the <cite>multiprocessing</cite> module which uses <cite>dill</cite> instead of <cite>pickle</cite>
-for serialization and overcomes this issue conveniently.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>function</strong> (<em>Callable</em><em>[</em><em>[</em><em>pd.DataFrame</em><em>]</em><em>, </em><em>pd.DataFrame</em><em>]</em>) – A function that processes a chunk of the DataFrame and returns a transformed DataFrame.</p></li>
-<li><p><strong>df</strong> (<em>pd.DataFrame</em>) – The DataFrame to be processed in parallel.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The resulting DataFrame after applying the function to all chunks in parallel.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>pd.DataFrame</p>
-</dd>
-</dl>
-<p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">multiprocess</span> <span class="kn">import</span> <span class="n">Pool</span>
-</pre></div>
-</div>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">sample_function</span><span class="p">(</span><span class="n">chunk</span><span class="p">):</span>
-<span class="gp">... </span>    <span class="n">chunk</span><span class="p">[</span><span class="s2">&quot;new_column&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">chunk</span><span class="p">[</span><span class="s2">&quot;existing_column&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="mi">2</span>
-<span class="gp">... </span>    <span class="k">return</span> <span class="n">chunk</span>
-</pre></div>
-</div>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create a sample DataFrame</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">input_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;existing_column&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]})</span>
-</pre></div>
-</div>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Apply the function to the DataFrame in parallel</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">result_df</span> <span class="o">=</span> <span class="n">parallelize</span><span class="p">(</span><span class="n">sample_function</span><span class="p">,</span> <span class="n">input_df</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">result_df</span><span class="p">)</span>
-<span class="go">   existing_column  new_column</span>
-<span class="go">0                1           2</span>
-<span class="go">1                2           4</span>
-<span class="go">2                3           6</span>
-<span class="go">3                4           8</span>
-</pre></div>
-</div>
-<p class="rubric">Notes</p>
-<p>This function uses the <cite>multiprocess</cite> library instead of the standard <cite>multiprocessing</cite> module
-because <cite>multiprocess</cite> supports a broader range of serialization scenarios, making it more
-suitable for use with IPython and Jupyter notebooks.</p>
-</dd></dl>
-
+<section id="geoparse-pprocessing-module">
+<h2>geoparse.pprocessing module<a class="headerlink" href="#geoparse-pprocessing-module" title="Link to this heading"></a></h2>
 </section>
 <section id="module-geoparse">
 <span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-geoparse" title="Link to this heading"></a></h2>
