@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import pyproj
 import requests
-from shapely.geometry import MultiPolygon, Point, Polygon
+from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import transform
 
@@ -86,7 +86,7 @@ def geom_stats(geom: Optional[Union[Polygon, MultiPolygon]] = None, unit: str = 
         return [n_shells, n_holes, n_shell_points, round(area / 1_000_000), round(border / 1000)]
 
 
-def find_proj(geom: Union[Point, Polygon, MultiPolygon]) -> str:
+def find_proj(geom: Union[Point, LineString, Polygon, MultiPolygon]) -> str:
     """
     Determines the appropriate UTM zone projection for a given geometry.
 
@@ -96,7 +96,7 @@ def find_proj(geom: Union[Point, Polygon, MultiPolygon]) -> str:
 
     Parameters
     ----------
-    geom : Point, Polygon, or MultiPolygon
+    geom : Point, LineString, Polygon, or MultiPolygon
         A Shapely geometry object, which can be a Point, Polygon, or MultiPolygon.
 
     Returns
