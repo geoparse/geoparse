@@ -321,21 +321,22 @@ def vincenty(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 
 def bearing(geom):
-    dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
-    bidirs = ['N-S', 'NE-SW', 'E-W', 'NW-SE'] 
+    dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+    bidirs = ["N-S", "NE-SW", "E-W", "NW-SE"]
 
     # if coords[0] = coords[-1] the function returns 90 degrees
     if geom.coords[0] == geom.coords[-1]:
-        return -1, -1, 'LOOP', 'LOOP'
+        return -1, -1, "LOOP", "LOOP"
     else:
         x0, y0 = geom.coords[0]
         x1, y1 = geom.coords[-1]
-    
-        angle = math.atan2(y1-y0, x1-x0) * 180/math.pi
-        bearing = (450-angle)%360  # the angle between North and road segment 
-        
-        ix = round(bearing/45)
-        return round(bearing), round(bearing)%180, dirs[ix%8], bidirs[ix%4]
+
+        angle = math.atan2(y1 - y0, x1 - x0) * 180 / math.pi
+        bearing = (450 - angle) % 360  # the angle between North and road segment
+
+        ix = round(bearing / 45)
+        return round(bearing), round(bearing) % 180, dirs[ix % 8], bidirs[ix % 4]
+
 
 def flatten_3d(geom: gpd.GeoSeries) -> List[Union[Polygon, MultiPolygon]]:
     """
