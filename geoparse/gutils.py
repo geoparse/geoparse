@@ -320,7 +320,7 @@ def vincenty(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return s
 
 
-def bearing(geom: LineString):
+def bearing(geom: LineString) -> tuple[int, int, str, str]:
     """
     Calculate the bearing and cardinal directions of a LineString.
 
@@ -331,7 +331,7 @@ def bearing(geom: LineString):
 
     Returns
     -------
-    tuple
+    tuple[int, int, str, str]
         A tuple containing:
         - `bearing` (int): The bearing angle in degrees (0 to 359).
         - `axis_bearing` (int): The axis bearing in degrees (0 to 179).
