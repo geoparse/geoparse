@@ -320,11 +320,45 @@ def vincenty(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return s
 
 
-def bearing(geom):
+def bearing(geom: LineString):
+    """
+    Calculate the bearing and cardinal directions of a LineString.
+
+    Parameters
+    ----------
+    geom : shapely.geometry.LineString
+        The input geometry for which the bearing is calculated.
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - `bearing` (int): The bearing angle in degrees (0 to 359).
+        - `axis_bearing` (int): The axis bearing in degrees (0 to 179).
+        - `cardinal_direction` (str): The cardinal direction (e.g., "N", "NE").
+        - `axis_direction` (str): The cardinal axis direction (e.g., "N-S", "E-W").
+        Returns (-1, -1, "LOOP", "LOOP") if the LineString forms a loop.
+
+    Notes
+    -----
+    The bearing is calculated based on the angle between the starting and
+    ending points of the LineString, relative to North.
+
+    Examples
+    --------
+    >>> from shapely.geometry import LineString
+    >>> geom = LineString([(0, 0), (1, 1)])
+    >>> bearing(geom)
+    (45, 45, 'NE', 'NE-SW')
+
+    >>> loop_geom = LineString([(0, 0), (1, 1), (0, 0)])
+    >>> bearing(loop_geom)
+    (-1, -1, 'LOOP', 'LOOP')
+    """
     dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
     bidirs = ["N-S", "NE-SW", "E-W", "NW-SE"]
 
-    # if coords[0] = coords[-1] the function returns 90 degrees
+    # Check if the LineString is a loop
     if geom.coords[0] == geom.coords[-1]:
         return -1, -1, "LOOP", "LOOP"
     else:
@@ -332,7 +366,7 @@ def bearing(geom):
         x1, y1 = geom.coords[-1]
 
         angle = math.atan2(y1 - y0, x1 - x0) * 180 / math.pi
-        bearing = (450 - angle) % 360  # the angle between North and road segment
+        bearing = (450 - angle) % 360  # Angle between North and the road segment
 
         ix = round(bearing / 45)
         return round(bearing), round(bearing) % 180, dirs[ix % 8], bidirs[ix % 4]
