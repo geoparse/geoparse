@@ -76,7 +76,7 @@
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 <span class="kn">import</span> <span class="nn">pyproj</span>
 <span class="kn">import</span> <span class="nn">requests</span>
-<span class="kn">from</span> <span class="nn">shapely.geometry</span> <span class="kn">import</span> <span class="n">MultiPolygon</span><span class="p">,</span> <span class="n">Point</span><span class="p">,</span> <span class="n">Polygon</span>
+<span class="kn">from</span> <span class="nn">shapely.geometry</span> <span class="kn">import</span> <span class="n">LineString</span><span class="p">,</span> <span class="n">MultiPolygon</span><span class="p">,</span> <span class="n">Point</span><span class="p">,</span> <span class="n">Polygon</span>
 <span class="kn">from</span> <span class="nn">shapely.geometry.base</span> <span class="kn">import</span> <span class="n">BaseGeometry</span>
 <span class="kn">from</span> <span class="nn">shapely.ops</span> <span class="kn">import</span> <span class="n">transform</span>
 
@@ -159,7 +159,7 @@
 
 <div class="viewcode-block" id="find_proj">
 <a class="viewcode-back" href="../../geoparse.html#geoparse.gutils.find_proj">[docs]</a>
-<span class="k">def</span> <span class="nf">find_proj</span><span class="p">(</span><span class="n">geom</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Point</span><span class="p">,</span> <span class="n">Polygon</span><span class="p">,</span> <span class="n">MultiPolygon</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="k">def</span> <span class="nf">find_proj</span><span class="p">(</span><span class="n">geom</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Point</span><span class="p">,</span> <span class="n">LineString</span><span class="p">,</span> <span class="n">Polygon</span><span class="p">,</span> <span class="n">MultiPolygon</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Determines the appropriate UTM zone projection for a given geometry.</span>
 
@@ -169,7 +169,7 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    geom : Point, Polygon, or MultiPolygon</span>
+<span class="sd">    geom : Point, LineString, Polygon, or MultiPolygon</span>
 <span class="sd">        A Shapely geometry object, which can be a Point, Polygon, or MultiPolygon.</span>
 
 <span class="sd">    Returns</span>
@@ -400,6 +400,61 @@
     <span class="n">s</span> <span class="o">=</span> <span class="n">b</span> <span class="o">*</span> <span class="n">aa</span> <span class="o">*</span> <span class="p">(</span><span class="n">sigma</span> <span class="o">-</span> <span class="n">delta_sigma</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">s</span></div>
+
+
+
+<div class="viewcode-block" id="bearing">
+<a class="viewcode-back" href="../../geoparse.html#geoparse.gutils.bearing">[docs]</a>
+<span class="k">def</span> <span class="nf">bearing</span><span class="p">(</span><span class="n">geom</span><span class="p">:</span> <span class="n">LineString</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the bearing and cardinal directions of a LineString.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    geom : shapely.geometry.LineString</span>
+<span class="sd">        The input geometry for which the bearing is calculated.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple[int, int, str, str]</span>
+<span class="sd">        A tuple containing:</span>
+<span class="sd">        - `bearing` (int): The bearing angle in degrees (0 to 359).</span>
+<span class="sd">        - `axis_bearing` (int): The axis bearing in degrees (0 to 179).</span>
+<span class="sd">        - `cardinal_direction` (str): The cardinal direction (e.g., &quot;N&quot;, &quot;NE&quot;).</span>
+<span class="sd">        - `axis_direction` (str): The cardinal axis direction (e.g., &quot;N-S&quot;, &quot;E-W&quot;).</span>
+<span class="sd">        Returns (-1, -1, &quot;LOOP&quot;, &quot;LOOP&quot;) if the LineString forms a loop.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    The bearing is calculated based on the angle between the starting and</span>
+<span class="sd">    ending points of the LineString, relative to North.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from shapely.geometry import LineString</span>
+<span class="sd">    &gt;&gt;&gt; geom = LineString([(0, 0), (1, 1)])</span>
+<span class="sd">    &gt;&gt;&gt; bearing(geom)</span>
+<span class="sd">    (45, 45, &#39;NE&#39;, &#39;NE-SW&#39;)</span>
+
+<span class="sd">    &gt;&gt;&gt; loop_geom = LineString([(0, 0), (1, 1), (0, 0)])</span>
+<span class="sd">    &gt;&gt;&gt; bearing(loop_geom)</span>
+<span class="sd">    (-1, -1, &#39;LOOP&#39;, &#39;LOOP&#39;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cardinal_dirs</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;N&quot;</span><span class="p">,</span> <span class="s2">&quot;NE&quot;</span><span class="p">,</span> <span class="s2">&quot;E&quot;</span><span class="p">,</span> <span class="s2">&quot;SE&quot;</span><span class="p">,</span> <span class="s2">&quot;S&quot;</span><span class="p">,</span> <span class="s2">&quot;SW&quot;</span><span class="p">,</span> <span class="s2">&quot;W&quot;</span><span class="p">,</span> <span class="s2">&quot;NW&quot;</span><span class="p">]</span>
+    <span class="n">axis_dirs</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;N-S&quot;</span><span class="p">,</span> <span class="s2">&quot;NE-SW&quot;</span><span class="p">,</span> <span class="s2">&quot;E-W&quot;</span><span class="p">,</span> <span class="s2">&quot;NW-SE&quot;</span><span class="p">]</span>
+
+    <span class="c1"># Check if the LineString is a loop</span>
+    <span class="k">if</span> <span class="n">geom</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">geom</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;LOOP&quot;</span><span class="p">,</span> <span class="s2">&quot;LOOP&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">x0</span><span class="p">,</span> <span class="n">y0</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">x1</span><span class="p">,</span> <span class="n">y1</span> <span class="o">=</span> <span class="n">geom</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">angle</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">atan2</span><span class="p">(</span><span class="n">y1</span> <span class="o">-</span> <span class="n">y0</span><span class="p">,</span> <span class="n">x1</span> <span class="o">-</span> <span class="n">x0</span><span class="p">)</span> <span class="o">*</span> <span class="mi">180</span> <span class="o">/</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span>
+        <span class="n">bearing</span> <span class="o">=</span> <span class="p">(</span><span class="mi">450</span> <span class="o">-</span> <span class="n">angle</span><span class="p">)</span> <span class="o">%</span> <span class="mi">360</span>  <span class="c1"># Angle between North and the road segment</span>
+
+        <span class="n">ix</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">bearing</span> <span class="o">/</span> <span class="mi">45</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">round</span><span class="p">(</span><span class="n">bearing</span><span class="p">),</span> <span class="nb">round</span><span class="p">(</span><span class="n">bearing</span><span class="p">)</span> <span class="o">%</span> <span class="mi">180</span><span class="p">,</span> <span class="n">cardinal_dirs</span><span class="p">[</span><span class="n">ix</span> <span class="o">%</span> <span class="mi">8</span><span class="p">],</span> <span class="n">axis_dirs</span><span class="p">[</span><span class="n">ix</span> <span class="o">%</span> <span class="mi">4</span><span class="p">]</span></div>
 
 
 

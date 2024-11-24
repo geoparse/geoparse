@@ -59,6 +59,7 @@
 </ul>
 </li>
 <li><a class="reference internal" href="#module-geoparse.gutils">geoparse.gutils module</a><ul>
+<li><a class="reference internal" href="#geoparse.gutils.bearing"><code class="docutils literal notranslate"><span class="pre">bearing()</span></code></a></li>
 <li><a class="reference internal" href="#geoparse.gutils.find_proj"><code class="docutils literal notranslate"><span class="pre">find_proj()</span></code></a></li>
 <li><a class="reference internal" href="#geoparse.gutils.flatten_3d"><code class="docutils literal notranslate"><span class="pre">flatten_3d()</span></code></a></li>
 <li><a class="reference internal" href="#geoparse.gutils.geocoding_google"><code class="docutils literal notranslate"><span class="pre">geocoding_google()</span></code></a></li>
@@ -604,15 +605,52 @@ compact tokens, expanded to the specified resolution level.</p>
 <section id="module-geoparse.gutils">
 <span id="geoparse-gutils-module"></span><h2>geoparse.gutils module<a class="headerlink" href="#module-geoparse.gutils" title="Link to this heading"></a></h2>
 <dl class="py function">
+<dt class="sig sig-object py" id="geoparse.gutils.bearing">
+<span class="sig-prename descclassname"><span class="pre">geoparse.gutils.</span></span><span class="sig-name descname"><span class="pre">bearing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">geom</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">LineString</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/geoparse/gutils.html#bearing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#geoparse.gutils.bearing" title="Link to this definition"></a></dt>
+<dd><p>Calculate the bearing and cardinal directions of a LineString.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>geom</strong> (<em>shapely.geometry.LineString</em>) – The input geometry for which the bearing is calculated.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A tuple containing:
+- <cite>bearing</cite> (int): The bearing angle in degrees (0 to 359).
+- <cite>axis_bearing</cite> (int): The axis bearing in degrees (0 to 179).
+- <cite>cardinal_direction</cite> (str): The cardinal direction (e.g., “N”, “NE”).
+- <cite>axis_direction</cite> (str): The cardinal axis direction (e.g., “N-S”, “E-W”).
+Returns (-1, -1, “LOOP”, “LOOP”) if the LineString forms a loop.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple[int, int, str, str]</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The bearing is calculated based on the angle between the starting and
+ending points of the LineString, relative to North.</p>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">shapely.geometry</span> <span class="kn">import</span> <span class="n">LineString</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">geom</span> <span class="o">=</span> <span class="n">LineString</span><span class="p">([(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bearing</span><span class="p">(</span><span class="n">geom</span><span class="p">)</span>
+<span class="go">(45, 45, &#39;NE&#39;, &#39;NE-SW&#39;)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">loop_geom</span> <span class="o">=</span> <span class="n">LineString</span><span class="p">([(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bearing</span><span class="p">(</span><span class="n">loop_geom</span><span class="p">)</span>
+<span class="go">(-1, -1, &#39;LOOP&#39;, &#39;LOOP&#39;)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="geoparse.gutils.find_proj">
-<span class="sig-prename descclassname"><span class="pre">geoparse.gutils.</span></span><span class="sig-name descname"><span class="pre">find_proj</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">geom</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Point</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Polygon</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">MultiPolygon</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/geoparse/gutils.html#find_proj"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#geoparse.gutils.find_proj" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">geoparse.gutils.</span></span><span class="sig-name descname"><span class="pre">find_proj</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">geom</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Point</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">LineString</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Polygon</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">MultiPolygon</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/geoparse/gutils.html#find_proj"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#geoparse.gutils.find_proj" title="Link to this definition"></a></dt>
 <dd><p>Determines the appropriate UTM zone projection for a given geometry.</p>
 <p>Calculates the Universal Transverse Mercator (UTM) zone projection based on the centroid
 coordinates of the input geometry. The function returns the corresponding EPSG code for
 the UTM zone in which the geometry is located.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>geom</strong> (<em>Point</em><em>, </em><em>Polygon</em><em>, or </em><em>MultiPolygon</em>) – A Shapely geometry object, which can be a Point, Polygon, or MultiPolygon.</p>
+<dd class="field-odd"><p><strong>geom</strong> (<em>Point</em><em>, </em><em>LineString</em><em>, </em><em>Polygon</em><em>, or </em><em>MultiPolygon</em>) – A Shapely geometry object, which can be a Point, Polygon, or MultiPolygon.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The EPSG code representing the UTM projection for the geometry’s location. For the
