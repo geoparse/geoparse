@@ -355,8 +355,8 @@ def bearing(geom: LineString) -> tuple[int, int, str, str]:
     >>> bearing(loop_geom)
     (-1, -1, 'LOOP', 'LOOP')
     """
-    dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
-    bidirs = ["N-S", "NE-SW", "E-W", "NW-SE"]
+    cardinal_dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+    axis_dirs = ["N-S", "NE-SW", "E-W", "NW-SE"]
 
     # Check if the LineString is a loop
     if geom.coords[0] == geom.coords[-1]:
@@ -369,7 +369,7 @@ def bearing(geom: LineString) -> tuple[int, int, str, str]:
         bearing = (450 - angle) % 360  # Angle between North and the road segment
 
         ix = round(bearing / 45)
-        return round(bearing), round(bearing) % 180, dirs[ix % 8], bidirs[ix % 4]
+        return round(bearing), round(bearing) % 180, cardinal_dirs[ix % 8], axis_dirs[ix % 4]
 
 
 def flatten_3d(geom: gpd.GeoSeries) -> List[Union[Polygon, MultiPolygon]]:
