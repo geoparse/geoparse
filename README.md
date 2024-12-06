@@ -2,25 +2,17 @@
 <h1 align="center">GeoParse</h1>
 <h3 align="center">It's all about points <img src="tutorials/data/point.png" width="10"/> lines <img src="tutorials/data/line.png" width="40"/> and polygons <img src="tutorials/data/polygon.png" width="30"/></h3>
 
+---
 
-#### [Website](http://geoparse.io) | [Google Scholar](https://scholar.google.com/citations?user=OVFGLWQAAAAJ&hl=en) | [GitHub](https://github.com/kiasari) | [LinkedIn](https://www.linkedin.com/in/a-kiasari)
-
-***
-
-
-
-
-
+[![GeoParse](https://img.shields.io/badge/GeoParse-008000.svg)](https://geoparse.io)
 [![License](https://img.shields.io/github/license/geoparse/geospatial)](https://github.com/geoparse/geospatial/blob/main/LICENSE)
-[![PythonVersion]( https://img.shields.io/badge/3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/)
+[![PythonVersion](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue?style=flat&logo=python&logoColor=white&labelColor=gray)](https://www.python.org/)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-Ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Contributors](https://img.shields.io/github/contributors/geoparse/geospatial)](https://github.com/geoparse/geospatial/graphs/contributors)
-
-
 
 GeoParse is a Python library designed for the visualization, analysis, and manipulation of vector geospatial data. It builds on top of popular libraries like GeoPandas and Folium, providing a powerful toolkit for working with geospatial data. GeoParse focuses on efficient geospatial indexing, geometry manipulations, and utilities to handle OpenStreetMap data with ease.
 
 ---
-
 
 ## Key Features
 * Efficient geospatial indexing using grid-based systems (H3, S2, Geohash)
