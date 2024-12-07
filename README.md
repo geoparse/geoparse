@@ -43,3 +43,11 @@ The official API documentation is hosted on [ReadTheDocs](https://geo-parse.read
 You can run [GeoParse examples](https://github.com/geoparse/geoparse/tree/main/tutorials) on MyBinder. No installation required. [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/geoparse/geoparse/main?labpath=tutorials%2F00_visualization.ipynb)
 
 To try the cutting-edge dev version, use this MyBinder link.
+
+### Polygon
+
+```python
+gdf = gpd.read_file("data/london.geojson")
+plp(gdf)
+```
+![London](graphics/london.png)
