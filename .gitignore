@@ -11,9 +11,6 @@ __pycache__/
 *.bak
 *.swp
 
-# graphics files
-graphics/
-
 # Distribution / packaging
 .Python
 build/
