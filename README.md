@@ -51,3 +51,12 @@ gdf = gpd.read_file("data/london.geojson")
 plp(gdf)
 ```
 ![London](graphics/london.png)
+
+---
+### OSM Ways
+```python
+plp(osm_ways=[335265936, 53820456, 1117218957], s2_res=22, compact=True)
+```
+![London](graphics/osm_ways_2.png)
+
+---
