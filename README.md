@@ -49,22 +49,18 @@ df = pd.read_csv("data/great_britain_road_casualties-2023.csv")
 df.head()
 ```
 
-`df = pd.read_csv("data/great_britain_road_casualties-2023.csv")`
-
-`df.head()`
-
-
 ![](tutorials/graphics/casualty_df.png)
 
 ```python
 plp(df)
 ```
-![](tutorials/graphics/casualty_map.png) 
+![](tutorials/graphics/casualty_map.gif)
+
 
 ```python
-plp(df, heatmap=True)
+plp(df, heatmap=True, cluster=True)
 ```
-![](tutorials/graphics/casualty_heatmap.gif) 
+![](tutorials/graphics/casualty_heatmap_cluster.gif) 
 
 
 
