@@ -43,6 +43,30 @@ The official API documentation is hosted on [ReadTheDocs](https://geo-parse.read
 You can run [GeoParse examples](https://github.com/geoparse/geoparse/tree/main/tutorials) on MyBinder. No installation required. [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/geoparse/geoparse/main?labpath=tutorials%2F00_visualization.ipynb)
 
 To try the cutting-edge dev version, use this MyBinder link.
+### Point
+```python
+df = pd.read_csv("data/great_britain_road_casualties-2023.csv")
+df.head()
+```
+
+`df = pd.read_csv("data/great_britain_road_casualties-2023.csv")`
+
+`df.head()`
+
+
+![](tutorials/graphics/casualty_df.png)
+
+```python
+plp(df)
+```
+![](tutorials/graphics/casualty_map.png) 
+
+```python
+plp(df, heatmap=True)
+```
+![](tutorials/graphics/casualty_heatmap.gif) 
+
+
 
 ### Polygon
 
@@ -50,7 +74,7 @@ To try the cutting-edge dev version, use this MyBinder link.
 gdf = gpd.read_file("data/london.geojson")
 plp(gdf)
 ```
-![London](tutorials/graphics/london.png)
+![](tutorials/graphics/london.png)
 
 ---
 ### OSM Ways
