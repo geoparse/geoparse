@@ -1,3 +1,4 @@
+
 <h1 align="center"><img align="center" src="tutorials/data/geoparse_logo.png" alt="GeoParse Logo" width="200"/></h1>
 <h1 align="center">GeoParse</h1>
 <h3 align="center">It's all about points <img src="tutorials/data/point.png" width="10"/> lines <img src="tutorials/data/line.png" width="40"/> and polygons <img src="tutorials/data/polygon.png" width="30"/></h3>
@@ -48,19 +49,12 @@ To try the cutting-edge dev version, use this MyBinder link.
 df = pd.read_csv("data/great_britain_road_casualties-2023.csv")
 df.head()
 ```
-
 ![](tutorials/graphics/casualty_df.png)
 
 ```python
-plp(df)
+plp(df)                                        plp(df, heatmap=True, cluster=True)
 ```
-![](tutorials/graphics/casualty_map.gif)
-
-
-```python
-plp(df, heatmap=True, cluster=True)
-```
-![](tutorials/graphics/casualty_heatmap_cluster.gif) 
+<img src="tutorials/graphics/casualty_map.gif" alt="Sample Image" width="400" height="150">    <img src="tutorials/graphics/casualty_heatmap_cluster.gif" alt="Sample Image" width="400" height="150">
 
 
 
