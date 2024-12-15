@@ -182,13 +182,20 @@ def base_map(sw: list or tuple, ne: list or tuple) -> folium.Map:
 
     # Dictionary of tile layers to be added
     tiles = {
-        "cartodbpositron": "Bright Mode",
-        "cartodbdark_matter": "Dark Mode",
+        "cartodbpositron": "Light",
+        "cartodbdark_matter": "Dark",
     }
 
     # Add each tile layer to the map
     for item in tiles:
         folium.TileLayer(item, name=tiles[item], max_zoom=21).add_to(karta)
+
+    # Add OpenTopoMap as a tile layer
+    folium.TileLayer(
+        tiles="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+        attr="Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)",
+        name="Outdoors"
+    ).add_to(karta)
 
     # Add a satellite tile layer (Esri World Imagery)
     folium.TileLayer(
@@ -201,7 +208,7 @@ def base_map(sw: list or tuple, ne: list or tuple) -> folium.Map:
     ).add_to(karta)
 
     # Add OpenStreetMap (OSM) tile layer
-    folium.TileLayer("openstreetmap", name="OpenStreetMap", max_zoom=19).add_to(karta)
+    folium.TileLayer("openstreetmap", name="OSM", max_zoom=19).add_to(karta)
 
     # Fit the map's view to the bounding box defined by the southwest and northeast coordinates
     karta.fit_bounds([sw, ne])
