@@ -51,11 +51,10 @@ df.head()
 ```
 ![](tutorials/graphics/casualty_df.png)
 
-```python
-plp(df)                                        plp(df, heatmap=True, cluster=True)
-```
-<img src="tutorials/graphics/casualty_map.gif" alt="Sample Image" width="400" height="480">    <img src="tutorials/graphics/casualty_heatmap_cluster.gif" alt="Sample Image" width="400" height="480">
-
+|                                                                                               |                                                                                                          |
+|-----------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|
+|`plp(df)`                                                                                      | `plp(df, heatmap=True, cluster=True)`                                                                    |
+|<img src="tutorials/graphics/casualty_map.gif" alt="Sample Image" width="400" height="480">    | <img src="tutorials/graphics/casualty_heatmap_cluster.gif" alt="Sample Image" width="400" height="480">  |
 
 
 ### Polygon
