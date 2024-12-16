@@ -60,7 +60,8 @@ GeoParse can visualize the vector data on a map with the following tile layers.
 
 | Light | Dark |
 | ----- | ---- | 
-| <img src="tutorials/graphics/light.png"> | <img src="tutorials/graphics/dark.png"> |
+| A minimalist, light-colored basemap that serves as a subtle background, emphasizing overlaid data on dashboards and visualizations. | A high-contrast, dark-themed map that is ideal for vibrant data overlays and nighttime aesthetics. |
+| <img src="tutorials/graphics/light.png" height="400"> | <img src="tutorials/graphics/dark.png" height="400"> |
 
 | Outdoors | Satellite |
 | -------- | --------- | 
