@@ -38,6 +38,32 @@ We recommend starting your GeoParse journey with the [tutorial notebooks](https:
 The official API documentation is hosted on [ReadTheDocs](https://geo-parse.readthedocs.io/en/latest/)
 
 ---
+## Tile Layers
+
+GeoParse can visualize the vector data on a map with the following tile layers.
+
+- **Light**  
+  A minimalist, light-colored basemap that serves as a subtle background, emphasizing overlaid data on dashboards and visualizations.
+  
+- **Dark**  
+  A high-contrast, dark-themed map that is ideal for vibrant data overlays and nighttime aesthetics.
+
+- **Outdoors**  
+  Designed for outdoor enthusiasts, it features hiking trails, biking paths, natural landmarks, and elevation contours.
+
+- **Satellite**  
+  A basemap displaying satellite imagery of the Earth's surface, useful for real-world visual context, remote sensing, or analyses requiring detailed imagery.
+
+  
+- **OSM (OpenStreetMap)**  
+  A general-purpose map powered by OpenStreetMap, showcasing roads, buildings, and points of interest.
+
+| Light | Dark | Outdoors | Satellite | OSM |
+| ----- | ---- | -------- | --------- | --- | 
+| <img src="tutorials/graphics/light.png"> | <img src="tutorials/graphics/dark.png"> | <img src="tutorials/graphics/outdoors.png"> | <img src="tutorials/graphics/satellite.png"> | <img src="tutorials/graphics/osm.png"> |
+
+
+---
 
 ## Examples
 
@@ -51,10 +77,10 @@ df.head()
 ```
 ![](tutorials/graphics/casualty_df.png)
 
-|                                                                                               |                                                                                                          |
-|-----------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|
-|`plp(df)`                                                                                      | `plp(df, heatmap=True, cluster=True)`                                                                    |
-|<img src="tutorials/graphics/casualty_map.gif" alt="Sample Image" width="400" height="480">    | <img src="tutorials/graphics/casualty_heatmap_cluster.gif" alt="Sample Image" width="400" height="480">  |
+| | |
+|-|-|
+| `plp(df)` | `plp(df, heatmap=True, cluster=True)` |
+|<img src="tutorials/graphics/casualty_map.gif" width="400" height="480"> | <img src="tutorials/graphics/casualty_heatmap_cluster.gif" width="400" height="480"> |
 
 
 ### Polygon
