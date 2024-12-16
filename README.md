@@ -68,6 +68,29 @@ GeoParse can visualize the vector data on a map with the following tile layers.
 | Designed for outdoor enthusiasts, featuring hiking trails, biking paths, natural landmarks, and elevation contours. | A basemap displaying satellite imagery of the Earth's surface, useful for real-world context and analyses requiring detailed imagery. |
 | <img src="tutorials/graphics/outdoors.png" width="400" height="400">                              | <img src="tutorials/graphics/satellite.png" width="400" height="400">                           |
 
+| OSM                                                                                               |                                                                                                  |
+| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| A general-purpose map powered by OpenStreetMap, showcasing roads, buildings, and points of interest. |                                                                                                  |
+| <img src="tutorials/graphics/osm.png" width="400" height="400">                                   |                                                                                                  |
+
+
+
+
+
+
+
+
+
+| Light                                                                                               | Dark                                                                                                |
+| --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | 
+| A minimalist, light-colored basemap that serves as a subtle background, emphasizing overlaid data. | A high-contrast, dark-themed map ideal for vibrant data overlays and nighttime aesthetics.         |
+| <img src="tutorials/graphics/light.png" width="400" height="400">                                  | <img src="tutorials/graphics/dark.png" width="400" height="400">                                  |
+
+| Outdoors                                                                                          | Satellite                                                                                       |
+| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Designed for outdoor enthusiasts, featuring hiking trails, biking paths, natural landmarks, and elevation contours. | A basemap displaying satellite imagery of the Earth's surface, useful for real-world context and analyses requiring detailed imagery. |
+| <img src="tutorials/graphics/outdoors.png" width="400" height="400">                              | <img src="tutorials/graphics/satellite.png" width="400" height="400">                           |
+
 | OSM |
 | --- |
 | A general-purpose map powered by OpenStreetMap, showcasing roads, buildings, and points of interest. |
