@@ -58,6 +58,9 @@ GeoParse can visualize the vector data on a map with the following tile layers.
 - **OSM (OpenStreetMap)**  
   A general-purpose map powered by OpenStreetMap, showcasing roads, buildings, and points of interest.
 
+
+
+
 | Light | Dark |
 | ----- | ---- | 
 | A minimalist, light-colored basemap that serves as a subtle background, emphasizing overlaid data on dashboards and visualizations. | A high-contrast, dark-themed map that is ideal for vibrant data overlays and nighttime aesthetics.                                  |
