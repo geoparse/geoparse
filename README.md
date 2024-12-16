@@ -62,13 +62,13 @@ GeoParse can visualize the vector data on a map with the following tile layers.
 | ----- | ---- | 
 | <img src="tutorials/graphics/light.png"> | <img src="tutorials/graphics/dark.png"> |
 
-| Outdoors | Satellite | OSM |
-| ----- | ---- | -------- | 
-| <img src="tutorials/graphics/outdoors.png"> | <img src="tutorials/graphics/satellite.png"> | <img src="tutorials/graphics/osm.png"> |
+| Outdoors | Satellite |
+| -------- | --------- | 
+| <img src="tutorials/graphics/outdoors.png"> | <img src="tutorials/graphics/satellite.png"> |
 
-| Light | Dark | Outdoors | Satellite | OSM |
-| ----- | ---- | -------- | --------- | --- | 
-| <img src="tutorials/graphics/light.png"> | <img src="tutorials/graphics/dark.png"> | <img src="tutorials/graphics/outdoors.png"> | <img src="tutorials/graphics/satellite.png"> | <img src="tutorials/graphics/osm.png"> |
+| OSM |     |
+| --- | --- | 
+| <img src="tutorials/graphics/osm.png"> |    |
 
 
 ---
