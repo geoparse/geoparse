@@ -61,14 +61,17 @@ GeoParse can visualize the vector data on a map with the following tile layers.
 | Light | Dark |
 | ----- | ---- | 
 | A minimalist, light-colored basemap that serves as a subtle background, emphasizing overlaid data on dashboards and visualizations. | A high-contrast, dark-themed map that is ideal for vibrant data overlays and nighttime aesthetics. |
-| <img src="tutorials/graphics/light.png" height="400"> | <img src="tutorials/graphics/dark.png" height="400"> |
+| <img src="tutorials/graphics/light.png" width="400" height="400"> | <img src="tutorials/graphics/dark.png" width="400" height="400"> |
 
 | Outdoors | Satellite |
 | -------- | --------- | 
-| <img src="tutorials/graphics/outdoors.png"> | <img src="tutorials/graphics/satellite.png"> |
+| Designed for outdoor enthusiasts, it features hiking trails, biking paths, natural landmarks, and elevation contours. |  A basemap displaying satellite imagery of the Earth's surface, useful for real-world visual context, remote sensing, or analyses requiring detailed imagery. |
+
+| <img src="tutorials/graphics/outdoors.png" width="400" height="400"> | <img src="tutorials/graphics/satellite.png" width="400" height="400"> |
 
 | OSM |
 | --- |
+| A general-purpose map powered by OpenStreetMap, showcasing roads, buildings, and points of interest. |
 | <img src="tutorials/graphics/osm.png" width="400" height="400"> |
 
 
