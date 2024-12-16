@@ -65,8 +65,9 @@ GeoParse can visualize the vector data on a map with the following tile layers.
 
 | Outdoors | Satellite |
 | -------- | --------- | 
-| Designed for outdoor enthusiasts, it features hiking trails, biking paths, natural landmarks, and elevation contours. |  A basemap displaying satellite imagery of the Earth's surface, useful for real-world visual context, remote sensing, or analyses requiring detailed imagery. |
+| Designed for outdoor enthusiasts, it features hiking trails, biking paths, natural landmarks, and elevation contours. | A basemap displaying satellite imagery of the Earth's surface, useful for real-world visual context, remote sensing, or analyses requiring detailed imagery. |
 | <img src="tutorials/graphics/outdoors.png" width="400" height="400"> | <img src="tutorials/graphics/satellite.png" width="400" height="400"> |
+
 
 | OSM |
 | --- |
