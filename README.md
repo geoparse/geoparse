@@ -58,12 +58,25 @@ GeoParse can visualize the vector data on a map with the following tile layers.
 | <img src="tutorials/graphics/osm.png" width="400" height="400"> |
 
 ---
+## GeoParse Modules
 
+GeoParse provides a powerful suite of tools for anyone working with geospatial data. It allows users to handle basic tasks like geocoding and visualization as well as more advanced features like spatial indexing and OSM-based analysis. It includes four key modules, each focusing on different aspects of geospatial tasks.
+
+* **karta**: The karta module, named after the Swedish word for "map", visualizes vector data (points, lines, polygons) on a map. It supports a variety of visualization styles and configurations, including clustering, heatmaps, choropleth maps, and cell-based layers. This module is ideal for creating interactive visual maps from geospatial data.
+
+* **gutils**: The gutils stands for Geospatial Utilities and provides a wide range of geospatial utilities that serve various tasks such as geometric statistics, transformations, geocoding (address to coordinates), and distance or area calculations. It's perfect for handling everyday geospatial processing tasks.
+
+* **gindex**: The gindex module stands for Geospatial Index and specializes in spatial indexing systems. It converts geographic coordinates and geometries into spatial index representations and vice versa, utilizing popular encoding systems like Geohash, H3, and S2. It also accelerates computations through parallel processing, making it useful for efficient spatial queries and handling large datasets.
+
+* **osm**: This module offers tools to work with OpenStreetMap (OSM) data and routing engines built on top of OSM. It allows users to retrieve OSM way geometries (either polygons or lines), decode encoded polyline strings (such as those used by Valhalla and similar services), and perform map matching of GPS coordinates to road networks. This module is essential for extracting, analyzing, and visualizing OSM data as well as processing GPS traces with routing services.
+
+
+---
 ## Examples
 
 You can run [GeoParse examples](https://github.com/geoparse/geoparse/tree/main/tutorials) on MyBinder. No installation required. [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/geoparse/geoparse/main?labpath=tutorials%2F00_visualization.ipynb)
 
-To try the cutting-edge dev version, use this MyBinder link.
+
 ### Point
 ```python
 df = pd.read_csv("data/great_britain_road_casualties-2023.csv")
