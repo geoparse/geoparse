@@ -62,7 +62,7 @@ GeoParse can visualize the vector data on a map with the following tile layers.
 
 GeoParse provides a powerful suite of tools for anyone working with geospatial data. It allows users to handle basic tasks like geocoding and visualization as well as more advanced features like spatial indexing and OSM-based analysis. It includes four key modules, each focusing on different aspects of geospatial tasks.
 
-* **karta**: The karta module, named after the Swedish word for "map", visualizes vector data (points, lines, polygons) on a map. It supports a variety of visualization styles and configurations, including clustering, heatmaps, choropleth maps, and cell-based layers. This module is ideal for creating interactive visual maps from geospatial data.
+* **karta**: The [karta](https://github.com/geoparse/geoparse/blob/main/geoparse/karta.py) module, named after the Swedish word for "map", visualizes vector data (points, lines, polygons) on a map. It supports a variety of visualization styles and configurations, including clustering, heatmaps, choropleth maps, and cell-based layers. This module is ideal for creating interactive visual maps from geospatial data.
 
 * **gutils**: The gutils stands for Geospatial Utilities and provides a wide range of geospatial utilities that serve various tasks such as geometric statistics, transformations, geocoding (address to coordinates), and distance or area calculations. It's perfect for handling everyday geospatial processing tasks.
 
