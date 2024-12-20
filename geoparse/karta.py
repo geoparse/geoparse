@@ -194,7 +194,7 @@ def base_map(sw: list or tuple, ne: list or tuple) -> folium.Map:
     folium.TileLayer(
         tiles="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
         attr='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://opentopomap.org/">OpenTopoMap</a>',
-        name="Outdoors"
+        name="Outdoors",
     ).add_to(karta)
 
     # Add a satellite tile layer (Esri World Imagery)
