@@ -76,7 +76,7 @@
 <span class="kn">from</span> <span class="nn">folium</span> <span class="kn">import</span> <span class="n">plugins</span>
 <span class="kn">from</span> <span class="nn">shapely.geometry</span> <span class="kn">import</span> <span class="n">LineString</span><span class="p">,</span> <span class="n">MultiPolygon</span><span class="p">,</span> <span class="n">Point</span><span class="p">,</span> <span class="n">Polygon</span>
 
-<span class="kn">from</span> <span class="nn">geoparse</span> <span class="kn">import</span> <span class="n">gindex</span><span class="p">,</span> <span class="n">gutils</span><span class="p">,</span> <span class="n">osm</span>
+<span class="kn">from</span> <span class="nn">geoparse</span> <span class="kn">import</span> <span class="n">gindex</span><span class="p">,</span> <span class="n">gutils</span><span class="p">,</span> <span class="n">osmtools</span>
 
 
 <div class="viewcode-block" id="color_map">
@@ -782,7 +782,7 @@
 
     <span class="c1"># Handle `osm_ways` input by converting OSM way IDs to geometries</span>
     <span class="k">if</span> <span class="n">osm_ways</span><span class="p">:</span>
-        <span class="n">geoms</span> <span class="o">=</span> <span class="n">osm</span><span class="o">.</span><span class="n">ways_to_geom</span><span class="p">(</span><span class="n">osm_ways</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
+        <span class="n">geoms</span> <span class="o">=</span> <span class="n">osmtools</span><span class="o">.</span><span class="n">ways_to_geom</span><span class="p">(</span><span class="n">osm_ways</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
         <span class="n">gdf</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">({</span><span class="s2">&quot;way_id&quot;</span><span class="p">:</span> <span class="n">osm_ways</span><span class="p">,</span> <span class="s2">&quot;geometry&quot;</span><span class="p">:</span> <span class="n">geoms</span><span class="p">},</span> <span class="n">crs</span><span class="o">=</span><span class="s2">&quot;EPSG:4326&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">gdf</span><span class="o">.</span><span class="n">geometry</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">LineString</span><span class="p">):</span>
             <span class="n">karta</span> <span class="o">=</span> <span class="n">plp</span><span class="p">(</span><span class="n">gdf</span><span class="p">,</span> <span class="n">line_popup</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;way_id&quot;</span><span class="p">:</span> <span class="s2">&quot;way_id&quot;</span><span class="p">},</span> <span class="n">line_color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">)</span>
