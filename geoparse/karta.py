@@ -8,7 +8,7 @@ import pandas as pd
 from folium import plugins
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 
-from geoparse import gindex, gutils, osm
+from geoparse import gindex, gutils, osmtools
 
 
 def color_map(col: int or str, head: int = None, tail: int = None) -> str:
@@ -694,7 +694,7 @@ def plp(  # plp: points, lines, polygons
 
     # Handle `osm_ways` input by converting OSM way IDs to geometries
     if osm_ways:
-        geoms = osm.ways_to_geom(osm_ways, url)
+        geoms = osmtools.ways_to_geom(osm_ways, url)
         gdf = gpd.GeoDataFrame({"way_id": osm_ways, "geometry": geoms}, crs="EPSG:4326")
         if isinstance(gdf.geometry[0], LineString):
             karta = plp(gdf, line_popup={"way_id": "way_id"}, line_color="red")

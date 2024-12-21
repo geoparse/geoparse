@@ -12,8 +12,6 @@ from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import transform
 
-# pd.options.mode.chained_assignment = None  # default='warn'
-
 
 def geom_stats(geom: Optional[Union[Polygon, MultiPolygon]] = None, unit: str = "m") -> Optional[List[Union[int, float]]]:
     """
