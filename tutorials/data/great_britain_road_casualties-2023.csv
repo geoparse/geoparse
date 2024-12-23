@@ -1,4 +1,4 @@
-date,time,lat,lon,number_of_vehicles,number_of_casualties,speed_limit
+date,time,latitude,longitude,number_of_vehicles,number_of_casualties,speed_limit
 03/01/2023,19:12,51.356551,-0.097759,1,1,30
 07/01/2023,10:05,51.593701,0.022379,1,1,30
 14/01/2023,16:15,51.466689,-0.011289,1,1,20
