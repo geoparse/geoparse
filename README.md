@@ -76,6 +76,9 @@ GeoParse provides a powerful suite of tools for anyone working with geospatial d
 
 You can run [GeoParse examples](https://github.com/geoparse/geoparse/tree/main/tutorials) on MyBinder. No installation required. [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/geoparse/geoparse/main?labpath=tutorials%2F00_visualization.ipynb)
 
+### Visualization: karta
+
+`karta` accepts either a pandas `DataFrame` or a GeoPandas `GeoDataFrame` to visualize geometry data. In the case of a `DataFrame`, the `plp` function in karta identifies columns with names containing `lat` and `lon` and uses them as latitude and longitude to display the data on the map. The `plp` function can render Shapely `Point`, `LineString`, `Polygon`, and `MultiPolygon` objects.
 
 ### Point
 ```python
