@@ -76,16 +76,24 @@ GeoParse provides a powerful suite of tools for anyone working with geospatial d
 
 You can run [GeoParse examples](https://github.com/geoparse/geoparse/tree/main/tutorials) on MyBinder. No installation required. [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/geoparse/geoparse/main?labpath=tutorials%2F00_visualization.ipynb)
 
-### Visualization: karta
+### karta
 
-`karta` accepts either a pandas `DataFrame` or a GeoPandas `GeoDataFrame` to visualize geometry data. In the case of a `DataFrame`, the `plp` function in karta identifies columns with names containing `lat` and `lon` and uses them as latitude and longitude to display the data on the map. The `plp` function can render Shapely `Point`, `LineString`, `Polygon`, and `MultiPolygon` objects.
+`karta` is used for visualization and accepts either a pandas `DataFrame` or a GeoPandas `GeoDataFrame` to render geometry data. For a `DataFrame`, the `plp` function in `karta` identifies columns with names containing `lat` and `lon` to use as latitude and longitude for displaying points on the map. For a `GeoDataFrame`, the `plp` function can render Shapely objects such as `Point`, `LineString`, `Polygon`, and `MultiPolygon`.
+
 
 ### Point
 ```python
 df = pd.read_csv("data/great_britain_road_casualties-2023.csv")
 df.head()
 ```
-![](tutorials/graphics/casualty_df.png)
+| date       | time   | latitude   | longitude   | number_of_vehicles  | number_of_casualties  | speed_limit |
+|------------|--------|------------|-------------|---------------------|-----------------------|-------------|
+| 03/01/2023 | 19:12  | 51.356551  | -0.097759   | 1                   | 1                     | 30          |
+| 07/01/2023 | 10:05  | 51.593701  | 0.022379    | 1                   | 1                     | 30          |
+| 14/01/2023 | 16:15  | 51.466689  | -0.011289   | 1                   | 1                     | 20          |
+| 15/01/2023 | 19:51  | 51.671577  | -0.037543   | 1                   | 1                     | 30          |
+| 16/01/2023 | 19:22  | 51.447944  | 0.117279    | 2                   | 1                     | 30          |
+
 
 | | |
 |-|-|
