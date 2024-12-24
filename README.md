@@ -81,8 +81,11 @@ You can run [GeoParse examples](https://github.com/geoparse/geoparse/tree/main/t
 `karta` is used for visualization and accepts either a pandas `DataFrame` or a GeoPandas `GeoDataFrame` to render geometry data. For a `DataFrame`, the `plp` function in `karta` identifies columns with names containing `lat` and `lon` to use as latitude and longitude for displaying points on the map. For a `GeoDataFrame`, the `plp` function can render Shapely objects such as `Point`, `LineString`, `Polygon`, and `MultiPolygon`.
 
 
-### Point
+#### Point
 ```python
+import pandas as pd
+from geoparse.karta import plp
+
 df = pd.read_csv("data/great_britain_road_casualties-2023.csv")
 df.head()
 ```
@@ -94,11 +97,33 @@ df.head()
 | 15/01/2023 | 19:51  | 51.671577  | -0.037543   | 1                   | 1                     | 30          |
 | 16/01/2023 | 19:22  | 51.447944  | 0.117279    | 2                   | 1                     | 30          |
 
+After loading the data, we can easily display it on a map using plp(df). For a more advanced visualization, we can customize the color of the points based on a feature value (e.g., `speed_limit` in the right map) and create HTML popups that display the attributes of each point.
 
-| | |
-|-|-|
-| `plp(df)` | `plp(df, heatmap=True, cluster=True)` |
-|<img src="tutorials/graphics/casualty_map.gif" width="400" height="480"> | <img src="tutorials/graphics/casualty_heatmap_cluster.gif" width="400" height="480"> |
+<table>
+  <tr>
+    <td style="vertical-align: bottom;">
+      plp(df)
+    </td>
+    <td style="vertical-align: bottom;">
+      <pre><code>
+plp(df, 
+    point_color='speed_limit', 
+    point_popup={
+        'Date': 'date',
+        'Number of Casualties': 'number_of_casualties'
+    }
+)</code></pre>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <img src="tutorials/graphics/casualty_map.png" width="400" height="480">
+    </td>
+    <td>
+      <img src="tutorials/graphics/casualty_heatmap_cluster.gif" width="440" height="510">
+    </td>
+  </tr>
+</table>
 
 
 ### Polygon
