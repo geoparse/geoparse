@@ -117,10 +117,10 @@ plp(df,
   </tr>
   <tr>
     <td>
-      <img src="tutorials/graphics/casualty_map.png" width="440" height="500">
+      <img src="tutorials/graphics/casualty_map.png" height="480">
     </td>
     <td>
-      <img src="tutorials/graphics/casualty_heatmap_cluster.gif" width="440" height="500">
+      <img src="tutorials/graphics/casualty_heatmap_cluster.gif" height="480">
     </td>
   </tr>
 </table>
