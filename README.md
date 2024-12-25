@@ -102,13 +102,13 @@ After loading the data, we can easily display it on a map using plp(df). For a m
 <table>
   <tr>
     <td style="vertical-align: bottom;">
-      plp(df)
+      <pre><code>plp(df)</code></pre>
     </td>
     <td style="vertical-align: bottom;">
       <pre><code>
 plp(df, 
-    point_color='speed_limit', 
-    point_popup={
+    point_color = 'speed_limit', 
+    point_popup = {
         'Date': 'date',
         'Number of Casualties': 'number_of_casualties'
     }
@@ -117,7 +117,7 @@ plp(df,
   </tr>
   <tr>
     <td>
-      <img src="tutorials/graphics/casualty_map.png" height="480">
+      <img src="tutorials/graphics/casualty_map.gif"  width="330" height="480">
     </td>
     <td>
       <img src="tutorials/graphics/casualty_popup.gif" height="480">
