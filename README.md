@@ -130,7 +130,7 @@ plp(df,
 <table>
   <tr>
     <td style="vertical-align: bottom;">
-      <pre><code>plp(df, heatmap=True, Cluster=True)</code></pre>
+      <pre><code>plp(df, heatmap=True, cluster=True)</code></pre>
     </td>
     <td style="vertical-align: bottom;">
       <pre><code>
