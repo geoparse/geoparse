@@ -117,13 +117,37 @@ plp(df,
   </tr>
   <tr>
     <td>
-      <img src="tutorials/graphics/casualty_map.gif"  width="330" height="480">
+      <img src="tutorials/graphics/casualty_map.gif"  height="480">
     </td>
     <td>
       <img src="tutorials/graphics/casualty_popup.gif" height="480">
     </td>
   </tr>
 </table>
+
+`plp` can also add heatmap and cluster layers to the map. In the left image, we see the clusters and heatmap of fatal road crashes in Great Britain. If you are working with trajectory data, `plp` can display the direction of movement using the antpath parameter, as shown in the right image.
+
+<table>
+  <tr>
+    <td style="vertical-align: bottom;">
+      <pre><code>plp(df, heatmap=True, cluster=True)</code></pre>
+    </td>
+    <td style="vertical-align: bottom;">
+      <pre><code>
+plp(df, antpath=True, line=True)
+      </code></pre>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <img src="tutorials/graphics/casualty_heatmap_cluster.gif" height="480">
+    </td>
+    <td>
+      <img src="tutorials/graphics/trajectory.gif" height="480">
+    </td>
+  </tr>
+</table>
+
 
 
 ### Polygon
