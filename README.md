@@ -107,8 +107,8 @@ After loading the data, we can easily display it on a map using plp(df). For a m
     <td style="vertical-align: bottom;">
       <pre><code>
 plp(df, 
-    point_color='speed_limit', 
-    point_popup={
+    point_color = 'speed_limit', 
+    point_popup = {
         'Date': 'date',
         'Number of Casualties': 'number_of_casualties'
     }
