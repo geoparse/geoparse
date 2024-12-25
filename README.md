@@ -102,7 +102,7 @@ After loading the data, we can easily display it on a map using plp(df). For a m
 <table>
   <tr>
     <td style="vertical-align: bottom;">
-      plp(df)
+      <pre><code>plp(df)</code></pre>
     </td>
     <td style="vertical-align: bottom;">
       <pre><code>
