@@ -650,10 +650,10 @@ def plp(  # plp: points, lines, polygons
         Resolution for creating geohash-based polygonal layers. Set to 0 to disable.
 
     s2_res : int, default -1
-        Resolution for creating Google S2-based polygonal layers. Set to -1 to disable.
+        Resolution for creating S2-based polygonal layers. Set to -1 to disable.
 
     h3_res : int, default -1
-        Resolution for creating Uber H3-based polygonal layers. Set to -1 to disable.
+        Resolution for creating H3-based polygonal layers. Set to -1 to disable.
 
     geohash_inner : bool, default False
         If True, shows only inner geohash cells. Does not work if `compact` is set to True.
@@ -963,7 +963,7 @@ def plp(  # plp: points, lines, polygons
         cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
 
         # Add S2 cells to the map as a polygon layer
-        group_s2 = folium.FeatureGroup(name=f"{i} - Google S2")
+        group_s2 = folium.FeatureGroup(name=f"{i} - S2")
         polygons(
             karta=group_s2,
             mdf=cdf,
@@ -989,7 +989,7 @@ def plp(  # plp: points, lines, polygons
         cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
 
         # Add H3 cells to the map as a polygon layer
-        group_h3 = folium.FeatureGroup(name=f"{i} - Uber H3")
+        group_h3 = folium.FeatureGroup(name=f"{i} - H3")
         polygons(
             karta=group_h3,
             mdf=cdf,
