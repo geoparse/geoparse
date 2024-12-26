@@ -78,10 +78,12 @@ You can run [GeoParse examples](https://github.com/geoparse/geoparse/tree/main/t
 
 ### karta
 
-`karta` is used for visualization and accepts either a pandas `DataFrame` or a GeoPandas `GeoDataFrame` to render geometry data. For a `DataFrame`, the `plp` function in `karta` identifies columns with names containing `lat` and `lon` to use as latitude and longitude for displaying points on the map. For a `GeoDataFrame`, the `plp` function can render Shapely objects such as `Point`, `LineString`, `Polygon`, and `MultiPolygon`.
+`karta` is used for visualization and accepts either a pandas `DataFrame` or a GeoPandas `GeoDataFrame` to render geometry data. For a `DataFrame`, the `plp` function in `karta` automatically identifies columns with names containing "lat" and "lon" (case-insensitive) to use as latitude and longitude for plotting points on the map. If no columns contain these keywords, or if more than two columns contain these keywords, you must explicitly specify the latitude and longitude using the `y` and `x` parameters, respectively, e.g., `plp(df, x="easting", y="northing")`. Note that plp assumes all data is in the [EPSG:4326](https://epsg.io/4326) projection. For a `GeoDataFrame`, the `plp` function can render Shapely objects such as `Point`, `LineString`, `Polygon`, and `MultiPolygon`.
 
 
 #### Point
+In the following example, we demonstrate how to display points from a CSV file, customize the map with point colors and popups, and add layers such as heatmaps and clusters.
+
 ```python
 import pandas as pd
 from geoparse.karta import plp
@@ -89,15 +91,15 @@ from geoparse.karta import plp
 df = pd.read_csv("data/great_britain_road_casualties-2023.csv")
 df.head()
 ```
-| date       | time   | latitude   | longitude   | number_of_vehicles  | number_of_casualties  | speed_limit |
-|------------|--------|------------|-------------|---------------------|-----------------------|-------------|
-| 03/01/2023 | 19:12  | 51.356551  | -0.097759   | 1                   | 1                     | 30          |
-| 07/01/2023 | 10:05  | 51.593701  | 0.022379    | 1                   | 1                     | 30          |
-| 14/01/2023 | 16:15  | 51.466689  | -0.011289   | 1                   | 1                     | 20          |
-| 15/01/2023 | 19:51  | 51.671577  | -0.037543   | 1                   | 1                     | 30          |
-| 16/01/2023 | 19:22  | 51.447944  | 0.117279    | 2                   | 1                     | 30          |
+| date       | time  | latitude  | longitude  | number_of_vehicles | number_of_casualties | speed_limit |
+|------------|-------|-----------|------------|--------------------|----------------------|-------------|
+| 03/01/2023 | 19:12 | 51.356551 | -0.097759  | 1                  | 1                    | 30          |
+| 07/01/2023 | 10:05 | 51.593701 | 0.022379   | 1                  | 1                    | 30          |
+| 14/01/2023 | 16:15 | 51.466689 | -0.011289  | 1                  | 1                    | 20          |
+| 15/01/2023 | 19:51 | 51.671577 | -0.037543  | 1                  | 1                    | 30          |
+| 16/01/2023 | 19:22 | 51.447944 | 0.117279   | 2                  | 1                    | 30          |
 
-After loading the data, we can easily display it on a map using plp(df). For a more advanced visualization, we can customize the color of the points based on a feature value (e.g., `speed_limit` in the right map) and create HTML popups that display the attributes of each point.
+After loading the data, we can easily display it on a map using `plp(df)`. For a more advanced visualization, we can customize the color of the points based on a feature value (e.g., `speed_limit` in the right map) and create HTML popups that display the attributes of each point.
 
 <table>
   <tr>
