@@ -154,13 +154,11 @@ plp(df, antpath=True, line=True)
 
 Using `GeoPandas`, we can read a geospatial file and display its contents using `plp` function. The left image illustrates the border of Luxembourg, represented as a Shapely `Polygon` object. The center image depicts the main roads in Luxembourg, represented as Shapely `LineString` objects. Additionally, `plp` can accept two `GeoDataFrame` objects as a list and display both of them on a single map, as shown in the right image.
 
-| Polygn            | LineString                                        | Both                                                            |
-| ----------------- | --------------------------------------------------|---------------------------------------------------------------- | 
-| `plp(border_gdf)` | `plp(road_gdf, line_color='gold', line_weight=1)` | `plp([border_gdf, road_gdf], line_color='gold', line_weight=1)` |
-|![](tutorials/graphics/luxembourg_border.png) | ![](tutorials/graphics/luxembourg_roads.png) | ![](tutorials/graphics/luxembourg_border_roads.png) |
+| Polygn                                       | LineString                                        | Both                                                            |
+| -------------------------------------------- | --------------------------------------------------|---------------------------------------------------------------- | 
+| `plp(border_gdf)`                            | `plp(road_gdf, line_color='gold', line_weight=1)` | `plp([border_gdf, road_gdf], line_color='gold', line_weight=1)` |
+|![](tutorials/graphics/luxembourg_border.png) | ![](tutorials/graphics/luxembourg_roads.png)      | ![](tutorials/graphics/luxembourg_border_roads.png)             |
 
-
-![](tutorials/graphics/london.png)
 
 ---
 ### OSM Ways
