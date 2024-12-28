@@ -160,6 +160,13 @@ Using `GeoPandas`, we can read a geospatial file and display its contents using 
 |![](tutorials/graphics/luxembourg_border.png) | ![](tutorials/graphics/luxembourg_roads.png)      | ![](tutorials/graphics/luxembourg_border_roads.png)             |
 
 
+
+| Geohash                                      | Google S2                                         | Uber H3                                                         |
+| -------------------------------------------- | --------------------------------------------------|---------------------------------------------------------------- | 
+| `plp(border_gdf, geohash_res=5)`             | `plp(border_gdf, s2_res=11)`                      | `plp(border_gdf, h3_res=6)`                                     |
+|![](tutorials/graphics/geohash_5.png)         | ![](tutorials/graphics/s2_11.png)      | ![](tutorials/graphics/h3_6.png)             |
+
+
 ---
 ### OSM Ways
 ```python
