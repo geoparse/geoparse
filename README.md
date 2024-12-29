@@ -160,7 +160,7 @@ Using `GeoPandas`, we can read a geospatial file and display its contents using 
 |![](tutorials/graphics/luxembourg_border.png) | ![](tutorials/graphics/luxembourg_roads.png)      | ![](tutorials/graphics/luxembourg_border_roads.png)             |
 
 
-Using the `plp` function, we can also add spatial index polygonal layers such as `GeoHash`, Google `S2`, and Uber `H3`. If the `compact` parameter is set to True, `plp` calculates the parent cell IDs to create a compact representation of the cells.
+Using the `plp` function, we can also add spatial index polygonal layers such as `GeoHash`, Google `S2`, and Uber `H3`. 
 
 
 | Geohash                                      | S2                                                | H3                                                              |
@@ -168,6 +168,7 @@ Using the `plp` function, we can also add spatial index polygonal layers such as
 | `plp(border_gdf, geohash_res=5)`             | `plp(border_gdf, s2_res=11)`                      | `plp(border_gdf, h3_res=6)`                                     |
 |![](tutorials/graphics/geohash_5.png)         | ![](tutorials/graphics/s2_11.png)                 | ![](tutorials/graphics/h3_6.png)                                |
  
+If the `compact` parameter is set to True, `plp` calculates the parent cell IDs to create a compact representation of the cells.
 
 | Geohash                                      | S2                                                | H3                                                              |
 | -------------------------------------------- | --------------------------------------------------|---------------------------------------------------------------- | 
