@@ -42,13 +42,13 @@ The official API documentation is hosted on [ReadTheDocs](https://geo-parse.read
 
 GeoParse can visualize the vector data on a map with the following tile layers.
 
-| Light                                                                                               | Dark                                                                                                |
-| --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | 
-| A minimalist, light-colored basemap that serves as a subtle background, emphasizing overlaid data. | A high-contrast, dark-themed map ideal for vibrant data overlays and nighttime aesthetics.         |
-| <img src="tutorials/graphics/light.png" width="400" height="400">                                  | <img src="tutorials/graphics/dark.png" width="400" height="400">                                  |
+| Light                                                                                              | Dark                                                                                       |
+| -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | 
+| A minimalist, light-colored basemap that serves as a subtle background, emphasizing overlaid data. | A high-contrast, dark-themed map ideal for vibrant data overlays and nighttime aesthetics. |
+| <img src="tutorials/graphics/light.png" width="400" height="400">                                  | <img src="tutorials/graphics/dark.png" width="400" height="400">                           |
 
 | Outdoors                                                                                          | Satellite                                                                                       |
-| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | Designed for outdoor enthusiasts, featuring hiking trails, biking paths, natural landmarks, and elevation contours. | A basemap displaying satellite imagery of the Earth's surface, useful for real-world context and analyses requiring detailed imagery. |
 | <img src="tutorials/graphics/outdoors.png" width="400" height="400">                              | <img src="tutorials/graphics/satellite.png" width="400" height="400">                           |
 
@@ -160,12 +160,20 @@ Using `GeoPandas`, we can read a geospatial file and display its contents using 
 |![](tutorials/graphics/luxembourg_border.png) | ![](tutorials/graphics/luxembourg_roads.png)      | ![](tutorials/graphics/luxembourg_border_roads.png)             |
 
 
+Using the `plp` function, we can also add spatial index polygonal layers such as `GeoHash`, Google `S2`, and Uber `H3`. If the `compact` parameter is set to True, `plp` calculates the parent cell IDs to create a compact representation of the cells.
 
-| Geohash                                      | Google S2                                         | Uber H3                                                         |
+
+| Geohash                                      | S2                                                | H3                                                              |
 | -------------------------------------------- | --------------------------------------------------|---------------------------------------------------------------- | 
 | `plp(border_gdf, geohash_res=5)`             | `plp(border_gdf, s2_res=11)`                      | `plp(border_gdf, h3_res=6)`                                     |
-|![](tutorials/graphics/geohash_5.png)         | ![](tutorials/graphics/s2_11.png)      | ![](tutorials/graphics/h3_6.png)             |
+|![](tutorials/graphics/geohash_5.png)         | ![](tutorials/graphics/s2_11.png)                 | ![](tutorials/graphics/h3_6.png)                                |
+ 
 
+| Geohash                                      | S2                                                | H3                                                              |
+| -------------------------------------------- | --------------------------------------------------|---------------------------------------------------------------- | 
+| `plp(border_gdf, geohash_res=7, compact=True)`             | `plp(border_gdf, s2_res=15, compact=True)`                      | `plp(border_gdf, h3_res=10, compact=True)`                                     |
+|![](tutorials/graphics/geohash_compact.png)         | ![](tutorials/graphics/s2_compact.png)                 | ![](tutorials/graphics/h3_compact.png)                                |
+ 
 
 ---
 ### OSM Ways
