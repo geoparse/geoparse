@@ -178,9 +178,13 @@ If the `compact` parameter is set to True, `plp` calculates the parent cell IDs 
 
 ---
 ### OSM Ways
-```python
-plp(osm_ways=[335265936, 53820456, 1117218957], s2_res=22, compact=True)
-```
-![London](tutorials/graphics/osm_ways_2.png)
+
+The `plp` function can also accept `OpenStreetMap` (OSM) Way IDs instead of `DataFrame` or `GeoDataFrame` objects and visualize them as `LineString` or `Polygon` geometries. The left image illustrates two ways of the Tokyo Metro Line represented as `LineString` geometries, while the right image depicts three ways in the Louvre Museum visualized as `Polygon` geometries.
+
+|                                         |                                                                            | 
+| --------------------------------------- | ---------------------------------------------------------------------------|
+| `plp(osm_ways=[893074361, 666201240])`  | `plp(osm_ways=[335265936, 53820456, 1117218957], s2_res=22, compact=True)` | 
+|![](tutorials/graphics/osm_way_line.png) | ![](tutorials/graphics/osm_way_polygon.gif)                                | 
+
 
 ---
