@@ -738,10 +738,10 @@
 <span class="sd">        Resolution for creating geohash-based polygonal layers. Set to 0 to disable.</span>
 
 <span class="sd">    s2_res : int, default -1</span>
-<span class="sd">        Resolution for creating Google S2-based polygonal layers. Set to -1 to disable.</span>
+<span class="sd">        Resolution for creating S2-based polygonal layers. Set to -1 to disable.</span>
 
 <span class="sd">    h3_res : int, default -1</span>
-<span class="sd">        Resolution for creating Uber H3-based polygonal layers. Set to -1 to disable.</span>
+<span class="sd">        Resolution for creating H3-based polygonal layers. Set to -1 to disable.</span>
 
 <span class="sd">    geohash_inner : bool, default False</span>
 <span class="sd">        If True, shows only inner geohash cells. Does not work if `compact` is set to True.</span>
@@ -1051,7 +1051,7 @@
         <span class="n">cdf</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">({</span><span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">cells</span><span class="p">,</span> <span class="s2">&quot;res&quot;</span><span class="p">:</span> <span class="n">res</span><span class="p">,</span> <span class="s2">&quot;geometry&quot;</span><span class="p">:</span> <span class="n">geoms</span><span class="p">},</span> <span class="n">crs</span><span class="o">=</span><span class="s2">&quot;EPSG:4326&quot;</span><span class="p">)</span>
 
         <span class="c1"># Add S2 cells to the map as a polygon layer</span>
-        <span class="n">group_s2</span> <span class="o">=</span> <span class="n">folium</span><span class="o">.</span><span class="n">FeatureGroup</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> - Google S2&quot;</span><span class="p">)</span>
+        <span class="n">group_s2</span> <span class="o">=</span> <span class="n">folium</span><span class="o">.</span><span class="n">FeatureGroup</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> - S2&quot;</span><span class="p">)</span>
         <span class="n">polygons</span><span class="p">(</span>
             <span class="n">karta</span><span class="o">=</span><span class="n">group_s2</span><span class="p">,</span>
             <span class="n">mdf</span><span class="o">=</span><span class="n">cdf</span><span class="p">,</span>
@@ -1077,7 +1077,7 @@
         <span class="n">cdf</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">({</span><span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">cells</span><span class="p">,</span> <span class="s2">&quot;res&quot;</span><span class="p">:</span> <span class="n">res</span><span class="p">,</span> <span class="s2">&quot;geometry&quot;</span><span class="p">:</span> <span class="n">geoms</span><span class="p">},</span> <span class="n">crs</span><span class="o">=</span><span class="s2">&quot;EPSG:4326&quot;</span><span class="p">)</span>
 
         <span class="c1"># Add H3 cells to the map as a polygon layer</span>
-        <span class="n">group_h3</span> <span class="o">=</span> <span class="n">folium</span><span class="o">.</span><span class="n">FeatureGroup</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> - Uber H3&quot;</span><span class="p">)</span>
+        <span class="n">group_h3</span> <span class="o">=</span> <span class="n">folium</span><span class="o">.</span><span class="n">FeatureGroup</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> - H3&quot;</span><span class="p">)</span>
         <span class="n">polygons</span><span class="p">(</span>
             <span class="n">karta</span><span class="o">=</span><span class="n">group_h3</span><span class="p">,</span>
             <span class="n">mdf</span><span class="o">=</span><span class="n">cdf</span><span class="p">,</span>
