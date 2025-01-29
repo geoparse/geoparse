@@ -13,7 +13,9 @@ from shapely.geometry.base import BaseGeometry
 from shapely.ops import transform
 
 
-def geom_stats(geom: Optional[Union[Polygon, MultiPolygon]] = None, unit: str = "m") -> Optional[List[Union[int, float]]]:
+def geom_stats(
+    geom: Optional[Union[Polygon, MultiPolygon]] = None, epsg_code=None, unit: str = "m"
+) -> Optional[List[Union[int, float]]]:
     """
     Computes geometric statistics for a Polygon or MultiPolygon geometry.
 
@@ -26,6 +28,8 @@ def geom_stats(geom: Optional[Union[Polygon, MultiPolygon]] = None, unit: str = 
     geom : Polygon or MultiPolygon, optional
         A Shapely geometry object (Polygon or MultiPolygon) for which to compute the statistics. If not provided,
         the function will print a usage example and not perform any computations. Default is None.
+    epsg_code: str, optional
+        The EPSG code used for calculating border and area of the geom in meters or kilometers, and square meters or square kilometers.
     unit : str, optional
         The unit for area and length calculations. Accepts "m" for meters and "km" for kilometers. Default is "m".
 
@@ -54,8 +58,9 @@ def geom_stats(geom: Optional[Union[Polygon, MultiPolygon]] = None, unit: str = 
         )
         return
 
-    # Determine the appropriate UTM zone for the given geometry
-    utm_zone = find_proj(geom)
+    # Identify the appropriate UTM zone if the EPSG code is not provided.
+    if not epsg_code:
+        epsg_code = find_proj(geom)
 
     # Handle different geometry types
     if geom.geom_type == "Polygon":
@@ -74,14 +79,14 @@ def geom_stats(geom: Optional[Union[Polygon, MultiPolygon]] = None, unit: str = 
         n_holes += len(poly.interiors)  # Count the number of holes
         n_shell_points += len(poly.exterior.coords)  # Count the number of shell points
         # Transform geometry to the appropriate UTM zone and calculate length/area
-        border += trans_proj(poly, "EPSG:4326", utm_zone).exterior.length
-        area += trans_proj(poly, "EPSG:4326", utm_zone).area
+        border += trans_proj(poly, "EPSG:4326", epsg_code).exterior.length
+        area += trans_proj(poly, "EPSG:4326", epsg_code).area
 
     # Return statistics based on the specified unit
     if unit == "m":  # If unit is meters
-        return [n_shells, n_holes, n_shell_points, round(area), round(border)]
+        return [n_shells, n_holes, n_shell_points, area, border]
     else:  # If unit is kilometers
-        return [n_shells, n_holes, n_shell_points, round(area / 1_000_000), round(border / 1000)]
+        return [n_shells, n_holes, n_shell_points, area / 1_000_000, border / 1000]
 
 
 def find_proj(geom: Union[Point, LineString, Polygon, MultiPolygon]) -> str:
