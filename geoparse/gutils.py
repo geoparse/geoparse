@@ -30,6 +30,7 @@ def geom_stats(
         the function will print a usage example and not perform any computations. Default is None.
     epsg_code: str, optional
         The EPSG code used for calculating border and area of the geom in meters or kilometers, and square meters or square kilometers.
+        If None, the UTM zone will be calculated.
     unit : str, optional
         The unit for area and length calculations. Accepts "m" for meters and "km" for kilometers. Default is "m".
 
