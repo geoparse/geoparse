@@ -37,6 +37,7 @@ def geom_stats(
     -------
     list of int or float, optional
         A list containing the following statistics in order:
+            - The EPSG code used for calculating the area and border
             - Number of shells (int)
             - Number of holes (int)
             - Number of shell points (int)
@@ -54,13 +55,14 @@ def geom_stats(
     """
     if not geom:  # Print usage help if geom is None
         print(
-            "mdf[['nshells', 'nholes', 'nshell_points', 'area', 'border']] = [gutils.geom_stats(geom, unit='km') for geom in mdf.geometry]"
+            "mdf[['epsg_code', 'nshells', 'nholes', 'nshell_points', 'area', 'border']] = [gutils.geom_stats(geom, unit='km') for geom in mdf.geometry]"
         )
         return
 
     # Identify the appropriate UTM zone if the EPSG code is not provided.
     if not epsg_code:
         epsg_code = find_proj(geom)
+    epsg_code = epsg_code.upper()
 
     # Handle different geometry types
     if geom.geom_type == "Polygon":
@@ -84,9 +86,9 @@ def geom_stats(
 
     # Return statistics based on the specified unit
     if unit == "m":  # If unit is meters
-        return [n_shells, n_holes, n_shell_points, area, border]
+        return [epsg_code, n_shells, n_holes, n_shell_points, area, border]
     else:  # If unit is kilometers
-        return [n_shells, n_holes, n_shell_points, area / 1_000_000, border / 1000]
+        return [epsg_code, n_shells, n_holes, n_shell_points, area / 1_000_000, border / 1000]
 
 
 def find_proj(geom: Union[Point, LineString, Polygon, MultiPolygon]) -> str:
