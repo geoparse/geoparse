@@ -51,8 +51,7 @@ def geom_stats(
     >>> from shapely.geometry import Polygon
     >>> geom = Polygon([(0, 0), (1, 0), (1, 1), (0, 1), (0, 0)])
     >>> geom_stats(geom, unit="km")
-    [1, 0, 5, 12322.539175581376, 444.0301771896464, 'EPSG:32631']
-    [1, 0, 5, 1.0, 4.0]
+    [1, 0, 4, 12322.539175581376, 444.0301771896464, 'EPSG:32631']
     """
     if not geom:  # Print usage help if geom is None
         print(
