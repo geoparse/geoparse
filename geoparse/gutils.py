@@ -14,13 +14,13 @@ from shapely.ops import transform
 
 
 def geom_stats(
-    geom: Optional[Union[Polygon, MultiPolygon]] = None, epsg_code=None, unit: str = "m"
+    geom: Optional[Union[Polygon, MultiPolygon]] = None, projection=None, unit: str = "m"
 ) -> Optional[List[Union[int, float]]]:
-    """
+    """ 
     Computes geometric statistics for a Polygon or MultiPolygon geometry.
 
     Calculates various statistics for a given Shapely geometry, such as the number of shells (outer boundaries),
-    number of holes, number of shell points, total area, and total border length. If no geometry is provided,
+    number of holes, number of shell points, total area, and total perimeter length. If no geometry is provided,
     the function will print a usage example.
 
     Parameters
@@ -28,8 +28,8 @@ def geom_stats(
     geom : Polygon or MultiPolygon, optional
         A Shapely geometry object (Polygon or MultiPolygon) for which to compute the statistics. If not provided,
         the function will print a usage example and not perform any computations. Default is None.
-    epsg_code: str, optional
-        The EPSG code used for calculating border and area of the geom in meters or kilometers, and square meters or square kilometers.
+    projection: str, optional
+        The EPSG code used for calculating perimeter and area of the geom in meters or kilometers, and square meters or square kilometers.
         If None, the UTM zone will be calculated.
     unit : str, optional
         The unit for area and length calculations. Accepts "m" for meters and "km" for kilometers. Default is "m".
@@ -38,32 +38,31 @@ def geom_stats(
     -------
     list of int or float, optional
         A list containing the following statistics in order:
-            - The EPSG code used for calculating the area and border
             - Number of shells (int)
             - Number of holes (int)
             - Number of shell points (int)
-            - Total area (float, rounded to nearest integer in the specified unit)
-            - Total border length (float, rounded to nearest integer in the specified unit)
-
-        If no geometry is provided, the function returns None.
+            - Total area (float)
+            - Total perimeter length (float)
+            - The projection used for calculating the area and perimeter
+    If no geometry is provided, the function returns None.
 
     Examples
     --------
     >>> from shapely.geometry import Polygon
     >>> geom = Polygon([(0, 0), (1, 0), (1, 1), (0, 1), (0, 0)])
-    >>> compute_geometry_statistics(geom, unit="km")
-    [1, 0, 5, 1.0, 4.0]
+    >>> geom_stats(geom, unit="km")
+    [1, 0, 4, 12322.539175581376, 444.0301771896464, 'EPSG:32631']
     """
     if not geom:  # Print usage help if geom is None
         print(
-            "mdf[['epsg_code', 'nshells', 'nholes', 'nshell_points', 'area', 'border']] = [gutils.geom_stats(geom, unit='km') for geom in mdf.geometry]"
+            "mdf[['nshells', 'nholes', 'nshell_points', 'area', 'perimeter', 'projection']] = [gutils.geom_stats(geom, unit='km') for geom in mdf.geometry]"
         )
         return
 
-    # Identify the appropriate UTM zone if the EPSG code is not provided.
-    if not epsg_code:
-        epsg_code = find_proj(geom)
-    epsg_code = epsg_code.upper()
+    # Identify the appropriate UTM zone if the projection is not provided.
+    if not projection:
+        projection = find_proj(geom)
+    projection = projection.upper()
 
     # Handle different geometry types
     if geom.geom_type == "Polygon":
@@ -75,21 +74,21 @@ def geom_stats(
 
     # Initialize variables for calculating statistics
     n_shells = len(polylist)
-    n_holes = n_shell_points = border = area = 0
+    n_holes = n_shell_points = perimeter = area = 0
 
     # Iterate through each Polygon in the list to calculate statistics
     for poly in polylist:
         n_holes += len(poly.interiors)  # Count the number of holes
-        n_shell_points += len(poly.exterior.coords)  # Count the number of shell points
-        # Transform geometry to the appropriate UTM zone and calculate length/area
-        border += trans_proj(poly, "EPSG:4326", epsg_code).exterior.length
-        area += trans_proj(poly, "EPSG:4326", epsg_code).area
+        n_shell_points += len(poly.exterior.coords)-1  # Count the number of shell points
+        # Transform geometry to the appropriate projection and calculate length/area
+        perimeter += trans_proj(poly, "EPSG:4326", projection).exterior.length
+        area += trans_proj(poly, "EPSG:4326", projection).area
 
     # Return statistics based on the specified unit
     if unit == "m":  # If unit is meters
-        return [epsg_code, n_shells, n_holes, n_shell_points, area, border]
+        return [n_shells, n_holes, n_shell_points, area, perimeter, projection]
     else:  # If unit is kilometers
-        return [epsg_code, n_shells, n_holes, n_shell_points, area / 1_000_000, border / 1000]
+        return [n_shells, n_holes, n_shell_points, area / 1_000_000, perimeter / 1000, projection]
 
 
 def find_proj(geom: Union[Point, LineString, Polygon, MultiPolygon]) -> str:
