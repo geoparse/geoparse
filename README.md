@@ -24,14 +24,28 @@ GeoParse is a Python library designed for the visualization, analysis, and manip
 * Geometry manipulations and conversions between formats
   
 ---
+## Prerequisites
+This repository uses [uv](https://docs.astral.sh/uv/) for Python package and project management. 
+If you don't have it installed, you need to install it first.
+```bash
+# On Linux and macOS
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
+```
+
+```bash
+# On Windows
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+```
+
+---
 ## Installation
 
 
 `pip install git+https://github.com/geoparse/geospatial.git`
 
 ---
-
 ## Ducumentation
 We recommend starting your GeoParse journey with the [tutorial notebooks](https://github.com/geoparse/geoparse/tree/main/tutorials).
 
