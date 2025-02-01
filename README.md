@@ -25,7 +25,7 @@ GeoParse is a Python library designed for the visualization, analysis, and manip
   
 ---
 ## Prerequisites
-This repository uses [uv](https://docs.astral.sh/uv/) for Python package and project management. 
+This repository uses [uv](https://docs.astral.sh/uv/) for Python package and project management.
 If you don't have it installed, you need to install it first.
 ```bash
 # On Linux and macOS
@@ -37,6 +37,11 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 # On Windows
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 
+```
+
+You can also update it using the following command if you have `uv` installed:
+```
+uv self update
 ```
 
 ---
