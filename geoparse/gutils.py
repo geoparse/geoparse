@@ -16,7 +16,7 @@ from shapely.ops import transform
 def geom_stats(
     geom: Optional[Union[Polygon, MultiPolygon]] = None, projection=None, unit: str = "m"
 ) -> Optional[List[Union[int, float]]]:
-    """ 
+    """
     Computes geometric statistics for a Polygon or MultiPolygon geometry.
 
     Calculates various statistics for a given Shapely geometry, such as the number of shells (outer boundaries),
@@ -79,7 +79,7 @@ def geom_stats(
     # Iterate through each Polygon in the list to calculate statistics
     for poly in polylist:
         n_holes += len(poly.interiors)  # Count the number of holes
-        n_shell_points += len(poly.exterior.coords)-1  # Count the number of shell points
+        n_shell_points += len(poly.exterior.coords) - 1  # Count the number of shell points
         # Transform geometry to the appropriate projection and calculate length/area
         perimeter += trans_proj(poly, "EPSG:4326", projection).exterior.length
         area += trans_proj(poly, "EPSG:4326", projection).area
@@ -651,10 +651,9 @@ def poverlay(
 
     # Create a multiprocessing pool and apply the overlay function in parallel on each chunk
     with Pool(n_cores) as pool:
-        df = pd.concat(pool.starmap(gpd.overlay, inputs))
+        gdf = pd.concat(pool.starmap(gpd.overlay, inputs), ignore_index=True)
 
-    # Return the concatenated GeoDataFrame with the same CRS as the first input GeoDataFrame
-    return gpd.GeoDataFrame(df, crs=gdf1.crs)
+    return gdf
 
 
 def geocoding_google(address_or_zipcode: str, api_key: str) -> pd.Series:
