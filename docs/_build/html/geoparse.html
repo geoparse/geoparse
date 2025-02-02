@@ -741,42 +741,46 @@ returns a Series with <cite>(None, None)</cite>.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="geoparse.gutils.geom_stats">
-<span class="sig-prename descclassname"><span class="pre">geoparse.gutils.</span></span><span class="sig-name descname"><span class="pre">geom_stats</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">geom</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Polygon</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">MultiPolygon</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'m'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="_modules/geoparse/gutils.html#geom_stats"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#geoparse.gutils.geom_stats" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">geoparse.gutils.</span></span><span class="sig-name descname"><span class="pre">geom_stats</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">geom</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Polygon</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">MultiPolygon</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">projection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'m'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="_modules/geoparse/gutils.html#geom_stats"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#geoparse.gutils.geom_stats" title="Link to this definition"></a></dt>
 <dd><p>Computes geometric statistics for a Polygon or MultiPolygon geometry.</p>
 <p>Calculates various statistics for a given Shapely geometry, such as the number of shells (outer boundaries),
-number of holes, number of shell points, total area, and total border length. If no geometry is provided,
+number of holes, number of shell points, total area, and total perimeter length. If no geometry is provided,
 the function will print a usage example.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>geom</strong> (<em>Polygon</em><em> or </em><em>MultiPolygon</em><em>, </em><em>optional</em>) – A Shapely geometry object (Polygon or MultiPolygon) for which to compute the statistics. If not provided,
 the function will print a usage example and not perform any computations. Default is None.</p></li>
+<li><p><strong>projection</strong> (<em>str</em><em>, </em><em>optional</em>) – The EPSG code used for calculating perimeter and area of the geom in meters or kilometers, and square meters or square kilometers.
+If None, the UTM zone will be calculated.</p></li>
 <li><p><strong>unit</strong> (<em>str</em><em>, </em><em>optional</em>) – The unit for area and length calculations. Accepts “m” for meters and “km” for kilometers. Default is “m”.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
+<dd class="field-even"><p><ul>
+<li><p><em>list of int or float, optional</em> –</p>
+<dl class="simple">
 <dt>A list containing the following statistics in order:</dt><dd><ul class="simple">
 <li><p>Number of shells (int)</p></li>
 <li><p>Number of holes (int)</p></li>
 <li><p>Number of shell points (int)</p></li>
-<li><p>Total area (float, rounded to nearest integer in the specified unit)</p></li>
-<li><p>Total border length (float, rounded to nearest integer in the specified unit)</p></li>
+<li><p>Total area (float)</p></li>
+<li><p>Total perimeter length (float)</p></li>
+<li><p>The projection used for calculating the area and perimeter</p></li>
 </ul>
 </dd>
 </dl>
-<p>If no geometry is provided, the function returns None.</p>
+</li>
+<li><p><em>If no geometry is provided, the function returns None.</em></p></li>
+</ul>
 </p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>list of int or float, optional</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">shapely.geometry</span> <span class="kn">import</span> <span class="n">Polygon</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">geom</span> <span class="o">=</span> <span class="n">Polygon</span><span class="p">([(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">compute_geometry_statistics</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;km&quot;</span><span class="p">)</span>
-<span class="go">[1, 0, 5, 1.0, 4.0]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">geom_stats</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;km&quot;</span><span class="p">)</span>
+<span class="go">[1, 0, 4, 12322.539175581376, 444.0301771896464, &#39;EPSG:32631&#39;]</span>
 </pre></div>
 </div>
 </dd></dl>

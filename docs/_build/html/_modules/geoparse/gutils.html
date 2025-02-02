@@ -83,12 +83,14 @@
 
 <div class="viewcode-block" id="geom_stats">
 <a class="viewcode-back" href="../../geoparse.html#geoparse.gutils.geom_stats">[docs]</a>
-<span class="k">def</span> <span class="nf">geom_stats</span><span class="p">(</span><span class="n">geom</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Polygon</span><span class="p">,</span> <span class="n">MultiPolygon</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">unit</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;m&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]]:</span>
+<span class="k">def</span> <span class="nf">geom_stats</span><span class="p">(</span>
+    <span class="n">geom</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Polygon</span><span class="p">,</span> <span class="n">MultiPolygon</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">unit</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;m&quot;</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Computes geometric statistics for a Polygon or MultiPolygon geometry.</span>
 
 <span class="sd">    Calculates various statistics for a given Shapely geometry, such as the number of shells (outer boundaries),</span>
-<span class="sd">    number of holes, number of shell points, total area, and total border length. If no geometry is provided,</span>
+<span class="sd">    number of holes, number of shell points, total area, and total perimeter length. If no geometry is provided,</span>
 <span class="sd">    the function will print a usage example.</span>
 
 <span class="sd">    Parameters</span>
@@ -96,6 +98,9 @@
 <span class="sd">    geom : Polygon or MultiPolygon, optional</span>
 <span class="sd">        A Shapely geometry object (Polygon or MultiPolygon) for which to compute the statistics. If not provided,</span>
 <span class="sd">        the function will print a usage example and not perform any computations. Default is None.</span>
+<span class="sd">    projection: str, optional</span>
+<span class="sd">        The EPSG code used for calculating perimeter and area of the geom in meters or kilometers, and square meters or square kilometers.</span>
+<span class="sd">        If None, the UTM zone will be calculated.</span>
 <span class="sd">    unit : str, optional</span>
 <span class="sd">        The unit for area and length calculations. Accepts &quot;m&quot; for meters and &quot;km&quot; for kilometers. Default is &quot;m&quot;.</span>
 
@@ -106,26 +111,28 @@
 <span class="sd">            - Number of shells (int)</span>
 <span class="sd">            - Number of holes (int)</span>
 <span class="sd">            - Number of shell points (int)</span>
-<span class="sd">            - Total area (float, rounded to nearest integer in the specified unit)</span>
-<span class="sd">            - Total border length (float, rounded to nearest integer in the specified unit)</span>
-
-<span class="sd">        If no geometry is provided, the function returns None.</span>
+<span class="sd">            - Total area (float)</span>
+<span class="sd">            - Total perimeter length (float)</span>
+<span class="sd">            - The projection used for calculating the area and perimeter</span>
+<span class="sd">    If no geometry is provided, the function returns None.</span>
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; from shapely.geometry import Polygon</span>
 <span class="sd">    &gt;&gt;&gt; geom = Polygon([(0, 0), (1, 0), (1, 1), (0, 1), (0, 0)])</span>
-<span class="sd">    &gt;&gt;&gt; compute_geometry_statistics(geom, unit=&quot;km&quot;)</span>
-<span class="sd">    [1, 0, 5, 1.0, 4.0]</span>
+<span class="sd">    &gt;&gt;&gt; geom_stats(geom, unit=&quot;km&quot;)</span>
+<span class="sd">    [1, 0, 4, 12322.539175581376, 444.0301771896464, &#39;EPSG:32631&#39;]</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">geom</span><span class="p">:</span>  <span class="c1"># Print usage help if geom is None</span>
         <span class="nb">print</span><span class="p">(</span>
-            <span class="s2">&quot;mdf[[&#39;nshells&#39;, &#39;nholes&#39;, &#39;nshell_points&#39;, &#39;area&#39;, &#39;border&#39;]] = [gutils.geom_stats(geom, unit=&#39;km&#39;) for geom in mdf.geometry]&quot;</span>
+            <span class="s2">&quot;mdf[[&#39;nshells&#39;, &#39;nholes&#39;, &#39;nshell_points&#39;, &#39;area&#39;, &#39;perimeter&#39;, &#39;projection&#39;]] = [gutils.geom_stats(geom, unit=&#39;km&#39;) for geom in mdf.geometry]&quot;</span>
         <span class="p">)</span>
         <span class="k">return</span>
 
-    <span class="c1"># Determine the appropriate UTM zone for the given geometry</span>
-    <span class="n">utm_zone</span> <span class="o">=</span> <span class="n">find_proj</span><span class="p">(</span><span class="n">geom</span><span class="p">)</span>
+    <span class="c1"># Identify the appropriate UTM zone if the projection is not provided.</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">projection</span><span class="p">:</span>
+        <span class="n">projection</span> <span class="o">=</span> <span class="n">find_proj</span><span class="p">(</span><span class="n">geom</span><span class="p">)</span>
+    <span class="n">projection</span> <span class="o">=</span> <span class="n">projection</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
 
     <span class="c1"># Handle different geometry types</span>
     <span class="k">if</span> <span class="n">geom</span><span class="o">.</span><span class="n">geom_type</span> <span class="o">==</span> <span class="s2">&quot;Polygon&quot;</span><span class="p">:</span>
@@ -137,21 +144,21 @@
 
     <span class="c1"># Initialize variables for calculating statistics</span>
     <span class="n">n_shells</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">polylist</span><span class="p">)</span>
-    <span class="n">n_holes</span> <span class="o">=</span> <span class="n">n_shell_points</span> <span class="o">=</span> <span class="n">border</span> <span class="o">=</span> <span class="n">area</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">n_holes</span> <span class="o">=</span> <span class="n">n_shell_points</span> <span class="o">=</span> <span class="n">perimeter</span> <span class="o">=</span> <span class="n">area</span> <span class="o">=</span> <span class="mi">0</span>
 
     <span class="c1"># Iterate through each Polygon in the list to calculate statistics</span>
     <span class="k">for</span> <span class="n">poly</span> <span class="ow">in</span> <span class="n">polylist</span><span class="p">:</span>
         <span class="n">n_holes</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">poly</span><span class="o">.</span><span class="n">interiors</span><span class="p">)</span>  <span class="c1"># Count the number of holes</span>
-        <span class="n">n_shell_points</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">poly</span><span class="o">.</span><span class="n">exterior</span><span class="o">.</span><span class="n">coords</span><span class="p">)</span>  <span class="c1"># Count the number of shell points</span>
-        <span class="c1"># Transform geometry to the appropriate UTM zone and calculate length/area</span>
-        <span class="n">border</span> <span class="o">+=</span> <span class="n">trans_proj</span><span class="p">(</span><span class="n">poly</span><span class="p">,</span> <span class="s2">&quot;EPSG:4326&quot;</span><span class="p">,</span> <span class="n">utm_zone</span><span class="p">)</span><span class="o">.</span><span class="n">exterior</span><span class="o">.</span><span class="n">length</span>
-        <span class="n">area</span> <span class="o">+=</span> <span class="n">trans_proj</span><span class="p">(</span><span class="n">poly</span><span class="p">,</span> <span class="s2">&quot;EPSG:4326&quot;</span><span class="p">,</span> <span class="n">utm_zone</span><span class="p">)</span><span class="o">.</span><span class="n">area</span>
+        <span class="n">n_shell_points</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">poly</span><span class="o">.</span><span class="n">exterior</span><span class="o">.</span><span class="n">coords</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>  <span class="c1"># Count the number of shell points</span>
+        <span class="c1"># Transform geometry to the appropriate projection and calculate length/area</span>
+        <span class="n">perimeter</span> <span class="o">+=</span> <span class="n">trans_proj</span><span class="p">(</span><span class="n">poly</span><span class="p">,</span> <span class="s2">&quot;EPSG:4326&quot;</span><span class="p">,</span> <span class="n">projection</span><span class="p">)</span><span class="o">.</span><span class="n">exterior</span><span class="o">.</span><span class="n">length</span>
+        <span class="n">area</span> <span class="o">+=</span> <span class="n">trans_proj</span><span class="p">(</span><span class="n">poly</span><span class="p">,</span> <span class="s2">&quot;EPSG:4326&quot;</span><span class="p">,</span> <span class="n">projection</span><span class="p">)</span><span class="o">.</span><span class="n">area</span>
 
     <span class="c1"># Return statistics based on the specified unit</span>
     <span class="k">if</span> <span class="n">unit</span> <span class="o">==</span> <span class="s2">&quot;m&quot;</span><span class="p">:</span>  <span class="c1"># If unit is meters</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">n_shells</span><span class="p">,</span> <span class="n">n_holes</span><span class="p">,</span> <span class="n">n_shell_points</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">area</span><span class="p">),</span> <span class="nb">round</span><span class="p">(</span><span class="n">border</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">n_shells</span><span class="p">,</span> <span class="n">n_holes</span><span class="p">,</span> <span class="n">n_shell_points</span><span class="p">,</span> <span class="n">area</span><span class="p">,</span> <span class="n">perimeter</span><span class="p">,</span> <span class="n">projection</span><span class="p">]</span>
     <span class="k">else</span><span class="p">:</span>  <span class="c1"># If unit is kilometers</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">n_shells</span><span class="p">,</span> <span class="n">n_holes</span><span class="p">,</span> <span class="n">n_shell_points</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">area</span> <span class="o">/</span> <span class="mi">1_000_000</span><span class="p">),</span> <span class="nb">round</span><span class="p">(</span><span class="n">border</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">)]</span></div>
+        <span class="k">return</span> <span class="p">[</span><span class="n">n_shells</span><span class="p">,</span> <span class="n">n_holes</span><span class="p">,</span> <span class="n">n_shell_points</span><span class="p">,</span> <span class="n">area</span> <span class="o">/</span> <span class="mi">1_000_000</span><span class="p">,</span> <span class="n">perimeter</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">,</span> <span class="n">projection</span><span class="p">]</span></div>
 
 
 
@@ -744,10 +751,9 @@
 
     <span class="c1"># Create a multiprocessing pool and apply the overlay function in parallel on each chunk</span>
     <span class="k">with</span> <span class="n">Pool</span><span class="p">(</span><span class="n">n_cores</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
-        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">pool</span><span class="o">.</span><span class="n">starmap</span><span class="p">(</span><span class="n">gpd</span><span class="o">.</span><span class="n">overlay</span><span class="p">,</span> <span class="n">inputs</span><span class="p">))</span>
+        <span class="n">gdf</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">pool</span><span class="o">.</span><span class="n">starmap</span><span class="p">(</span><span class="n">gpd</span><span class="o">.</span><span class="n">overlay</span><span class="p">,</span> <span class="n">inputs</span><span class="p">),</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-    <span class="c1"># Return the concatenated GeoDataFrame with the same CRS as the first input GeoDataFrame</span>
-    <span class="k">return</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">crs</span><span class="o">=</span><span class="n">gdf1</span><span class="o">.</span><span class="n">crs</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">gdf</span></div>
 
 
 
