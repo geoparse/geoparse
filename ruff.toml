@@ -3,7 +3,7 @@ show-fixes = true
 unsafe-fixes = true
 
 [lint]
-select = ["E", "F", "W", "B", "N"]
+select = ["E", "F", "W", "B", "N", "I"]
 ignore = ["E203", "E501"]   # Ignore rules that conflict with Black
 extend-select = ["I001"]    # Ensure Ruff enforces isort rules
 
