@@ -1,6 +1,8 @@
 import unittest
 
-from geoparse.gindex import cellpoint, pointcell
+from shapely.geometry import MultiPolygon, Polygon
+
+from geoparse.gindex import cellpoint, pointcell, polycell
 
 
 class TestPointCell(unittest.TestCase):
@@ -65,6 +67,55 @@ class TestCellPoint(unittest.TestCase):
     def test_invalid_cell_type(self):
         with self.assertRaises(ValueError):
             cellpoint(["invalid"], cell_type="unknown")
+
+
+class TestPolyCell(unittest.TestCase):
+    def test_polycell_geohash(self):
+        geometries = [Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])]
+        result = polycell(geometries, cell_type="geohash", res=6)
+        self.assertIsInstance(result, list)
+        self.assertTrue(all(isinstance(cell, str) for cell in result))
+        self.assertGreater(len(result), 0)
+
+    def test_polycell_s2(self):
+        geometries = [Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])]
+        result = polycell(geometries, cell_type="s2", res=10)
+        self.assertIsInstance(result, list)
+        self.assertTrue(all(isinstance(cell, str) for cell in result))
+        self.assertGreater(len(result), 0)
+
+    def test_polycell_h3(self):
+        geometries = [Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])]
+        result = polycell(geometries, cell_type="h3", res=9)
+        self.assertIsInstance(result, list)
+        self.assertTrue(all(isinstance(cell, str) for cell in result))
+        self.assertGreater(len(result), 0)
+
+    def test_polycell_multipolygon(self):
+        geometries = [MultiPolygon([Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]), Polygon([(2, 2), (3, 2), (3, 3), (2, 3)])])]
+        result = polycell(geometries, cell_type="h3", res=9)
+        self.assertIsInstance(result, list)
+        self.assertGreater(len(result), 0)
+
+    def test_polycell_invalid_cell_type(self):
+        geometries = [Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])]
+        with self.assertRaises(ValueError) as context:
+            polycell(geometries, cell_type="invalid", res=6)
+        self.assertIn("Unsupported cell type", str(context.exception))
+
+    def test_polycell_dump(self):
+        import os
+        import tempfile
+
+        geometries = [Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])]
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            result = polycell(geometries, cell_type="h3", res=9, dump=tmpdirname)
+            self.assertIsNone(result)
+            self.assertTrue(os.path.exists(os.path.join(tmpdirname, "h3", "9")))
+
+
+if __name__ == "__main__":
+    unittest.main()
 
 
 if __name__ == "__main__":
