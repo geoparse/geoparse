@@ -1,6 +1,6 @@
 [project]
 name = "GeoParse"
-version = "0.3.1"
+version = "0.4.0"
 description = "A collection of Python functions for performing geospatial analysis and creating visualisations. "
 authors = [{name = "Abbas Kiasari", email = "kiasari@gmail.com"}]
 license = {file = "LICENSE"}
