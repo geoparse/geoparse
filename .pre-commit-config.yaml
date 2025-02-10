@@ -10,3 +10,13 @@ repos:
     # Run the formatter.
     - id: ruff-format
       types_or: [ python, pyi ]
+- repo: local
+  hooks:
+    - id: pytest
+      name: pytest
+      entry: uv run pytest --cov
+      language: system
+      types: [python]
+      pass_filenames: false
+      always_run: true
+      stages: [commit]
