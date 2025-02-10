@@ -116,6 +116,37 @@ class TestPolyCell(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(tmpdirname, "h3", "9")))
 
 
+class TestCellPoly(unittest.TestCase):
+    def test_cellpoly_geohash(self):
+        cells = ["ezs42", "ezs43"]
+        cell_type = "geohash"
+        res, geoms = indexer.cellpoly(cells, cell_type)
+        self.assertEqual(res, [5, 5])
+        self.assertEqual(len(geoms), 2)
+        self.assertTrue(all(isinstance(g, Polygon) for g in geoms))
+
+    def test_cellpoly_h3(self):
+        cells = ["8928308280fffff", "8928308283bffff"]
+        cell_type = "h3"
+        res, geoms = indexer.cellpoly(cells, cell_type)
+        self.assertEqual(len(res), 2)
+        self.assertEqual(len(geoms), 2)
+        self.assertTrue(all(isinstance(g, Polygon) for g in geoms))
+
+    def test_cellpoly_s2(self):
+        cells = ["89c25c", "89c25d"]
+        cell_type = "s2"
+        res, geoms = indexer.cellpoly(cells, cell_type)
+        self.assertEqual(len(res), 2)
+        self.assertEqual(len(geoms), 2)
+        self.assertTrue(all(isinstance(g, Polygon) for g in geoms))
+
+    def test_cellpoly_invalid_type(self):
+        cells = ["ezs42"]
+        with self.assertRaises(ValueError):
+            indexer.cellpoly(cells, "invalid")
+
+
 if __name__ == "__main__":
     unittest.main()
 
