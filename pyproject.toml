@@ -21,6 +21,7 @@ requires-python = ">=3.9,<4.0"
 dependencies = [
     "numpy>=1.26.4",
     "geopandas>=1.0.1",
+    "pyarrow>=18.0.0",
     "folium>=0.14.0",
     "pygeohash>=1.2.0",
     "s2>=0.1.9",
@@ -30,7 +31,7 @@ dependencies = [
     "jupyterlab>=4.0.5",
 ]
 [tool.uv]
-exclude-newer = "2024-11-07T00:00:00Z"
+exclude-newer = "2025-02-11T00:00:00Z"
 dev-dependencies = [
     "pre-commit>=4.0.0",
     "ruff>=0.6.9",
