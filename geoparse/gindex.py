@@ -19,7 +19,48 @@ from shapely.geometry.base import BaseGeometry
 
 class GeomCell:
     """
-    The GeomCell class is designed to handle the conversion of geographical data (points and polygons) into spatial index representations using various encoding types such as Geohash, S2, and H3. It also supports parallel processing for large datasets to improve performance.
+    A utility class for converting geographical data (points and polygons) into spatial index representations
+    using various encoding types such as Geohash, S2, and H3. It supports both single-threaded and parallel
+    processing for efficient handling of large datasets.
+
+    The class provides methods to:
+    1. Convert latitude and longitude points into spatial cells (e.g., Geohash, S2, H3).
+    2. Convert polygons or multipolygons into spatial cells.
+    3. Perform these conversions in parallel for improved performance on large datasets.
+    4. Save the resulting cells to files for later use.
+
+    Supported cell types:
+    - Geohash: A hierarchical spatial indexing system using base-32 encoding.
+    - S2: A spherical geometry library for spatial indexing on a sphere (supports both string and integer-based cell IDs).
+    - H3: A hexagonal hierarchical spatial indexing system.
+
+    Key Features:
+    - Parallel processing for large datasets using multiprocessing.
+    - Support for saving results to files in a structured directory format.
+    - Compaction of cells to reduce redundancy (e.g., merging adjacent H3 or S2 cells into parent cells).
+
+    Examples
+    --------
+    >>> geomcell = GeomCell()
+
+    >>> # Convert points to Geohash cells
+    >>> lats = [37.7749, 34.0522]
+    >>> lons = [-122.4194, -118.2437]
+    >>> cells = geomcell.pointcell(lats, lons, "geohash", 6)
+    >>> print(cells)
+    ['9q8yy', '9qh0b']
+
+    >>> # Convert polygons to H3 cells in parallel
+    >>> from shapely.geometry import Polygon
+    >>> geometries = [Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])]
+    >>> cells, count = geomcell.ppolycell(gpd.GeoDataFrame(geometry=geometries), "h3", 9, compact=True)
+    >>> print(f"Generated {count} cells: {cells}")
+
+    Notes
+    -----
+    - Ensure that the input data matches the expected format for the specified cell type.
+    - Parallel processing is recommended for large datasets to improve performance.
+    - The `dump` parameter in `polycell` and `ppolycell` allows saving results to files for later use.
     """
 
     def __init__(self):
@@ -365,6 +406,60 @@ class GeomCell:
 
 
 class CellGeom:
+    """
+    A utility class for converting spatial cell identifiers (e.g., Geohash, H3, S2) into geographical representations,
+    such as centroids (latitude, longitude) or polygon geometries. It also supports parallel processing for large datasets.
+
+    This class provides methods to:
+    1. Convert cell IDs (e.g., Geohash, H3, S2) into their corresponding centroid points (latitude, longitude).
+    2. Convert cell IDs into polygon geometries representing their spatial boundaries.
+    3. Perform these conversions in parallel for improved performance on large datasets.
+
+    Supported cell types:
+    - Geohash: A hierarchical spatial indexing system using base-32 encoding.
+    - H3: A hexagonal hierarchical spatial indexing system.
+    - S2: A spherical geometry library for spatial indexing on a sphere (supports both integer and token-based cell IDs).
+
+    Methods
+    -------
+    cellpoint(cells, cell_type)
+        Converts a list of cell IDs into their corresponding centroid points (latitude, longitude).
+
+    cellpoly(cells, cell_type)
+        Converts a list of cell IDs into their corresponding polygon geometries and resolution levels.
+
+    pcellpoint(cells, cell_type)
+        Parallelized version of `cellpoint` for converting cell IDs into centroid points.
+
+    pcellpoly(cells, cell_type)
+        Parallelized version of `cellpoly` for converting cell IDs into polygon geometries and resolution levels.
+
+    Examples
+    --------
+    >>> cellgeom = CellGeom()
+
+    >>> # Convert Geohash cells to centroid points
+    >>> points = cellgeom.cellpoint(["ezs42", "u4pruydqqvj"], cell_type="geohash")
+    >>> print(points)
+    [(42.6, -5.6), (57.64911, 10.40744)]
+
+    >>> # Convert H3 cells to polygon geometries
+    >>> res, geoms = cellgeom.cellpoly(["8928308280fffff"], cell_type="h3")
+    >>> print(geoms)
+    [<shapely.geometry.polygon.Polygon object at 0x...>]
+
+    >>> # Parallelized conversion of S2 cells to centroid points
+    >>> points = cellgeom.pcellpoint(["89c25c", "89c284"], cell_type="s2")
+    >>> print(points)
+    [(37.7749, -122.4194), (37.7749, -122.4194)]
+
+    Notes
+    -----
+    - The class leverages multiprocessing for parallelized operations, making it suitable for large datasets.
+    - Ensure that the input cell IDs match the specified `cell_type` to avoid errors.
+    - The `cellpoly` method returns both the resolution levels and the polygon geometries for the input cells.
+    """
+
     def __init__(self):
         pass
 
@@ -578,6 +673,53 @@ class CellGeom:
 
 
 class CellOperation:
+    """
+    A utility class for performing operations on spatial cells, such as compaction, uncompaction, and statistical analysis.
+    It supports various spatial indexing systems, including Geohash, H3, and S2, and provides methods to manipulate and
+    analyze spatial cells efficiently.
+
+    The class provides methods to:
+    1. Compact spatial cells by merging adjacent cells into parent cells, reducing the total number of cells.
+    2. Uncompact S2 cells by expanding them into their child cells at a specified resolution.
+    3. Compute statistics for H3 cells covering a given geometry, including the number of cells and their area.
+
+    Supported cell types:
+    - Geohash: A hierarchical spatial indexing system using base-32 encoding.
+    - H3: A hexagonal hierarchical spatial indexing system.
+    - S2: A spherical geometry library for spatial indexing on a sphere.
+
+    Key Features:
+    - Compaction of spatial cells to reduce redundancy and improve efficiency.
+    - Uncompaction of S2 cells for detailed spatial analysis.
+    - Statistical analysis of H3 cells, including cell count and area calculations.
+
+    Examples
+    --------
+    >>> cellop = CellOperation()
+
+    >>> # Compact H3 cells
+    >>> h3_cells = ["8928308280fffff", "8928308280bffff"]
+    >>> compacted_cells = cellop.compact_cells(h3_cells, "h3")
+    >>> print(compacted_cells)
+
+    >>> # Uncompact S2 cells
+    >>> s2_tokens = ["89c2847c", "89c2847d"]
+    >>> uncompacted_cells = cellop.uncompact_s2(s2_tokens, level=10)
+    >>> print(uncompacted_cells)
+
+    >>> # Compute H3 cell statistics for a geometry
+    >>> from shapely.geometry import Polygon
+    >>> geom = Polygon([(-122.0, 37.0), (-122.0, 38.0), (-121.0, 38.0), (-121.0, 37.0), (-122.0, 37.0)])
+    >>> cell_count, cell_area = cellop.h3_stats(geom, h3_res=9, compact=True)
+    >>> print(f"Cell count: {cell_count}, Cell area: {cell_area} km^2")
+
+    Notes
+    -----
+    - Compaction is useful for reducing the number of cells while maintaining spatial coverage.
+    - Uncompaction allows for detailed analysis by expanding cells into finer resolutions.
+    - H3 cell statistics are useful for understanding the spatial distribution and coverage of a geometry.
+    """
+
     def __init__(self):
         pass
 
