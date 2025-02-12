@@ -2,7 +2,7 @@ import unittest
 
 from shapely.geometry import MultiPolygon, Polygon
 
-from geoparse.gindex import CellGeom, GeomCell
+from geoparse.geoparse import CellGeom, GeomCell
 
 
 class TestPointCell(unittest.TestCase):
