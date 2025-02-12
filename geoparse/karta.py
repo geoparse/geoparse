@@ -8,11 +8,7 @@ import pandas as pd
 from folium import plugins
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 
-from geoparse import gutils, osmtools
-from geoparse.gindex import CellGeom, GeomCell
-
-geomcell = GeomCell()
-cellgeom = CellGeom()
+from geoparse.geoparse import CellGeom, GeomCell, GeomUtils, WayConverter
 
 
 def color_map(col: int or str, head: int = None, tail: int = None) -> str:
@@ -691,14 +687,14 @@ def plp(  # plp: points, lines, polygons
 
     # Handle `cells` input by converting cell IDs to geometries
     if cells:
-        res, geoms = cellgeom.cellpoly(cells, cell_type=cell_type)
+        res, geoms = CellGeom.cellpoly(cells, cell_type=cell_type)
         gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
         karta = plp(gdf, polygon_popup={"ID": "id", "Resolution": "res"})
         return karta
 
     # Handle `osm_ways` input by converting OSM way IDs to geometries
     if osm_ways:
-        geoms = osmtools.ways_to_geom(osm_ways, url)
+        geoms = WayConverter.ways_to_geom(osm_ways, url)
         gdf = gpd.GeoDataFrame({"way_id": osm_ways, "geometry": geoms}, crs="EPSG:4326")
         if isinstance(gdf.geometry[0], LineString):
             karta = plp(gdf, line_popup={"way_id": "way_id"}, line_color="red")
@@ -889,7 +885,7 @@ def plp(  # plp: points, lines, polygons
                 bgdf = gdf.copy()  # buffered gdf: Create a copy of the GeoDataFrame to modify geometries
                 # Apply buffer to geometries using the specified radius in meters
                 bgdf["geometry"] = (
-                    bgdf.to_crs(gutils.find_proj(gdf.geometry.values[0])).buffer(buffer_radius).to_crs("EPSG:4326")
+                    bgdf.to_crs(GeomUtils.find_proj(gdf.geometry.values[0])).buffer(buffer_radius).to_crs("EPSG:4326")
                 )
                 # Add the buffered geometries to the map as polygons
                 polygons(
@@ -909,9 +905,9 @@ def plp(  # plp: points, lines, polygons
                 bgdf = gdf.copy()  # buffered gdf: Create a copy of the GeoDataFrame to modify geometries
                 # Create ring shapes by applying an outer and inner buffer, subtracting the inner from the outer
                 bgdf["geometry"] = (
-                    bgdf.to_crs(gutils.find_proj(gdf.geometry.values[0]))
+                    bgdf.to_crs(GeomUtils.find_proj(gdf.geometry.values[0]))
                     .buffer(ring_outer_radius)
-                    .difference(bgdf.to_crs(gutils.find_proj(gdf.geometry.values[0])).buffer(ring_inner_radius))
+                    .difference(bgdf.to_crs(GeomUtils.find_proj(gdf.geometry.values[0])).buffer(ring_inner_radius))
                     .to_crs("EPSG:4326")
                 )  # radius in meters
                 # Add the ring-shaped geometries to the map as polygons
@@ -936,8 +932,8 @@ def plp(  # plp: points, lines, polygons
             cdf = gpd.GeoDataFrame({"geometry": [bb]}, crs="EPSG:4326")  # Create a bounding box GeoDataFrame
 
         # Convert geometries to geohash cells and their geometries
-        cells, _ = geomcell.ppolycell(cdf, cell_type="geohash", res=geohash_res, compact=compact)
-        res, geoms = cellgeom.cellpoly(cells, cell_type="geohash")
+        cells, _ = GeomCell.ppolycell(cdf, cell_type="geohash", res=geohash_res, compact=compact)
+        res, geoms = CellGeom.cellpoly(cells, cell_type="geohash")
         cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
 
         # Add geohash cells to the map as a polygon layer
@@ -962,8 +958,8 @@ def plp(  # plp: points, lines, polygons
             cdf = gpd.GeoDataFrame({"geometry": [bb]}, crs="EPSG:4326")  # cell df
 
         # Convert geometries to S2 cells and their geometries
-        cells, _ = geomcell.ppolycell(cdf, cell_type="s2", res=s2_res, compact=compact)
-        res, geoms = cellgeom.cellpoly(cells, cell_type="s2")
+        cells, _ = GeomCell.ppolycell(cdf, cell_type="s2", res=s2_res, compact=compact)
+        res, geoms = CellGeom.cellpoly(cells, cell_type="s2")
         cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
 
         # Add S2 cells to the map as a polygon layer
@@ -988,8 +984,8 @@ def plp(  # plp: points, lines, polygons
             cdf = gpd.GeoDataFrame({"geometry": [bb]}, crs="EPSG:4326")  # cell df
 
         # Convert geometries to H3 cells and their geometries
-        cells, _ = geomcell.ppolycell(cdf, cell_type="h3", res=h3_res, compact=compact)
-        res, geoms = cellgeom.cellpoly(cells, cell_type="h3")
+        cells, _ = GeomCell.ppolycell(cdf, cell_type="h3", res=h3_res, compact=compact)
+        res, geoms = CellGeom.cellpoly(cells, cell_type="h3")
         cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
 
         # Add H3 cells to the map as a polygon layer
