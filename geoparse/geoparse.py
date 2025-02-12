@@ -22,50 +22,39 @@ from shapely.geometry.base import BaseGeometry
 from shapely.ops import transform
 
 
-class GeomCell:
+class SpatialIndex:
     """
-    A utility class for converting geographical data (points and polygons) into spatial index representations
-    using various encoding types such as Geohash, S2, and H3. It supports both single-threaded and parallel
-    processing for efficient handling of large datasets.
+    A class for performing spatial indexing operations on geographic data.
 
-    The class provides methods to:
-    1. Convert latitude and longitude points into spatial cells (e.g., Geohash, S2, H3).
-    2. Convert polygons or multipolygons into spatial cells.
-    3. Perform these conversions in parallel for improved performance on large datasets.
-    4. Save the resulting cells to files for later use.
+    This class provides methods to convert geographic coordinates (latitude, longitude) and geometries
+    (Polygon, MultiPolygon) into spatial cell representations using various encoding systems such as
+    Geohash, S2, and H3. It also supports parallel processing for efficient handling of large datasets.
 
-    Supported cell types:
-    - Geohash: A hierarchical spatial indexing system using base-32 encoding.
-    - S2: A spherical geometry library for spatial indexing on a sphere (supports both string and integer-based cell IDs).
-    - H3: A hexagonal hierarchical spatial indexing system.
-
-    Key Features:
-    - Parallel processing for large datasets using multiprocessing.
-    - Support for saving results to files in a structured directory format.
-    - Compaction of cells to reduce redundancy (e.g., merging adjacent H3 or S2 cells into parent cells).
-
-    Examples
+    Methods:
     --------
-    >>> geomcell = GeomCell()
+    pointcell(lats, lons, cell_type, res):
+        Converts latitude and longitude coordinates into spatial index representations.
 
-    >>> # Convert points to Geohash cells
-    >>> lats = [37.7749, 34.0522]
-    >>> lons = [-122.4194, -118.2437]
-    >>> cells = geomcell.pointcell(lats, lons, "geohash", 6)
-    >>> print(cells)
-    ['9q8yy', '9qh0b']
+    polycell(geoms, cell_type, res, dump):
+        Converts a list of geometries into a set of unique spatial cells.
 
-    >>> # Convert polygons to H3 cells in parallel
-    >>> from shapely.geometry import Polygon
-    >>> geometries = [Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])]
-    >>> cells, count = geomcell.ppolycell(gpd.GeoDataFrame(geometry=geometries), "h3", 9, compact=True)
-    >>> print(f"Generated {count} cells: {cells}")
+    ppointcell(lats, lons, cell_type, res):
+        Converts latitude and longitude coordinates into spatial index representations in parallel.
 
-    Notes
-    -----
-    - Ensure that the input data matches the expected format for the specified cell type.
-    - Parallel processing is recommended for large datasets to improve performance.
-    - The `dump` parameter in `polycell` and `ppolycell` allows saving results to files for later use.
+    ppolycell(mdf, cell_type, res, compact, dump, verbose):
+        Performs parallelized conversion of geometries in a GeoDataFrame to cell identifiers.
+
+    cellpoint(cells, cell_type):
+        Converts a list of cell IDs into their corresponding centroids.
+
+    cellpoly(cells, cell_type):
+        Converts a list of spatial cells to their corresponding geometries and resolution levels.
+
+    pcellpoint(cells, cell_type):
+        Converts a list of cell IDs into their corresponding latitude and longitude points in parallel.
+
+    pcellpoly(cells, cell_type):
+        Parallelized version of `cellpoly`, converting a list of spatial cells to geometries and resolution levels.
     """
 
     @staticmethod
@@ -252,7 +241,7 @@ class GeomCell:
 
         # Parallelize the conversion using Pool.starmap
         with Pool(n_cores) as pool:
-            cells = pool.starmap(GeomCell.pointcell, args)
+            cells = pool.starmap(SpatialIndex.pointcell, args)
         cells = [item for sublist in cells for item in sublist]  # Flatten the list of cells
 
         return cells
@@ -372,14 +361,14 @@ class GeomCell:
         # Parallel processing to generate cells
         if dump:
             with Pool(n_cores) as pool:
-                pool.starmap(GeomCell.polycell, args)
+                pool.starmap(SpatialIndex.polycell, args)
             if verbose:
                 elapsed_time = round(time() - start_time)
                 print(f"{elapsed_time} seconds.")
             return
         else:
             with Pool(n_cores) as pool:
-                cells = pool.starmap(GeomCell.polycell, args)
+                cells = pool.starmap(SpatialIndex.polycell, args)
             cells = [item for sublist in cells for item in sublist]  # Flatten the list of cells
 
             if verbose:
@@ -409,62 +398,6 @@ class GeomCell:
                     print(f"{elapsed_time} seconds.")
 
             return cells, cell_counts
-
-
-class CellGeom:
-    """
-    A utility class for converting spatial cell identifiers (e.g., Geohash, H3, S2) into geographical representations,
-    such as centroids (latitude, longitude) or polygon geometries. It also supports parallel processing for large datasets.
-
-    This class provides methods to:
-    1. Convert cell IDs (e.g., Geohash, H3, S2) into their corresponding centroid points (latitude, longitude).
-    2. Convert cell IDs into polygon geometries representing their spatial boundaries.
-    3. Perform these conversions in parallel for improved performance on large datasets.
-
-    Supported cell types:
-    - Geohash: A hierarchical spatial indexing system using base-32 encoding.
-    - H3: A hexagonal hierarchical spatial indexing system.
-    - S2: A spherical geometry library for spatial indexing on a sphere (supports both integer and token-based cell IDs).
-
-    Methods
-    -------
-    cellpoint(cells, cell_type)
-        Converts a list of cell IDs into their corresponding centroid points (latitude, longitude).
-
-    cellpoly(cells, cell_type)
-        Converts a list of cell IDs into their corresponding polygon geometries and resolution levels.
-
-    pcellpoint(cells, cell_type)
-        Parallelized version of `cellpoint` for converting cell IDs into centroid points.
-
-    pcellpoly(cells, cell_type)
-        Parallelized version of `cellpoly` for converting cell IDs into polygon geometries and resolution levels.
-
-    Examples
-    --------
-    >>> cellgeom = CellGeom()
-
-    >>> # Convert Geohash cells to centroid points
-    >>> points = cellgeom.cellpoint(["ezs42", "u4pruydqqvj"], cell_type="geohash")
-    >>> print(points)
-    [(42.6, -5.6), (57.64911, 10.40744)]
-
-    >>> # Convert H3 cells to polygon geometries
-    >>> res, geoms = cellgeom.cellpoly(["8928308280fffff"], cell_type="h3")
-    >>> print(geoms)
-    [<shapely.geometry.polygon.Polygon object at 0x...>]
-
-    >>> # Parallelized conversion of S2 cells to centroid points
-    >>> points = cellgeom.pcellpoint(["89c25c", "89c284"], cell_type="s2")
-    >>> print(points)
-    [(37.7749, -122.4194), (37.7749, -122.4194)]
-
-    Notes
-    -----
-    - The class leverages multiprocessing for parallelized operations, making it suitable for large datasets.
-    - Ensure that the input cell IDs match the specified `cell_type` to avoid errors.
-    - The `cellpoly` method returns both the resolution levels and the polygon geometries for the input cells.
-    """
 
     @staticmethod
     def cellpoint(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float, float]]:
@@ -635,7 +568,7 @@ class CellGeom:
 
         # Parallelize the conversion using Pool.starmap
         with Pool(n_cores) as pool:
-            points = pool.starmap(CellGeom.cellpoint, args)
+            points = pool.starmap(SpatialIndex.cellpoint, args)
         points = [item for sublist in points for item in sublist]  # Flatten the list of cells
 
         return points
@@ -670,7 +603,7 @@ class CellGeom:
         args = zip(cell_chunks, [cell_type] * 4 * n_cores)
 
         with Pool(n_cores) as pool:
-            results = pool.starmap(CellGeom.cellpoly, args)
+            results = pool.starmap(SpatialIndex.cellpoly, args)
 
         # Unpack `res` and `geoms` from the result tuples
         res = [r for result in results for r in result[0]]
@@ -888,7 +821,7 @@ class CellOps:
         The function utilizes the H3 library for generating and compacting H3 cells and for calculating cell area. The area
         is always returned in square kilometers ("km^2").
         """
-        cells = GeomCell.polycell([geom], cell_type="h3", res=h3_res)
+        cells = SpatialIndex.polycell([geom], cell_type="h3", res=h3_res)
         area = h3.hex_area(h3_res, unit="km^2")
         if compact:
             cells = h3.compact(cells)
