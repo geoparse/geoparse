@@ -2,7 +2,7 @@ import unittest
 
 from shapely.geometry import MultiPolygon, Polygon
 
-from geoparse.gindex import CellGeom, GeomCell
+from geoparse.geoparse import CellGeom, GeomCell
 
 # Create an instance of SpatialIndexer
 geomcell = GeomCell()
