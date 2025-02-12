@@ -68,10 +68,8 @@ class GeomCell:
     - The `dump` parameter in `polycell` and `ppolycell` allows saving results to files for later use.
     """
 
-    def __init__(self):
-        pass
-
-    def pointcell(self, lats: list[float], lons: list[float], cell_type: str, res: int) -> list:
+    @staticmethod
+    def pointcell(lats: list[float], lons: list[float], cell_type: str, res: int) -> list:
         """
         Convert latitude and longitude coordinates into spatial index representations using various cell encoding types.
 
@@ -121,8 +119,9 @@ class GeomCell:
         else:
             raise ValueError(f"Unsupported cell type: {cell_type}. Choose 'geohash', 's2', 's2_int', or 'h3'.")
 
+    @staticmethod
     def polycell(
-        self, geoms: List[Union[Polygon, MultiPolygon]], cell_type: str, res: int, dump: str = None
+        geoms: List[Union[Polygon, MultiPolygon]], cell_type: str, res: int, dump: str = None
     ) -> Union[List[str], None]:
         """
         Converts a list of geometries into a set of unique spatial cells based on the specified cell type and resolution.
@@ -194,7 +193,8 @@ class GeomCell:
                 json.dump(cells, json_file)
             return None
 
-    def ppointcell(self, lats: list[float], lons: list[float], cell_type: str, res: int) -> list:
+    @staticmethod
+    def ppointcell(lats: list[float], lons: list[float], cell_type: str, res: int) -> list:
         """
         Converts lists of latitude and longitude points to cell identifiers in parallel.
 
@@ -252,13 +252,14 @@ class GeomCell:
 
         # Parallelize the conversion using Pool.starmap
         with Pool(n_cores) as pool:
-            cells = pool.starmap(self.pointcell, args)
+            cells = pool.starmap(GeomCell.pointcell, args)
         cells = [item for sublist in cells for item in sublist]  # Flatten the list of cells
 
         return cells
 
+    @staticmethod
     def ppolycell(
-        self, mdf: gpd.GeoDataFrame, cell_type: str, res: int, compact: bool = False, dump: str = None, verbose: bool = False
+        mdf: gpd.GeoDataFrame, cell_type: str, res: int, compact: bool = False, dump: str = None, verbose: bool = False
     ) -> Tuple[List[str], int]:
         """
         Performs a parallelised conversion of geometries in a GeoDataFrame to cell identifiers of a specified type
@@ -371,14 +372,14 @@ class GeomCell:
         # Parallel processing to generate cells
         if dump:
             with Pool(n_cores) as pool:
-                pool.starmap(self.polycell, args)
+                pool.starmap(GeomCell.polycell, args)
             if verbose:
                 elapsed_time = round(time() - start_time)
                 print(f"{elapsed_time} seconds.")
             return
         else:
             with Pool(n_cores) as pool:
-                cells = pool.starmap(self.polycell, args)
+                cells = pool.starmap(GeomCell.polycell, args)
             cells = [item for sublist in cells for item in sublist]  # Flatten the list of cells
 
             if verbose:
@@ -402,7 +403,7 @@ class GeomCell:
                 if verbose:
                     print("Compacting cells ... ", end="")
                     start_time = time()
-                cells = self.compact_cells(cells, cell_type)
+                cells = CellOps.compact_cells(cells, cell_type)
                 if verbose:
                     elapsed_time = round(time() - start_time)
                     print(f"{elapsed_time} seconds.")
@@ -465,10 +466,8 @@ class CellGeom:
     - The `cellpoly` method returns both the resolution levels and the polygon geometries for the input cells.
     """
 
-    def __init__(self):
-        pass
-
-    def cellpoint(self, cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float, float]]:
+    @staticmethod
+    def cellpoint(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float, float]]:
         """
         Converts a list of cell IDs into their corresponding centroids.
 
@@ -530,7 +529,8 @@ class CellGeom:
         else:
             raise ValueError(f"Unsupported cell type: {cell_type}. Choose 'geohash', 's2', 's2_int', or 'h3'.")
 
-    def cellpoly(self, cells: list, cell_type: str) -> tuple:
+    @staticmethod
+    def cellpoly(cells: list, cell_type: str) -> tuple:
         """
         Converts a list of spatial cells to their corresponding geometries and resolution levels.
 
@@ -610,7 +610,8 @@ class CellGeom:
 
         return res, geoms
 
-    def pcellpoint(self, cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float, float]]:
+    @staticmethod
+    def pcellpoint(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float, float]]:
         """
         Converts a list of cell IDs into their corresponding latitude and longitude points in parallel.
 
@@ -634,11 +635,12 @@ class CellGeom:
 
         # Parallelize the conversion using Pool.starmap
         with Pool(n_cores) as pool:
-            points = pool.starmap(self.cellpoint, args)
+            points = pool.starmap(CellGeom.cellpoint, args)
         points = [item for sublist in points for item in sublist]  # Flatten the list of cells
 
         return points
 
+    @staticmethod
     def pcellpoly(self, cells: List[Union[str, int]], cell_type: str) -> tuple:
         """
         Parallelized version of `cellpoly`, converting a list of spatial cells to geometries and resolution levels.
@@ -668,7 +670,7 @@ class CellGeom:
         args = zip(cell_chunks, [cell_type] * 4 * n_cores)
 
         with Pool(n_cores) as pool:
-            results = pool.starmap(self.cellpoly, args)
+            results = pool.starmap(CellGeom.cellpoly, args)
 
         # Unpack `res` and `geoms` from the result tuples
         res = [r for result in results for r in result[0]]
@@ -950,10 +952,8 @@ class GeomUtils:
     (45, 45, 'NE', 'NE-SW')
     """
 
-    def __init__(self):
-        pass
-
-    def find_proj(self, geom: Union[Point, LineString, Polygon, MultiPolygon]) -> str:
+    @staticmethod
+    def find_proj(geom: Union[Point, LineString, Polygon, MultiPolygon]) -> str:
         """
         Determines the appropriate UTM zone projection for a given geometry.
 
@@ -1006,6 +1006,7 @@ class GeomUtils:
         # Return the complete EPSG code for the UTM projection
         return proj + str(utm)
 
+    @staticmethod
     def trans_proj(self, geom: BaseGeometry, proj1: str, proj2: str) -> BaseGeometry:
         """
         Transforms a Shapely geometry object from one CRS to another.
@@ -1048,8 +1049,9 @@ class GeomUtils:
         # Apply the transformation to the geometry and return the transformed geometry
         return transform(project, geom)
 
+    @staticmethod
     def geom_stats(
-        self, geom: Optional[Union[Polygon, MultiPolygon]] = None, projection=None, unit: str = "m"
+        geom: Optional[Union[Polygon, MultiPolygon]] = None, projection=None, unit: str = "m"
     ) -> Optional[List[Union[int, float]]]:
         """
         Computes geometric statistics for a Polygon or MultiPolygon geometry.
@@ -1096,7 +1098,7 @@ class GeomUtils:
 
         # Identify the appropriate UTM zone if the projection is not provided.
         if not projection:
-            projection = self.find_proj(geom)
+            projection = GeomUtils.find_proj(geom)
         projection = projection.upper()
 
         # Handle different geometry types
@@ -1116,8 +1118,8 @@ class GeomUtils:
             n_holes += len(poly.interiors)  # Count the number of holes
             n_shell_points += len(poly.exterior.coords) - 1  # Count the number of shell points
             # Transform geometry to the appropriate projection and calculate length/area
-            perimeter += self.trans_proj(poly, "EPSG:4326", projection).exterior.length
-            area += self.trans_proj(poly, "EPSG:4326", projection).area
+            perimeter += GeomUtils.trans_proj(poly, "EPSG:4326", projection).exterior.length
+            area += GeomUtils.trans_proj(poly, "EPSG:4326", projection).area
 
         # Return statistics based on the specified unit
         if unit == "m":  # If unit is meters
@@ -1125,6 +1127,7 @@ class GeomUtils:
         else:  # If unit is kilometers
             return [n_shells, n_holes, n_shell_points, area / 1_000_000, perimeter / 1000, projection]
 
+    @staticmethod
     def bearing(self: LineString) -> tuple[int, int, str, str]:
         """
         Calculate the bearing and cardinal directions of a LineString.
@@ -1874,18 +1877,7 @@ class WayConverter:
      <shapely.geometry.linestring.LineString object at 0x...>]
     """
 
-    def __init__(self, url: str = "https://overpass-api.de/api/interpreter"):
-        """
-        Initializes the WayConverter with the Overpass API URL.
-
-        Parameters
-        ----------
-        url : str, optional
-            The URL endpoint for the Overpass API. Defaults to "https://overpass-api.de/api/interpreter".
-        """
-        self.url = url
-
-    def way_to_geom(self, way_id: int) -> Optional[LineString or Polygon]:
+    def way_to_geom(self: int, url: str = "https://overpass-api.de/api/interpreter") -> Optional[LineString or Polygon]:
         """
         Converts an OSM way ID into a Shapely Polygon or LineString object.
 
@@ -1897,8 +1889,8 @@ class WayConverter:
         ----------
         way_id : int
             The OpenStreetMap (OSM) way ID to be retrieved.
-        url : str
-            The URL endpoint for the Overpass API to request the geometry.
+        url : str, optional
+            The URL endpoint for the Overpass API. Defaults to "https://overpass-api.de/api/interpreter".
 
         Returns
         -------
@@ -1920,7 +1912,7 @@ class WayConverter:
         >>> print(geometry)
         POLYGON ((13.3888 52.5170, 13.3976 52.5291, 13.4286 52.5232, 13.3888 52.5170))
         """
-        query = f"[out:json][timeout:600][maxsize:4073741824];way({way_id});out geom;"
+        query = f"[out:json][timeout:600][maxsize:4073741824];way({self});out geom;"
         response = requests.get(self.url, params={"data": query}).json()
         response = response["elements"][0]
         geom = response["geometry"]
@@ -1930,7 +1922,7 @@ class WayConverter:
         else:
             return LineString(coords)
 
-    def ways_to_geom(self, ids: List[int], url: str = "https://overpass-api.de/api/interpreter") -> List[LineString or Polygon]:
+    def ways_to_geom(self: List[int], url: str = "https://overpass-api.de/api/interpreter") -> List[LineString or Polygon]:
         """
         Converts an array of OpenStreetMap (OSM) way IDs into Shapely geometries.
 
@@ -1942,8 +1934,8 @@ class WayConverter:
         ----------
         ids : list of int
             A list of OSM way IDs to be retrieved.
-        url : str
-            The URL endpoint for the Overpass API to request the geometries.
+        url : str, optional
+            The URL endpoint for the Overpass API. Defaults to "https://overpass-api.de/api/interpreter".
 
         Returns
         -------
@@ -1969,7 +1961,7 @@ class WayConverter:
          <shapely.geometry.linestring.LineString object at 0x...>]
         """
         query = "[out:json][timeout:600][maxsize:4073741824];"
-        for item in ids:
+        for item in self:
             query += f"way({item});out geom;"
 
         response = requests.get(self.url, params={"data": query}).json()
