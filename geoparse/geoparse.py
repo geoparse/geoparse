@@ -727,10 +727,8 @@ class CellOps:
     - H3 cell statistics are useful for understanding the spatial distribution and coverage of a geometry.
     """
 
-    def __init__(self):
-        pass
-
-    def compact_cells(self, cells: list, cell_type: str) -> list:
+    @staticmethod
+    def compact_cells(cells: list, cell_type: str) -> list:
         """
         Compacts a list of spatial cells (e.g., Geohash, S2, or H3) by merging adjacent cells into parent cells.
 
@@ -808,7 +806,8 @@ class CellOps:
         else:  # Convert S2 cells back to tokens
             return [item.to_token() for item in compact_cells]
 
-    def uncompact_s2(self, compact_tokens: list, level: int) -> list:
+    @staticmethod
+    def uncompact_s2(compact_tokens: list, level: int) -> list:
         """
         Expands a list of compacted S2 cell tokens to a specified resolution level.
 
@@ -851,7 +850,8 @@ class CellOps:
         uncompact_tokens = [item.to_token() for item in uncompact_tokens]
         return list(set(uncompact_tokens))
 
-    def h3_stats(self, geom: BaseGeometry, h3_res: int, compact: bool = False) -> Tuple[int, float]:
+    @staticmethod
+    def h3_stats(geom: BaseGeometry, h3_res: int, compact: bool = False) -> Tuple[int, float]:
         """
         Computes H3 cell statistics for a given geometry at a specified resolution.
 
@@ -888,7 +888,7 @@ class CellOps:
         The function utilizes the H3 library for generating and compacting H3 cells and for calculating cell area. The area
         is always returned in square kilometers ("km^2").
         """
-        cells = self.polycell([geom], cell_type="h3", res=h3_res)
+        cells = GeomCell.polycell([geom], cell_type="h3", res=h3_res)
         area = h3.hex_area(h3_res, unit="km^2")
         if compact:
             cells = h3.compact(cells)
@@ -1913,7 +1913,7 @@ class WayConverter:
         POLYGON ((13.3888 52.5170, 13.3976 52.5291, 13.4286 52.5232, 13.3888 52.5170))
         """
         query = f"[out:json][timeout:600][maxsize:4073741824];way({self});out geom;"
-        response = requests.get(self.url, params={"data": query}).json()
+        response = requests.get(url, params={"data": query}).json()
         response = response["elements"][0]
         geom = response["geometry"]
         coords = [(node["lon"], node["lat"]) for node in geom]
@@ -1964,7 +1964,7 @@ class WayConverter:
         for item in self:
             query += f"way({item});out geom;"
 
-        response = requests.get(self.url, params={"data": query}).json()
+        response = requests.get(url, params={"data": query}).json()
         response = response["elements"]
         nodes = response[0]["geometry"]  # used later to determine if the way is a Polygon or a LineString
         ways = [item["geometry"] for item in response]
