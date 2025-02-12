@@ -677,7 +677,7 @@ class CellGeom:
         return res, geoms
 
 
-class CellOperation:
+class CellOps:
     """
     A utility class for performing operations on spatial cells, such as compaction, uncompaction, and statistical analysis.
     It supports various spatial indexing systems, including Geohash, H3, and S2, and provides methods to manipulate and
