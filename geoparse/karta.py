@@ -216,7 +216,7 @@ def base_map(sw: list or tuple, ne: list or tuple) -> folium.Map:
     return karta
 
 
-def points(
+def add_point(
     row: pd.Series,
     karta: folium.Map,
     color: str,
@@ -284,7 +284,7 @@ def points(
     --------
     >>> row = pd.Series({"geometry": Point(40.748817, -73.985428), "color": "red"})
     >>> karta = folium.Map(location=[40.748817, -73.985428], zoom_start=12)
-    >>> points(row, karta, "color")
+    >>> add_point(row, karta, "color")
     0
     """
     try:
@@ -332,7 +332,7 @@ def points(
     return 0
 
 
-def row_polygons(row: pd.Series, karta: folium.Map, fill_color: str, line_width: int, popup_dict: dict = None) -> int:
+def add_poly(row: pd.Series, karta: folium.Map, fill_color: str, line_width: int, popup_dict: dict = None) -> int:
     """
     Adds a polygon to a Folium map based on the specified parameters and data in the provided row.
 
@@ -368,7 +368,7 @@ def row_polygons(row: pd.Series, karta: folium.Map, fill_color: str, line_width:
     --------
     >>> row = pd.Series({"geometry": Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]), "fill_color": "blue"})
     >>> karta = folium.Map(location=[0.5, 0.5], zoom_start=10)
-    >>> row_polygons(row, karta, "fill_color", line_width=2)
+    >>> add_poly(row, karta, "fill_color", line_width=2)
     0
     """
     # Determine fill color if specified column is present
@@ -409,7 +409,7 @@ def row_polygons(row: pd.Series, karta: folium.Map, fill_color: str, line_width:
     return 0
 
 
-def polygons(
+def add_polys(
     karta: folium.Map, mdf: pd.DataFrame, fill_color: str, highlight_color: str, line_width: int, popup_dict: dict = None
 ) -> int:
     """
@@ -453,7 +453,7 @@ def polygons(
                 'color': ['blue', 'green']}
     >>> mdf = pd.DataFrame(data)
     >>> karta = folium.Map(location=[0.5, 0.5], zoom_start=10)
-    >>> polygons(karta, mdf, fill_color="color", highlight_color="yellow", line_width=2)
+    >>> add_polys(karta, mdf, fill_color="color", highlight_color="yellow", line_width=2)
     0
     """
     # Determine fill color if the specified column is present in the DataFrame
@@ -753,7 +753,7 @@ def plp(  # plp: points, lines, polygons
             if centroid:  # Show centroids of polygons if `centroid=True`
                 group_centroid = folium.FeatureGroup(name=f"{i}- Centroid")
                 cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs="EPSG:4326")  # centroid df
-                cdf.apply(points, karta=group_centroid, color="red", axis=1)
+                cdf.apply(add_point, karta=group_centroid, color="red", axis=1)
                 group_centroid.add_to(karta)
             # If choropleth columns are provided, visualize as a choropleth map
             if choropleth_cols:
@@ -771,7 +771,7 @@ def plp(  # plp: points, lines, polygons
             else:  # Otherwise, visualise polygons normally
                 group_polygon = folium.FeatureGroup(name=f"{i}- Polygon")
                 gdf.apply(
-                    row_polygons,
+                    add_poly,
                     karta=group_polygon,
                     fill_color=fill_color,
                     line_width=line_width,
@@ -813,7 +813,7 @@ def plp(  # plp: points, lines, polygons
             # Create point layers and visualizations
             group_point = folium.FeatureGroup(name=f"{i}- Point")
             gdf.apply(
-                points,
+                add_point,
                 x=xx,
                 y=yy,
                 karta=group_point,
@@ -888,7 +888,7 @@ def plp(  # plp: points, lines, polygons
                     bgdf.to_crs(GeomUtils.find_proj(gdf.geometry.values[0])).buffer(buffer_radius).to_crs("EPSG:4326")
                 )
                 # Add the buffered geometries to the map as polygons
-                polygons(
+                add_polys(
                     karta=group_buffer,
                     mdf=bgdf,
                     fill_color=fill_color,
@@ -911,7 +911,7 @@ def plp(  # plp: points, lines, polygons
                     .to_crs("EPSG:4326")
                 )  # radius in meters
                 # Add the ring-shaped geometries to the map as polygons
-                polygons(
+                add_polys(
                     karta=group_ring,
                     mdf=bgdf,
                     fill_color=fill_color,
@@ -938,7 +938,7 @@ def plp(  # plp: points, lines, polygons
 
         # Add geohash cells to the map as a polygon layer
         group_geohash = folium.FeatureGroup(name=f"{i} - Geohash")
-        polygons(
+        add_polys(
             karta=group_geohash,
             mdf=cdf,
             fill_color=fill_color,
@@ -964,7 +964,7 @@ def plp(  # plp: points, lines, polygons
 
         # Add S2 cells to the map as a polygon layer
         group_s2 = folium.FeatureGroup(name=f"{i} - S2")
-        polygons(
+        add_polys(
             karta=group_s2,
             mdf=cdf,
             fill_color=fill_color,
@@ -990,7 +990,7 @@ def plp(  # plp: points, lines, polygons
 
         # Add H3 cells to the map as a polygon layer
         group_h3 = folium.FeatureGroup(name=f"{i} - H3")
-        polygons(
+        add_polys(
             karta=group_h3,
             mdf=cdf,
             fill_color=fill_color,
