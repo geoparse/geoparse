@@ -11,6 +11,77 @@ from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 from geoparse.geoparse import GeomUtils, OSMUtils, SpatialIndex
 
 
+def base_map(sw: list or tuple, ne: list or tuple) -> folium.Map:
+    """
+    Creates a base map with multiple tile layers and fits the map to the specified bounding box.
+
+    This function initializes a Folium map object with multiple tile layers, including:
+    - `Bright Mode` (CartoDB Positron)
+    - `Dark Mode` (CartoDB Dark Matter)
+    - `Satellite` (Esri World Imagery)
+    - `OpenStreetMap` (OSM)
+
+    It then fits the map's view to the bounding box defined by the southwest (`sw`) and northeast (`ne`) coordinates.
+
+    Parameters
+    ----------
+    sw : list or tuple
+        The southwest coordinate [latitude, longitude] of the bounding box to fit the map view.
+
+    ne : list or tuple
+        The northeast coordinate [latitude, longitude] of the bounding box to fit the map view.
+
+    Returns
+    -------
+    folium.Map
+        A Folium map object with multiple tile layers and the view fitted to the provided bounding box.
+
+    Examples
+    --------
+    >>> sw = [51.2652, -0.5426]  # Southwest coordinate (London, UK)
+    >>> ne = [51.7225, 0.2824]  # Northeast coordinate (London, UK)
+    >>> karta = base_map(sw, ne)
+    >>> karta.save("map.html")  # Save the map to an HTML file
+    """
+    # Initialize the base map without any default tiles
+    karta = folium.Map(tiles=None)
+
+    # Dictionary of tile layers to be added
+    tiles = {
+        "cartodbpositron": "Light",
+        "cartodbdark_matter": "Dark",
+    }
+
+    # Add each tile layer to the map
+    for item in tiles:
+        folium.TileLayer(item, name=tiles[item], max_zoom=21).add_to(karta)
+
+    # Add OpenTopoMap as a tile layer
+    folium.TileLayer(
+        tiles="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+        attr='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://opentopomap.org/">OpenTopoMap</a>',
+        name="Outdoors",
+    ).add_to(karta)
+
+    # Add a satellite tile layer (Esri World Imagery)
+    folium.TileLayer(
+        name="Satellite",
+        attr='© <a href="https://www.esri.com/en-us/legal/overview">Esri</a>',
+        tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        overlay=False,
+        control=True,
+        max_zoom=19,
+    ).add_to(karta)
+
+    # Add OpenStreetMap (OSM) tile layer
+    folium.TileLayer("openstreetmap", name="OSM", max_zoom=19).add_to(karta)
+
+    # Fit the map's view to the bounding box defined by the southwest and northeast coordinates
+    karta.fit_bounds([sw, ne])
+
+    return karta
+
+
 def _select_color(col: int or str, head: int = None, tail: int = None) -> str:
     """
     Generates a consistent color based on the input column value by mapping it to a predefined color palette.
@@ -103,77 +174,6 @@ def _select_color(col: int or str, head: int = None, tail: int = None) -> str:
         idx = int(col[head:tail], 36) % len(palettet)  # Convert substring to a number base 36 (36 = 10 digits + 26 letters)
 
     return palettet[idx]
-
-
-def base_map(sw: list or tuple, ne: list or tuple) -> folium.Map:
-    """
-    Creates a base map with multiple tile layers and fits the map to the specified bounding box.
-
-    This function initializes a Folium map object with multiple tile layers, including:
-    - `Bright Mode` (CartoDB Positron)
-    - `Dark Mode` (CartoDB Dark Matter)
-    - `Satellite` (Esri World Imagery)
-    - `OpenStreetMap` (OSM)
-
-    It then fits the map's view to the bounding box defined by the southwest (`sw`) and northeast (`ne`) coordinates.
-
-    Parameters
-    ----------
-    sw : list or tuple
-        The southwest coordinate [latitude, longitude] of the bounding box to fit the map view.
-
-    ne : list or tuple
-        The northeast coordinate [latitude, longitude] of the bounding box to fit the map view.
-
-    Returns
-    -------
-    folium.Map
-        A Folium map object with multiple tile layers and the view fitted to the provided bounding box.
-
-    Examples
-    --------
-    >>> sw = [51.2652, -0.5426]  # Southwest coordinate (London, UK)
-    >>> ne = [51.7225, 0.2824]  # Northeast coordinate (London, UK)
-    >>> karta = base_map(sw, ne)
-    >>> karta.save("map.html")  # Save the map to an HTML file
-    """
-    # Initialize the base map without any default tiles
-    karta = folium.Map(tiles=None)
-
-    # Dictionary of tile layers to be added
-    tiles = {
-        "cartodbpositron": "Light",
-        "cartodbdark_matter": "Dark",
-    }
-
-    # Add each tile layer to the map
-    for item in tiles:
-        folium.TileLayer(item, name=tiles[item], max_zoom=21).add_to(karta)
-
-    # Add OpenTopoMap as a tile layer
-    folium.TileLayer(
-        tiles="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
-        attr='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://opentopomap.org/">OpenTopoMap</a>',
-        name="Outdoors",
-    ).add_to(karta)
-
-    # Add a satellite tile layer (Esri World Imagery)
-    folium.TileLayer(
-        name="Satellite",
-        attr='© <a href="https://www.esri.com/en-us/legal/overview">Esri</a>',
-        tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        overlay=False,
-        control=True,
-        max_zoom=19,
-    ).add_to(karta)
-
-    # Add OpenStreetMap (OSM) tile layer
-    folium.TileLayer("openstreetmap", name="OSM", max_zoom=19).add_to(karta)
-
-    # Fit the map's view to the bounding box defined by the southwest and northeast coordinates
-    karta.fit_bounds([sw, ne])
-
-    return karta
 
 
 def add_point(
@@ -292,7 +292,9 @@ def add_point(
     return 0
 
 
-def add_poly(row: pd.Series, karta: folium.Map, fill_color: str, line_width: int, popup_dict: dict = None) -> int:
+def add_poly(
+    row: pd.Series, karta: folium.Map, fill_color: str, highlight_color: str, line_width: int, popup_dict: dict = None
+) -> int:
     """
     Adds a polygon to a Folium map based on the specified parameters and data in the provided row.
 
@@ -347,7 +349,7 @@ def add_poly(row: pd.Series, karta: folium.Map, fill_color: str, line_width: int
     # Highlight style function when the polygon is hovered over
     def highlight_function(x):
         return {
-            "fillColor": fill_color,
+            "fillColor": highlight_color,  # fill_color,
             "color": "#000000",  # Border color
             "fillOpacity": 0.5,
             "weight": line_width,
@@ -369,109 +371,22 @@ def add_poly(row: pd.Series, karta: folium.Map, fill_color: str, line_width: int
     return 0
 
 
-def add_polys(
-    karta: folium.Map, mdf: pd.DataFrame, fill_color: str, highlight_color: str, line_width: int, popup_dict: dict = None
-) -> int:
-    """
-    Adds multiple polygons from a DataFrame to a Folium map with specified styles and popups.
-
-    This function iterates over the rows of a DataFrame containing geometries and adds each polygon to the given Folium map.
-    The polygon styles can be customized with fill and highlight colors, line width, and optional popup information for
-    each polygon.
-
-    Parameters
-    ----------
-    karta : folium.Map
-        The Folium map object to which the polygons will be added.
-
-    mdf : pd.DataFrame
-        A DataFrame containing polygon geometries in a 'geometry' column and other optional attributes for styling and popup.
-
-    fill_color : str
-        The column name or value used to determine the fill color of the polygons. If the column is present in `mdf`, the color
-        is extracted using the `_select_color` function. Otherwise, it is used as a direct color value.
-
-    highlight_color : str
-        The color used to highlight polygons when they are hovered over.
-
-    line_width : int
-        The width of the polygon borders (outlines).
-
-    popup_dict : dict, optional
-        A dictionary where keys are labels and values are column names in `mdf`. This dictionary is used to create an HTML popup
-        with the specified labels and values for each polygon (default is None).
-
-    Returns
-    -------
-    int
-        Returns 0 upon successfully adding the polygons to the map.
-
-    Examples
-    --------
-    >>> # Example DataFrame
-    >>> data = {'geometry': [Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]), Polygon([(1, 1), (2, 1), (2, 2), (1, 2)])],
-                'color': ['blue', 'green']}
-    >>> mdf = pd.DataFrame(data)
-    >>> karta = folium.Map(location=[0.5, 0.5], zoom_start=10)
-    >>> add_polys(karta, mdf, fill_color="color", highlight_color="yellow", line_width=2)
-    0
-    """
-    # Determine fill color if the specified column is present in the DataFrame
-    if fill_color in mdf.columns:
-        fill_color = _select_color(mdf[fill_color].values[0])
-
-    # Define the default style function for polygons
-    def style_function(x):
-        return {
-            "fillColor": fill_color,
-            "color": "#000000",  # Border color
-            "fillOpacity": 0.25,
-            "weight": line_width,
-        }
-
-    # Define the highlight style function for polygons when hovered over
-    def highlight_function(x):
-        return {
-            "fillColor": highlight_color,
-            "color": "#000000",  # Border color
-            "fillOpacity": 0.5,
-            "weight": line_width,
-        }
-
-    # Iterate over each row in the DataFrame and add the corresponding polygon to the map
-    for _, row in mdf.iterrows():
-        # Create a popup if a popup dictionary is provided
-        if popup_dict is None:
-            popup = None
-        else:
-            popup = ""
-            for item in popup_dict:
-                popup += "<b>{}</b>: <b>{}</b><br>".format(item, row[popup_dict[item]])
-
-        # Convert geometry to GeoJson and add it to the Folium map
-        gjson = gpd.GeoSeries(row["geometry"]).to_json()
-        gjson = folium.GeoJson(data=gjson, style_function=style_function, highlight_function=highlight_function, tooltip=popup)
-        gjson.add_to(karta)
-
-    return 0
-
-
-def plp(  # plp: points, lines, polygons
+def plp(
     gdf_list: Union[pd.DataFrame, gpd.GeoDataFrame, List[Union[pd.DataFrame, gpd.GeoDataFrame]]] = None,
     # Point
-    x: Optional[str] = None,
-    y: Optional[str] = None,  # provide x and y if more than one column in gdf contains 'lat' and 'lon'
+    x: Optional[str] = None,  # provide x and y if more than one column in gdf contains 'lon' and 'lat'
+    y: Optional[str] = None,
     cluster: bool = False,
     heatmap: bool = False,
     line: bool = False,
     antpath: bool = False,
     point_color: str = "blue",
-    color_head: Optional[str] = None,
-    color_tail: Optional[str] = None,  # color_head and color_tail: substring indices
+    color_head: Optional[str] = None,  # color_head and color_tail: substring indices
+    color_tail: Optional[str] = None,
     point_opacity: float = 0.5,
     point_radius: int = 3,
-    point_weight: int = 6,
-    point_popup: Optional[dict] = None,  # point_weight = 2xpoint_radius
+    point_weight: int = 6,  # point_weight = 2xpoint_radius
+    point_popup: Optional[dict] = None,
     buffer_radius: int = 0,
     ring_inner_radius: int = 0,
     ring_outer_radius: int = 0,
@@ -481,7 +396,7 @@ def plp(  # plp: points, lines, polygons
     line_weight: int = 6,
     line_popup: Optional[dict] = None,
     # Polygon
-    centroid: bool = False,  # if centroid=True it shows centroids of polygons on the map.
+    centroid: bool = False,  # if True it shows centroids of polygons on the map.
     fill_color: str = "red",
     highlight_color: str = "green",
     line_width: float = 0.3,
@@ -497,8 +412,7 @@ def plp(  # plp: points, lines, polygons
     url: Optional[str] = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
 ) -> folium.Map:
     """
-    Creates a Folium map with points, lines, or polygons based on the input geospatial data.
-
+    plp (points, lines, polygons) creates a Folium map with points, lines, or polygons based on the input geospatial data.
     The function `plp` allows users to add different geometrical elements (points, lines, polygons) to a Folium map.
     It supports various visual styles and configurations, such as clustering, heatmaps, and geohash or cell-based layers.
 
@@ -695,6 +609,7 @@ def plp(  # plp: points, lines, polygons
                 add_poly,
                 karta=group_polygon,
                 fill_color=fill_color,
+                highlight_color=highlight_color,
                 line_width=line_width,
                 popup_dict=polygon_popup,
                 axis=1,
@@ -815,13 +730,14 @@ def plp(  # plp: points, lines, polygons
                     bgdf.to_crs(GeomUtils.find_proj(gdf.geometry.values[0])).buffer(buffer_radius).to_crs("EPSG:4326")
                 )
                 # Add the buffered geometries to the map as polygons
-                add_polys(
+                bgdf.apply(
+                    add_poly,
                     karta=group_buffer,
-                    mdf=bgdf,
                     fill_color=fill_color,
                     highlight_color=fill_color,
                     line_width=line_width,
                     popup_dict=None,
+                    axis=1,
                 )
                 # Add the buffer layer to the map
                 group_buffer.add_to(karta)
@@ -838,13 +754,14 @@ def plp(  # plp: points, lines, polygons
                     .to_crs("EPSG:4326")
                 )  # radius in meters
                 # Add the ring-shaped geometries to the map as polygons
-                add_polys(
+                bgdf.apply(
+                    add_poly,
                     karta=group_ring,
-                    mdf=bgdf,
                     fill_color=fill_color,
                     highlight_color=fill_color,
                     line_width=line_width,
                     popup_dict=None,
+                    axis=1,
                 )
                 # Add the ring layer to the map
                 group_ring.add_to(karta)
@@ -865,13 +782,15 @@ def plp(  # plp: points, lines, polygons
 
         # Add geohash cells to the map as a polygon layer
         group_geohash = folium.FeatureGroup(name=f"{i} - Geohash")
-        add_polys(
+
+        cdf.apply(
+            add_poly,
             karta=group_geohash,
-            mdf=cdf,
             fill_color=fill_color,
             highlight_color=highlight_color,
             line_width=line_width,
             popup_dict={"ID": "id", "Resolution": "res"},
+            axis=1,
         )
         group_geohash.add_to(karta)
 
@@ -891,13 +810,14 @@ def plp(  # plp: points, lines, polygons
 
         # Add S2 cells to the map as a polygon layer
         group_s2 = folium.FeatureGroup(name=f"{i} - S2")
-        add_polys(
+        cdf.apply(
+            add_poly,
             karta=group_s2,
-            mdf=cdf,
             fill_color=fill_color,
             highlight_color=highlight_color,
             line_width=line_width,
             popup_dict={"ID": "id", "Resolution": "res"},
+            axis=1,
         )
         group_s2.add_to(karta)
 
@@ -917,13 +837,14 @@ def plp(  # plp: points, lines, polygons
 
         # Add H3 cells to the map as a polygon layer
         group_h3 = folium.FeatureGroup(name=f"{i} - H3")
-        add_polys(
+        cdf.apply(
+            add_poly,
             karta=group_h3,
-            mdf=cdf,
             fill_color=fill_color,
             highlight_color=highlight_color,
             line_width=line_width,
             popup_dict={"ID": "id", "Resolution": "res"},
+            axis=1,
         )
         group_h3.add_to(karta)
     folium.LayerControl(collapsed=False).add_to(karta)
