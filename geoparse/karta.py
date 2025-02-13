@@ -292,7 +292,9 @@ def add_point(
     return 0
 
 
-def add_poly(row: pd.Series, karta: folium.Map, fill_color: str, line_width: int, popup_dict: dict = None) -> int:
+def add_poly(
+    row: pd.Series, karta: folium.Map, fill_color: str, highlight_color: str, line_width: int, popup_dict: dict = None
+) -> int:
     """
     Adds a polygon to a Folium map based on the specified parameters and data in the provided row.
 
@@ -347,7 +349,7 @@ def add_poly(row: pd.Series, karta: folium.Map, fill_color: str, line_width: int
     # Highlight style function when the polygon is hovered over
     def highlight_function(x):
         return {
-            "fillColor": fill_color,
+            "fillColor": highlight_color,  # fill_color,
             "color": "#000000",  # Border color
             "fillOpacity": 0.5,
             "weight": line_width,
@@ -365,93 +367,6 @@ def add_poly(row: pd.Series, karta: folium.Map, fill_color: str, line_width: int
     gjson = row.geometry.__geo_interface__
     gjson = folium.GeoJson(data=gjson, style_function=style_function, highlight_function=highlight_function, tooltip=popup)
     gjson.add_to(karta)
-
-    return 0
-
-
-def add_polys(
-    karta: folium.Map, mdf: pd.DataFrame, fill_color: str, highlight_color: str, line_width: int, popup_dict: dict = None
-) -> int:
-    """
-    Adds multiple polygons from a DataFrame to a Folium map with specified styles and popups.
-
-    This function iterates over the rows of a DataFrame containing geometries and adds each polygon to the given Folium map.
-    The polygon styles can be customized with fill and highlight colors, line width, and optional popup information for
-    each polygon.
-
-    Parameters
-    ----------
-    karta : folium.Map
-        The Folium map object to which the polygons will be added.
-
-    mdf : pd.DataFrame
-        A DataFrame containing polygon geometries in a 'geometry' column and other optional attributes for styling and popup.
-
-    fill_color : str
-        The column name or value used to determine the fill color of the polygons. If the column is present in `mdf`, the color
-        is extracted using the `_select_color` function. Otherwise, it is used as a direct color value.
-
-    highlight_color : str
-        The color used to highlight polygons when they are hovered over.
-
-    line_width : int
-        The width of the polygon borders (outlines).
-
-    popup_dict : dict, optional
-        A dictionary where keys are labels and values are column names in `mdf`. This dictionary is used to create an HTML popup
-        with the specified labels and values for each polygon (default is None).
-
-    Returns
-    -------
-    int
-        Returns 0 upon successfully adding the polygons to the map.
-
-    Examples
-    --------
-    >>> # Example DataFrame
-    >>> data = {'geometry': [Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]), Polygon([(1, 1), (2, 1), (2, 2), (1, 2)])],
-                'color': ['blue', 'green']}
-    >>> mdf = pd.DataFrame(data)
-    >>> karta = folium.Map(location=[0.5, 0.5], zoom_start=10)
-    >>> add_polys(karta, mdf, fill_color="color", highlight_color="yellow", line_width=2)
-    0
-    """
-    # Determine fill color if the specified column is present in the DataFrame
-    if fill_color in mdf.columns:
-        fill_color = _select_color(mdf[fill_color].values[0])
-
-    # Define the default style function for polygons
-    def style_function(x):
-        return {
-            "fillColor": fill_color,
-            "color": "#000000",  # Border color
-            "fillOpacity": 0.25,
-            "weight": line_width,
-        }
-
-    # Define the highlight style function for polygons when hovered over
-    def highlight_function(x):
-        return {
-            "fillColor": highlight_color,
-            "color": "#000000",  # Border color
-            "fillOpacity": 0.5,
-            "weight": line_width,
-        }
-
-    # Iterate over each row in the DataFrame and add the corresponding polygon to the map
-    for _, row in mdf.iterrows():
-        # Create a popup if a popup dictionary is provided
-        if popup_dict is None:
-            popup = None
-        else:
-            popup = ""
-            for item in popup_dict:
-                popup += "<b>{}</b>: <b>{}</b><br>".format(item, row[popup_dict[item]])
-
-        # Convert geometry to GeoJson and add it to the Folium map
-        gjson = gpd.GeoSeries(row["geometry"]).to_json()
-        gjson = folium.GeoJson(data=gjson, style_function=style_function, highlight_function=highlight_function, tooltip=popup)
-        gjson.add_to(karta)
 
     return 0
 
@@ -694,6 +609,7 @@ def plp(
                 add_poly,
                 karta=group_polygon,
                 fill_color=fill_color,
+                highlight_color=highlight_color,
                 line_width=line_width,
                 popup_dict=polygon_popup,
                 axis=1,
@@ -814,13 +730,14 @@ def plp(
                     bgdf.to_crs(GeomUtils.find_proj(gdf.geometry.values[0])).buffer(buffer_radius).to_crs("EPSG:4326")
                 )
                 # Add the buffered geometries to the map as polygons
-                add_polys(
+                bgdf.apply(
+                    add_poly,
                     karta=group_buffer,
-                    mdf=bgdf,
                     fill_color=fill_color,
                     highlight_color=fill_color,
                     line_width=line_width,
                     popup_dict=None,
+                    axis=1,
                 )
                 # Add the buffer layer to the map
                 group_buffer.add_to(karta)
@@ -837,13 +754,14 @@ def plp(
                     .to_crs("EPSG:4326")
                 )  # radius in meters
                 # Add the ring-shaped geometries to the map as polygons
-                add_polys(
+                bgdf.apply(
+                    add_poly,
                     karta=group_ring,
-                    mdf=bgdf,
                     fill_color=fill_color,
                     highlight_color=fill_color,
                     line_width=line_width,
                     popup_dict=None,
+                    axis=1,
                 )
                 # Add the ring layer to the map
                 group_ring.add_to(karta)
@@ -864,13 +782,15 @@ def plp(
 
         # Add geohash cells to the map as a polygon layer
         group_geohash = folium.FeatureGroup(name=f"{i} - Geohash")
-        add_polys(
+
+        cdf.apply(
+            add_poly,
             karta=group_geohash,
-            mdf=cdf,
             fill_color=fill_color,
             highlight_color=highlight_color,
             line_width=line_width,
             popup_dict={"ID": "id", "Resolution": "res"},
+            axis=1,
         )
         group_geohash.add_to(karta)
 
@@ -890,13 +810,14 @@ def plp(
 
         # Add S2 cells to the map as a polygon layer
         group_s2 = folium.FeatureGroup(name=f"{i} - S2")
-        add_polys(
+        cdf.apply(
+            add_poly,
             karta=group_s2,
-            mdf=cdf,
             fill_color=fill_color,
             highlight_color=highlight_color,
             line_width=line_width,
             popup_dict={"ID": "id", "Resolution": "res"},
+            axis=1,
         )
         group_s2.add_to(karta)
 
@@ -916,13 +837,14 @@ def plp(
 
         # Add H3 cells to the map as a polygon layer
         group_h3 = folium.FeatureGroup(name=f"{i} - H3")
-        add_polys(
+        cdf.apply(
+            add_poly,
             karta=group_h3,
-            mdf=cdf,
             fill_color=fill_color,
             highlight_color=highlight_color,
             line_width=line_width,
             popup_dict={"ID": "id", "Resolution": "res"},
+            axis=1,
         )
         group_h3.add_to(karta)
     folium.LayerControl(collapsed=False).add_to(karta)
