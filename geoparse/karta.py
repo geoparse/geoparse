@@ -741,8 +741,6 @@ def plp(  # plp: points, lines, polygons
             group_point = folium.FeatureGroup(name=f"{i}- Point")
             gdf.apply(
                 add_point,
-                x=xx,
-                y=yy,
                 karta=group_point,
                 color=point_color,
                 color_head=color_head,
@@ -751,6 +749,8 @@ def plp(  # plp: points, lines, polygons
                 radius=point_radius,
                 weight=point_weight,
                 popup_dict=point_popup,
+                x=xx,
+                y=yy,
                 axis=1,
             )
             group_point.add_to(karta)
