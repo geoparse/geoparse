@@ -11,6 +11,77 @@ from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 from geoparse.geoparse import GeomUtils, OSMUtils, SpatialIndex
 
 
+def base_map(sw: list or tuple, ne: list or tuple) -> folium.Map:
+    """
+    Creates a base map with multiple tile layers and fits the map to the specified bounding box.
+
+    This function initializes a Folium map object with multiple tile layers, including:
+    - `Bright Mode` (CartoDB Positron)
+    - `Dark Mode` (CartoDB Dark Matter)
+    - `Satellite` (Esri World Imagery)
+    - `OpenStreetMap` (OSM)
+
+    It then fits the map's view to the bounding box defined by the southwest (`sw`) and northeast (`ne`) coordinates.
+
+    Parameters
+    ----------
+    sw : list or tuple
+        The southwest coordinate [latitude, longitude] of the bounding box to fit the map view.
+
+    ne : list or tuple
+        The northeast coordinate [latitude, longitude] of the bounding box to fit the map view.
+
+    Returns
+    -------
+    folium.Map
+        A Folium map object with multiple tile layers and the view fitted to the provided bounding box.
+
+    Examples
+    --------
+    >>> sw = [51.2652, -0.5426]  # Southwest coordinate (London, UK)
+    >>> ne = [51.7225, 0.2824]  # Northeast coordinate (London, UK)
+    >>> karta = base_map(sw, ne)
+    >>> karta.save("map.html")  # Save the map to an HTML file
+    """
+    # Initialize the base map without any default tiles
+    karta = folium.Map(tiles=None)
+
+    # Dictionary of tile layers to be added
+    tiles = {
+        "cartodbpositron": "Light",
+        "cartodbdark_matter": "Dark",
+    }
+
+    # Add each tile layer to the map
+    for item in tiles:
+        folium.TileLayer(item, name=tiles[item], max_zoom=21).add_to(karta)
+
+    # Add OpenTopoMap as a tile layer
+    folium.TileLayer(
+        tiles="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+        attr='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://opentopomap.org/">OpenTopoMap</a>',
+        name="Outdoors",
+    ).add_to(karta)
+
+    # Add a satellite tile layer (Esri World Imagery)
+    folium.TileLayer(
+        name="Satellite",
+        attr='© <a href="https://www.esri.com/en-us/legal/overview">Esri</a>',
+        tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        overlay=False,
+        control=True,
+        max_zoom=19,
+    ).add_to(karta)
+
+    # Add OpenStreetMap (OSM) tile layer
+    folium.TileLayer("openstreetmap", name="OSM", max_zoom=19).add_to(karta)
+
+    # Fit the map's view to the bounding box defined by the southwest and northeast coordinates
+    karta.fit_bounds([sw, ne])
+
+    return karta
+
+
 def _select_color(col: int or str, head: int = None, tail: int = None) -> str:
     """
     Generates a consistent color based on the input column value by mapping it to a predefined color palette.
@@ -103,77 +174,6 @@ def _select_color(col: int or str, head: int = None, tail: int = None) -> str:
         idx = int(col[head:tail], 36) % len(palettet)  # Convert substring to a number base 36 (36 = 10 digits + 26 letters)
 
     return palettet[idx]
-
-
-def base_map(sw: list or tuple, ne: list or tuple) -> folium.Map:
-    """
-    Creates a base map with multiple tile layers and fits the map to the specified bounding box.
-
-    This function initializes a Folium map object with multiple tile layers, including:
-    - `Bright Mode` (CartoDB Positron)
-    - `Dark Mode` (CartoDB Dark Matter)
-    - `Satellite` (Esri World Imagery)
-    - `OpenStreetMap` (OSM)
-
-    It then fits the map's view to the bounding box defined by the southwest (`sw`) and northeast (`ne`) coordinates.
-
-    Parameters
-    ----------
-    sw : list or tuple
-        The southwest coordinate [latitude, longitude] of the bounding box to fit the map view.
-
-    ne : list or tuple
-        The northeast coordinate [latitude, longitude] of the bounding box to fit the map view.
-
-    Returns
-    -------
-    folium.Map
-        A Folium map object with multiple tile layers and the view fitted to the provided bounding box.
-
-    Examples
-    --------
-    >>> sw = [51.2652, -0.5426]  # Southwest coordinate (London, UK)
-    >>> ne = [51.7225, 0.2824]  # Northeast coordinate (London, UK)
-    >>> karta = base_map(sw, ne)
-    >>> karta.save("map.html")  # Save the map to an HTML file
-    """
-    # Initialize the base map without any default tiles
-    karta = folium.Map(tiles=None)
-
-    # Dictionary of tile layers to be added
-    tiles = {
-        "cartodbpositron": "Light",
-        "cartodbdark_matter": "Dark",
-    }
-
-    # Add each tile layer to the map
-    for item in tiles:
-        folium.TileLayer(item, name=tiles[item], max_zoom=21).add_to(karta)
-
-    # Add OpenTopoMap as a tile layer
-    folium.TileLayer(
-        tiles="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
-        attr='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://opentopomap.org/">OpenTopoMap</a>',
-        name="Outdoors",
-    ).add_to(karta)
-
-    # Add a satellite tile layer (Esri World Imagery)
-    folium.TileLayer(
-        name="Satellite",
-        attr='© <a href="https://www.esri.com/en-us/legal/overview">Esri</a>',
-        tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        overlay=False,
-        control=True,
-        max_zoom=19,
-    ).add_to(karta)
-
-    # Add OpenStreetMap (OSM) tile layer
-    folium.TileLayer("openstreetmap", name="OSM", max_zoom=19).add_to(karta)
-
-    # Fit the map's view to the bounding box defined by the southwest and northeast coordinates
-    karta.fit_bounds([sw, ne])
-
-    return karta
 
 
 def add_point(
@@ -456,22 +456,22 @@ def add_polys(
     return 0
 
 
-def plp(  # plp: points, lines, polygons
+def plp(
     gdf_list: Union[pd.DataFrame, gpd.GeoDataFrame, List[Union[pd.DataFrame, gpd.GeoDataFrame]]] = None,
     # Point
-    x: Optional[str] = None,
-    y: Optional[str] = None,  # provide x and y if more than one column in gdf contains 'lat' and 'lon'
+    x: Optional[str] = None,  # provide x and y if more than one column in gdf contains 'lon' and 'lat'
+    y: Optional[str] = None,
     cluster: bool = False,
     heatmap: bool = False,
     line: bool = False,
     antpath: bool = False,
     point_color: str = "blue",
-    color_head: Optional[str] = None,
-    color_tail: Optional[str] = None,  # color_head and color_tail: substring indices
+    color_head: Optional[str] = None,  # color_head and color_tail: substring indices
+    color_tail: Optional[str] = None,
     point_opacity: float = 0.5,
     point_radius: int = 3,
-    point_weight: int = 6,
-    point_popup: Optional[dict] = None,  # point_weight = 2xpoint_radius
+    point_weight: int = 6,  # point_weight = 2xpoint_radius
+    point_popup: Optional[dict] = None,
     buffer_radius: int = 0,
     ring_inner_radius: int = 0,
     ring_outer_radius: int = 0,
@@ -481,7 +481,7 @@ def plp(  # plp: points, lines, polygons
     line_weight: int = 6,
     line_popup: Optional[dict] = None,
     # Polygon
-    centroid: bool = False,  # if centroid=True it shows centroids of polygons on the map.
+    centroid: bool = False,  # if True it shows centroids of polygons on the map.
     fill_color: str = "red",
     highlight_color: str = "green",
     line_width: float = 0.3,
@@ -497,8 +497,7 @@ def plp(  # plp: points, lines, polygons
     url: Optional[str] = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
 ) -> folium.Map:
     """
-    Creates a Folium map with points, lines, or polygons based on the input geospatial data.
-
+    plp (points, lines, polygons) creates a Folium map with points, lines, or polygons based on the input geospatial data.
     The function `plp` allows users to add different geometrical elements (points, lines, polygons) to a Folium map.
     It supports various visual styles and configurations, such as clustering, heatmaps, and geohash or cell-based layers.
 
