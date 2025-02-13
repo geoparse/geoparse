@@ -48,7 +48,7 @@ uv self update
 ## Installation
 
 
-`pip install git+https://github.com/geoparse/geospatial.git`
+`pip install git+https://github.com/geoparse/geoparse.git`
 
 ---
 ## Ducumentation
