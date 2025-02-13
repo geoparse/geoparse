@@ -11,7 +11,7 @@ from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 from geoparse.geoparse import GeomUtils, OSMUtils, SpatialIndex
 
 
-def color_map(col: int or str, head: int = None, tail: int = None) -> str:
+def _select_color(col: int or str, head: int = None, tail: int = None) -> str:
     """
     Generates a consistent color based on the input column value by mapping it to a predefined color palette.
 
@@ -41,13 +41,13 @@ def color_map(col: int or str, head: int = None, tail: int = None) -> str:
 
     Examples
     --------
-    >>> color_map("Category1")
+    >>> _select_color("Category1")
     '#e6194b'  # Red color from the palette
 
-    >>> color_map(5)
+    >>> _select_color(5)
     '#3cb44b'  # Green color from the palette
 
-    >>> color_map("Example", head=0, tail=3)
+    >>> _select_color("Example", head=0, tail=3)
     '#e12348'  # Bright Red from the palette
     """
     # Predefined color palette
@@ -274,7 +274,7 @@ def add_point(
             color = "black"
     # Determine color if column is specified
     elif color in row.index:  # color in DataFrame columns
-        color = color_map(row[color], color_head, color_tail)
+        color = _select_color(row[color], color_head, color_tail)
 
     # Create a popup HTML if popup_dict is provided
     if popup_dict is None:
@@ -310,7 +310,7 @@ def add_poly(row: pd.Series, karta: folium.Map, fill_color: str, line_width: int
 
     fill_color : str
         Column name to determine the fill color of the polygon. If the column is present in the row, the color is extracted
-        using the `color_map` function.
+        using the `_select_color` function.
 
     line_width : int
         The width of the border (outline) of the polygon.
@@ -333,7 +333,7 @@ def add_poly(row: pd.Series, karta: folium.Map, fill_color: str, line_width: int
     """
     # Determine fill color if specified column is present
     if fill_color in row.index:
-        fill_color = color_map(row[fill_color])
+        fill_color = _select_color(row[fill_color])
 
     # Style function to apply to the polygon
     def style_function(x):
@@ -389,7 +389,7 @@ def add_polys(
 
     fill_color : str
         The column name or value used to determine the fill color of the polygons. If the column is present in `mdf`, the color
-        is extracted using the `color_map` function. Otherwise, it is used as a direct color value.
+        is extracted using the `_select_color` function. Otherwise, it is used as a direct color value.
 
     highlight_color : str
         The color used to highlight polygons when they are hovered over.
@@ -418,7 +418,7 @@ def add_polys(
     """
     # Determine fill color if the specified column is present in the DataFrame
     if fill_color in mdf.columns:
-        fill_color = color_map(mdf[fill_color].values[0])
+        fill_color = _select_color(mdf[fill_color].values[0])
 
     # Define the default style function for polygons
     def style_function(x):
@@ -714,7 +714,7 @@ def plp(  # plp: points, lines, polygons
                     (coord[1], coord[0]) for coord in row.geometry.coords
                 ]  # Convert LineString geometries to coordinates (lat, lon)
                 # Use color mapping if line_color is a column
-                color = color_map(row[line_color]) if line_color in gdf.columns else line_color
+                color = _select_color(row[line_color]) if line_color in gdf.columns else line_color
 
                 # Create popup content if specified
                 popup = "".join(f"{item}: <b>{row[line_popup[item]]}</b><br>" for item in line_popup) if line_popup else None
