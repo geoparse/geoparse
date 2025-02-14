@@ -6,7 +6,7 @@ import folium  # Folium is a Python library used for visualising geospatial data
 import geopandas as gpd
 import pandas as pd
 from folium import plugins
-from shapely.geometry import LineString, MultiPolygon, Point, Polygon
+from shapely.geometry import LineString, MultiPolygon, Polygon
 
 from geoparse.geoparse import GeomUtils, OSMUtils, SpatialIndex
 
@@ -254,7 +254,7 @@ def add_point(
         location = [row[y], row[x]]  # x, y: lon, lat column names in DataFrame
 
     if any(math.isnan(item) for item in location):
-        return 0
+        return None
 
     if color == "speed":
         if pd.isna(row.speedlimit) or row.speedlimit < 0:
@@ -282,8 +282,6 @@ def add_point(
     folium.CircleMarker(location=location, radius=radius, color=color, opacity=opacity, weight=weight, tooltip=popup).add_to(
         karta
     )
-
-    return 0
 
 
 def add_line(
@@ -415,8 +413,6 @@ def add_poly(
 def plp(
     gdf_list: Union[pd.DataFrame, gpd.GeoDataFrame, List[Union[pd.DataFrame, gpd.GeoDataFrame]]] = None,
     # Point
-    x: Optional[str] = None,  # provide x and y if more than one column in gdf contains 'lon' and 'lat'
-    y: Optional[str] = None,
     cluster: bool = False,
     heatmap: bool = False,
     line: bool = False,
@@ -431,6 +427,8 @@ def plp(
     buffer_radius: int = 0,
     ring_inner_radius: int = 0,
     ring_outer_radius: int = 0,
+    x: Optional[str] = None,  # provide x and y if more than one column in gdf contains 'lon' and 'lat'
+    y: Optional[str] = None,
     # LineString
     line_color: str = "blue",
     line_opacity: float = 0.5,
@@ -615,14 +613,16 @@ def plp(
 
     # Initialize bounding box coordinates for the map
     minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
+
+    easting, northing = x, y
     # Iterate through the list of GeoDataFrames to update bounding box
     for gdf in gdf_list:
-        if not isinstance(gdf, gpd.GeoDataFrame):
-            if not x:  # Determine longitude and latitude columns if x is not specified
-                xx = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
-                yy = [col for col in gdf.columns if "lat" in col.lower()][0]
-            lons = gdf[xx]
-            lats = gdf[yy]
+        if not isinstance(gdf, gpd.GeoDataFrame):  # if pd.DataFrame
+            if not x:  # if x is not specified, determine longitude and latitude columns
+                easting = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
+                northing = [col for col in gdf.columns if "lat" in col.lower()][0]
+            lons = gdf[easting]
+            lats = gdf[northing]
             minlatg, minlong, maxlatg, maxlong = min(lats), min(lons), max(lats), max(lons)  # minlatg: minlat in gdf
         else:  # If input is a GeoDataFrame, use total_bounds to get the bounding box
             minlong, minlatg, maxlong, maxlatg = gdf.total_bounds
@@ -638,14 +638,6 @@ def plp(
     # Iterate through each DataFrame or GeoDataFrame in the list to add layers to the map
     for i, gdf in enumerate(gdf_list, start=1):
         geom = gdf.geometry.values[0] if isinstance(gdf, gpd.GeoDataFrame) else None
-        # i = 0  # index of gdf in gdf_list
-        # for gdf in gdf_list:
-        #    i += 1
-        #    if not isinstance(gdf, gpd.GeoDataFrame):  # if pd.DataFrame
-        #        geom = None
-        #    else:
-        #        geom = gdf.geometry.values[0]
-
         # Handle Polygon geometries
         if isinstance(geom, Polygon) or isinstance(geom, MultiPolygon):
             group_polygon = folium.FeatureGroup(name=f"{i}- Polygon")
@@ -668,7 +660,7 @@ def plp(
                 cdf.apply(add_point, karta=group_centroid, axis=1)
                 group_centroid.add_to(karta)
         # Handle LineString geometries
-        if isinstance(geom, LineString):
+        elif isinstance(geom, LineString):
             group_line = folium.FeatureGroup(name=f"{i}- Line")
             gdf.apply(
                 add_line,
@@ -681,15 +673,8 @@ def plp(
             )
             group_line.add_to(karta)
 
-        # Handle Point geometries or DataFrame inputs with coordinates
-        if not isinstance(gdf, gpd.GeoDataFrame) or isinstance(geom, Point):
-            if not isinstance(gdf, gpd.GeoDataFrame) and not x:  # If DataFrame and no x specified
-                xx = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
-                yy = [col for col in gdf.columns if "lat" in col.lower()][0]
-            else:
-                xx = yy = None
-
-            # Create point layers and visualizations
+        # Handle DataFrame or Point geometry
+        else:  # if not isinstance(gdf, gpd.GeoDataFrame) or isinstance(geom, Point):
             group_point = folium.FeatureGroup(name=f"{i}- Point")
             gdf.apply(
                 add_point,
@@ -701,8 +686,8 @@ def plp(
                 radius=point_radius,
                 weight=point_weight,
                 popup_dict=point_popup,
-                x=xx,
-                y=yy,
+                x=easting,
+                y=northing,
                 axis=1,
             )
             group_point.add_to(karta)
