@@ -188,7 +188,7 @@ def add_point(
     popup_dict: dict = None,
     x: str = None,
     y: str = None,
-) -> int:
+) -> None:
     """
     Adds a point (marker) to a Folium map based on the specified parameters and data in the provided row.
 
@@ -237,15 +237,14 @@ def add_point(
 
     Returns
     -------
-    int
-        Returns 0 upon successfully adding the marker to the map.
+    None
+        The function modifies the Folium map in place and does not return anything.
 
     Examples
     --------
     >>> row = pd.Series({"geometry": Point(40.748817, -73.985428), "color": "red"})
     >>> karta = folium.Map(location=[40.748817, -73.985428], zoom_start=12)
     >>> add_point(row, karta, "color")
-    0
     """
     try:
         # Attempt to extract coordinates from the geometry column if present
@@ -294,12 +293,59 @@ def add_line(
     opacity: float = 0.5,
     weight: int = 6,
     popup_dict: dict = None,
-) -> int:
+) -> None:
+    """
+    Adds a polyline (line) to a Folium map based on geometry data from a Pandas Series row.
+
+    Parameters
+    ----------
+    row : pd.Series
+        A Pandas Series containing a 'geometry' column with a LineString object.
+    karta : folium.Map
+        The Folium map to which the polyline will be added.
+    color : str, optional
+        The color of the polyline. Defaults to "blue".
+    opacity : float, optional
+        The opacity of the polyline (range: 0.0 to 1.0). Defaults to 0.5.
+    weight : int, optional
+        The thickness of the polyline in pixels. Defaults to 6.
+    popup_dict : dict, optional
+        A dictionary mapping column names to popup labels.
+
+    Returns
+    -------
+    None
+        The function modifies the Folium map in place and does not return anything.
+
+    Example
+    -------
+    >>> import folium
+    >>> import pandas as pd
+    >>> from shapely.geometry import LineString
+
+    >>> # Create a sample row with geometry data
+    >>> data = {"geometry": LineString([(-74.006, 40.7128), (-73.9352, 40.7306)]), "road_name": "Broadway"}
+    >>> row = pd.Series(data)
+
+    >>> # Initialize a Folium map
+    >>> mapa = folium.Map(location=[40.72, -74.00], zoom_start=12)
+
+    >>> # Add the polyline to the map
+    >>> add_line(row, mapa, color="red", popup_dict={"road_name": "Name"})
+
+    >>> # Save or display the map
+    >>> mapa.save("map.html")  # Saves the map to an HTML file
+    """
     coordinates = [(coord[1], coord[0]) for coord in row.geometry.coords]
+
+    # Handle color selection
     color = _select_color(row[color]) if color in row.index else color
+
+    # Create popup if popup_dict is provided
     popup = "".join(f"{item}: <b>{row[popup_dict[item]]}</b><br>" for item in popup_dict) if popup_dict else None
+
+    # Add polyline to the map
     folium.PolyLine(coordinates, color=color, weight=weight, opacity=opacity, tooltip=popup).add_to(karta)
-    return 0
 
 
 def add_poly(
@@ -311,7 +357,7 @@ def add_poly(
     highlight_opacity: float = 0.5,
     line_width: float = 0.3,
     popup_dict: dict = None,
-) -> int:
+) -> None:
     """
     Adds a polygon to a Folium map based on the specified parameters and data in the provided row.
 
@@ -340,15 +386,14 @@ def add_poly(
 
     Returns
     -------
-    int
-        Returns 0 upon successfully adding the polygon to the map.
+    None
+        The function modifies the Folium map in place and does not return anything.
 
     Examples
     --------
     >>> row = pd.Series({"geometry": Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]), "fill_color": "blue"})
     >>> karta = folium.Map(location=[0.5, 0.5], zoom_start=10)
     >>> add_poly(row, karta, "fill_color", line_width=2)
-    0
     """
     # Determine fill color if specified column is present
     fill_color = _select_color(row[fill_color]) if fill_color in row.index else fill_color
@@ -378,8 +423,6 @@ def add_poly(
     gjson = row.geometry.__geo_interface__
     gjson = folium.GeoJson(data=gjson, style_function=style_function, highlight_function=highlight_function, tooltip=popup)
     gjson.add_to(karta)
-
-    return 0
 
 
 def plp(
