@@ -319,22 +319,9 @@ def add_line(
 
     Example
     -------
-    >>> import folium
-    >>> import pandas as pd
-    >>> from shapely.geometry import LineString
-
-    >>> # Create a sample row with geometry data
-    >>> data = {"geometry": LineString([(-74.006, 40.7128), (-73.9352, 40.7306)]), "road_name": "Broadway"}
-    >>> row = pd.Series(data)
-
-    >>> # Initialize a Folium map
-    >>> mapa = folium.Map(location=[40.72, -74.00], zoom_start=12)
-
-    >>> # Add the polyline to the map
-    >>> add_line(row, mapa, color="red", popup_dict={"road_name": "Name"})
-
-    >>> # Save or display the map
-    >>> mapa.save("map.html")  # Saves the map to an HTML file
+    >>> row = pd.Series({"geometry": LineString([(-74.006, 40.7128), (-73.9352, 40.7306)]), "road_name": "Broadway"})
+    >>> karta = folium.Map(location=[40.72, -74.00], zoom_start=12)
+    >>> add_line(row, karta, color="red", popup_dict={"Name": "road_name"})
     """
     coordinates = [(coord[1], coord[0]) for coord in row.geometry.coords]
 
