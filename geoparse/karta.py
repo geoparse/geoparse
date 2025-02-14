@@ -292,6 +292,21 @@ def add_point(
     return 0
 
 
+def add_line(
+    row: pd.Series,
+    karta: folium.Map,
+    color: str,
+    opacity: float,
+    weight: int,
+    popup_dict: dict,
+) -> int:
+    coordinates = [(coord[1], coord[0]) for coord in row.geometry.coords]
+    color = _select_color(row[color]) if color in row.index else color
+    popup = "".join(f"{item}: <b>{row[popup_dict[item]]}</b><br>" for item in popup_dict) if popup_dict else None
+    folium.PolyLine(coordinates, color=color, weight=weight, opacity=opacity, tooltip=popup).add_to(karta)
+    return 0
+
+
 def add_poly(
     row: pd.Series, karta: folium.Map, fill_color: str, highlight_color: str, line_width: int, popup_dict: dict = None
 ) -> int:
@@ -624,24 +639,15 @@ def plp(
         # Handle LineString geometries
         if isinstance(geom, LineString):
             group_line = folium.FeatureGroup(name=f"{i}- Line")
-            for _index, row in gdf.iterrows():
-                coordinates = [
-                    (coord[1], coord[0]) for coord in row.geometry.coords
-                ]  # Convert LineString geometries to coordinates (lat, lon)
-                # Use color mapping if line_color is a column
-                color = _select_color(row[line_color]) if line_color in gdf.columns else line_color
-
-                # Create popup content if specified
-                popup = "".join(f"{item}: <b>{row[line_popup[item]]}</b><br>" for item in line_popup) if line_popup else None
-                # if line_popup is None:
-                #    popup = None
-                # else:
-                #    popup = ""
-                #    for item in line_popup:
-                #        popup += "{}: <b>{}</b><br>".format(item, row[line_popup[item]])
-                group_line.add_child(
-                    folium.PolyLine(coordinates, color=color, weight=line_weight, opacity=line_opacity, tooltip=popup)
-                )
+            gdf.apply(
+                add_line,
+                karta=group_line,
+                color=line_color,
+                opacity=line_opacity,
+                weight=line_weight,
+                popup_dict=line_popup,
+                axis=1,
+            )
             group_line.add_to(karta)
 
         # Handle Point geometries or DataFrame inputs with coordinates
