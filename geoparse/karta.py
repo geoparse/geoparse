@@ -405,7 +405,7 @@ def plp(
     fill_color: str = "red",
     highlight_color: str = "green",
     line_width: float = 0.3,
-    polygon_popup: Optional[dict] = None,
+    poly_popup: Optional[dict] = None,
     geohash_res: int = 0,
     s2_res: int = -1,
     h3_res: int = -1,
@@ -501,7 +501,7 @@ def plp(
     line_width : float, default 0.3
         Thickness of polygon outlines.
 
-    polygon_popup : dict, optional
+    poly_popup : dict, optional
         Dictionary where keys are labels and values are column names in the DataFrame. Used to create HTML popups with
         attributes of each polygon.
 
@@ -548,7 +548,7 @@ def plp(
     if cells:
         res, geoms = SpatialIndex.cellpoly(cells, cell_type=cell_type)
         gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
-        karta = plp(gdf, polygon_popup={"ID": "id", "Resolution": "res"})
+        karta = plp(gdf, poly_popup={"ID": "id", "Resolution": "res"})
         return karta
 
     # Handle `osm_ways` input by converting OSM way IDs to geometries
@@ -565,7 +565,7 @@ def plp(
                 h3_res=h3_res,
                 geohash_inner=geohash_inner,
                 compact=compact,
-                polygon_popup={"way_id": "way_id"},
+                poly_popup={"way_id": "way_id"},
                 fill_color="red",
             )
         return karta
@@ -616,7 +616,7 @@ def plp(
                 fill_color=fill_color,
                 highlight_color=highlight_color,
                 line_width=line_width,
-                popup_dict=polygon_popup,
+                popup_dict=poly_popup,
                 axis=1,
             )
             group_polygon.add_to(karta)
