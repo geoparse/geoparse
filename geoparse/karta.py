@@ -418,16 +418,16 @@ def plp(
     line: bool = False,
     antpath: bool = False,
     point_color: str = "blue",
-    color_head: Optional[str] = None,  # color_head and color_tail: substring indices
+    color_head: Optional[str] = None,
     color_tail: Optional[str] = None,
     point_opacity: float = 0.5,
     point_radius: int = 3,
-    point_weight: int = 6,  # point_weight = 2 x point_radius
+    point_weight: int = 6,
     point_popup: Optional[dict] = None,
     buffer_radius: int = 0,
     ring_inner_radius: int = 0,
     ring_outer_radius: int = 0,
-    x: Optional[str] = None,  # provide x and y if more than one column in gdf contains 'lon' and 'lat'
+    x: Optional[str] = None,
     y: Optional[str] = None,
     # LineString
     line_color: str = "blue",
@@ -464,12 +464,6 @@ def plp(
         List of GeoDataFrames or DataFrames containing geometrical data to be plotted. If a single DataFrame is provided,
         it will be wrapped in a list internally.
 
-    x : str, optional
-        Column name for the x-coordinate (longitude). Required if more than one column in the DataFrame contains 'lon' or 'lat'.
-
-    y : str, optional
-        Column name for the y-coordinate (latitude). Required if more than one column in the DataFrame contains 'lon' or 'lat'.
-
     cluster : bool, default False
         If True, clusters points together based on their proximity using Folium's `MarkerCluster`.
 
@@ -486,10 +480,10 @@ def plp(
         Color of the points when displayed on the map.
 
     color_head : str, optional
-        Substring to extract color for the head.
+        Substring index for the head to extract color.
 
     color_tail : str, optional
-        Substring to extract color for the tail.
+        Substring index for the tail to extract color.
 
     point_opacity : float, default 0.5
         Opacity of the points. Value should be between 0 and 1.
@@ -512,6 +506,12 @@ def plp(
 
     ring_outer_radius : float, default 0
         Outer radius of ring buffers around points. If set, creates a ring around each point.
+
+    x : str, optional
+        Column name for the x-coordinate (longitude). Specify it to use the column other than that containing 'lon'.
+
+    y : str, optional
+        Column name for the y-coordinate (latitude). Specify it to use the column other than that containing 'lat'.
 
     line_color : str, default "blue"
         Color of the lines connecting points or LineString geometries.
