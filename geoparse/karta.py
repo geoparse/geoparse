@@ -179,7 +179,7 @@ def _select_color(col: int or str, head: int = None, tail: int = None) -> str:
 def add_point(
     row: pd.Series,
     karta: folium.Map,
-    color: str,
+    color: str = "black",
     color_head: int = None,
     color_tail: int = None,
     opacity: float = 0.5,
@@ -290,10 +290,10 @@ def add_point(
 def add_line(
     row: pd.Series,
     karta: folium.Map,
-    color: str,
-    opacity: float,
-    weight: int,
-    popup_dict: dict,
+    color: str = "blue",
+    opacity: float = 0.5,
+    weight: int = 6,
+    popup_dict: dict = None,
 ) -> int:
     coordinates = [(coord[1], coord[0]) for coord in row.geometry.coords]
     color = _select_color(row[color]) if color in row.index else color
@@ -303,7 +303,14 @@ def add_line(
 
 
 def add_poly(
-    row: pd.Series, karta: folium.Map, fill_color: str, highlight_color: str, line_width: int, popup_dict: dict = None
+    row: pd.Series,
+    karta: folium.Map,
+    fill_color: str = "red",
+    highlight_color: str = "green",
+    fill_opacity: float = 0.25,
+    highlight_opacity: float = 0.5,
+    line_width: float = 0.3,
+    popup_dict: dict = None,
 ) -> int:
     """
     Adds a polygon to a Folium map based on the specified parameters and data in the provided row.
@@ -350,8 +357,8 @@ def add_poly(
     def style_function(x):
         return {
             "fillColor": fill_color,
-            "color": "#000000",  # Border color
-            "fillOpacity": 0.25,
+            "color": "black",  # Border color
+            "fillOpacity": fill_opacity,
             "weight": line_width,
         }
 
@@ -359,8 +366,8 @@ def add_poly(
     def highlight_function(x):
         return {
             "fillColor": highlight_color,  # fill_color,
-            "color": "#000000",  # Border color
-            "fillOpacity": 0.5,
+            "color": "black",  # Border color
+            "fillOpacity": highlight_opacity,
             "weight": line_width,
         }
 
@@ -389,7 +396,7 @@ def plp(
     color_tail: Optional[str] = None,
     point_opacity: float = 0.5,
     point_radius: int = 3,
-    point_weight: int = 6,  # point_weight = 2xpoint_radius
+    point_weight: int = 6,  # point_weight = 2 x point_radius
     point_popup: Optional[dict] = None,
     buffer_radius: int = 0,
     ring_inner_radius: int = 0,
@@ -403,6 +410,8 @@ def plp(
     centroid: bool = False,  # if True it shows centroids of polygons on the map.
     fill_color: str = "red",
     highlight_color: str = "green",
+    fill_opacity: float = 0.25,
+    highlight_opacity: float = 0.5,
     line_width: float = 0.3,
     poly_popup: Optional[dict] = None,
     geohash_res: int = 0,
@@ -410,6 +419,7 @@ def plp(
     h3_res: int = -1,
     geohash_inner: bool = False,
     compact: bool = False,
+    # Cells and OSM objects
     cells: Optional[List[str]] = None,
     cell_type: Optional[str] = None,  # list of geohash, S2 or H3 cell IDs
     osm_ways: Optional[List[int]] = None,  # list of OSM way IDs (lines or polygons) and Overpass API URL to query from
@@ -614,6 +624,8 @@ def plp(
                 karta=group_polygon,
                 fill_color=fill_color,
                 highlight_color=highlight_color,
+                fill_opacity=fill_opacity,
+                highlight_opacity=highlight_opacity,
                 line_width=line_width,
                 popup_dict=poly_popup,
                 axis=1,
@@ -623,7 +635,7 @@ def plp(
             if centroid:  # Show centroids of polygons if `centroid=True`
                 group_centroid = folium.FeatureGroup(name=f"{i}- Centroid")
                 cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs="EPSG:4326")  # centroid df
-                cdf.apply(add_point, karta=group_centroid, color="red", axis=1)
+                cdf.apply(add_point, karta=group_centroid, axis=1)
                 group_centroid.add_to(karta)
         # Handle LineString geometries
         if isinstance(geom, LineString):
@@ -730,7 +742,6 @@ def plp(
                     karta=group_buffer,
                     fill_color=fill_color,
                     highlight_color=fill_color,
-                    line_width=line_width,
                     popup_dict=None,
                     axis=1,
                 )
@@ -754,7 +765,6 @@ def plp(
                     karta=group_ring,
                     fill_color=fill_color,
                     highlight_color=fill_color,
-                    line_width=line_width,
                     popup_dict=None,
                     axis=1,
                 )
@@ -783,7 +793,6 @@ def plp(
             karta=group_geohash,
             fill_color=fill_color,
             highlight_color=highlight_color,
-            line_width=line_width,
             popup_dict={"ID": "id", "Resolution": "res"},
             axis=1,
         )
@@ -810,7 +819,6 @@ def plp(
             karta=group_s2,
             fill_color=fill_color,
             highlight_color=highlight_color,
-            line_width=line_width,
             popup_dict={"ID": "id", "Resolution": "res"},
             axis=1,
         )
@@ -837,7 +845,6 @@ def plp(
             karta=group_h3,
             fill_color=fill_color,
             highlight_color=highlight_color,
-            line_width=line_width,
             popup_dict={"ID": "id", "Resolution": "res"},
             axis=1,
         )
