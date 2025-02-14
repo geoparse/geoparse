@@ -277,12 +277,7 @@ def add_point(
         color = _select_color(row[color], color_head, color_tail)
 
     # Create a popup HTML if popup_dict is provided
-    if popup_dict is None:
-        popup = None
-    else:
-        popup = ""
-        for item in popup_dict:
-            popup += "{}: <b>{}</b><br>".format(item, row[popup_dict[item]])
+    popup = "".join(f"{item}: <b>{row[popup_dict[item]]}</b><br>" for item in popup_dict) if popup_dict else None
 
     # Add a CircleMarker to the map with the specified parameters
     folium.CircleMarker(location=location, radius=radius, color=color, opacity=opacity, weight=weight, tooltip=popup).add_to(
@@ -371,12 +366,7 @@ def add_poly(
         }
 
     # Create a popup if a popup dictionary is provided
-    if popup_dict is None:
-        popup = None
-    else:
-        popup = ""
-        for item in popup_dict:
-            popup += "<b>{}</b>: <b>{}</b><br>".format(item, row[popup_dict[item]])
+    popup = "".join(f"{item}: <b>{row[popup_dict[item]]}</b><br>" for item in popup_dict) if popup_dict else None
 
     # Create a GeoJson object from the row's geometry and add it to the map
     gjson = row.geometry.__geo_interface__
