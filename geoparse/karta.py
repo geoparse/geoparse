@@ -344,8 +344,7 @@ def add_poly(
     0
     """
     # Determine fill color if specified column is present
-    if fill_color in row.index:
-        fill_color = _select_color(row[fill_color])
+    fill_color = _select_color(row[fill_color]) if fill_color in row.index else fill_color
 
     # Style function to apply to the polygon
     def style_function(x):
