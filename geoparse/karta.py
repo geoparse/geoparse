@@ -18,7 +18,7 @@ class Karta:
             "cartodbdark_matter": "Dark",
         }
 
-    def base_map(self, sw: list or tuple, ne: list or tuple) -> folium.Map:
+    def _base_map(self, sw: list or tuple, ne: list or tuple) -> folium.Map:
         """
         Creates a base map with multiple tile layers and fits the map to the specified bounding box.
 
@@ -47,7 +47,7 @@ class Karta:
         --------
         >>> sw = [51.2652, -0.5426]  # Southwest coordinate (London, UK)
         >>> ne = [51.7225, 0.2824]  # Northeast coordinate (London, UK)
-        >>> karta = base_map(sw, ne)
+        >>> karta = _base_map(sw, ne)
         >>> karta.save("map.html")  # Save the map to an HTML file
         """
         # Initialize the base map without any default tiles
@@ -175,7 +175,7 @@ class Karta:
 
         return palettet[idx]
 
-    def add_point(
+    def _add_point(
         self,
         row: pd.Series,
         karta: folium.Map,
@@ -244,7 +244,7 @@ class Karta:
         --------
         >>> row = pd.Series({"geometry": Point(40.748817, -73.985428), "color": "red"})
         >>> karta = folium.Map(location=[40.748817, -73.985428], zoom_start=12)
-        >>> add_point(row, karta, "color")
+        >>> _add_point(row, karta, "color")
         """
         try:
             # Attempt to extract coordinates from the geometry column if present
@@ -283,7 +283,7 @@ class Karta:
             location=location, radius=radius, color=color, opacity=opacity, weight=weight, tooltip=popup
         ).add_to(karta)
 
-    def add_line(
+    def _add_line(
         self,
         row: pd.Series,
         karta: folium.Map,
@@ -319,7 +319,7 @@ class Karta:
         -------
         >>> row = pd.Series({"geometry": LineString([(-74.006, 40.7128), (-73.9352, 40.7306)]), "road_name": "Broadway"})
         >>> karta = folium.Map(location=[40.72, -74.00], zoom_start=12)
-        >>> add_line(row, karta, color="red", popup_dict={"Name": "road_name"})
+        >>> _add_line(row, karta, color="red", popup_dict={"Name": "road_name"})
         """
         coordinates = [(coord[1], coord[0]) for coord in row.geometry.coords]
 
@@ -332,7 +332,7 @@ class Karta:
         # Add polyline to the map
         folium.PolyLine(coordinates, color=color, weight=weight, opacity=opacity, tooltip=popup).add_to(karta)
 
-    def add_poly(
+    def _add_poly(
         self,
         row: pd.Series,
         karta: folium.Map,
@@ -378,7 +378,7 @@ class Karta:
         --------
         >>> row = pd.Series({"geometry": Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]), "fill_color": "blue"})
         >>> karta = folium.Map(location=[0.5, 0.5], zoom_start=10)
-        >>> add_poly(row, karta, "fill_color", line_width=2)
+        >>> _add_poly(row, karta, "fill_color", line_width=2)
         """
         # Determine fill color if specified column is present
         fill_color = self._select_color(row[fill_color]) if fill_color in row.index else fill_color
@@ -633,7 +633,7 @@ class Karta:
         # Create a base map using the bounding box
         sw = [minlat, minlon]  # South West (bottom left corner)
         ne = [maxlat, maxlon]  # North East (top right corner)
-        karta = self.base_map(sw, ne)  # Initialize folium map with the bounding box
+        karta = self._base_map(sw, ne)  # Initialize folium map with the bounding box
 
         # Iterate through each DataFrame or GeoDataFrame in the list to add layers to the map
         for i, gdf in enumerate(gdf_list, start=1):
@@ -642,7 +642,7 @@ class Karta:
             if isinstance(geom, Polygon) or isinstance(geom, MultiPolygon):
                 group_polygon = folium.FeatureGroup(name=f"{i}- Polygon")
                 gdf.apply(
-                    self.add_poly,
+                    self._add_poly,
                     karta=group_polygon,
                     fill_color=fill_color,
                     highlight_color=highlight_color,
@@ -657,13 +657,13 @@ class Karta:
                 if centroid:  # Show centroids of polygons if `centroid=True`
                     group_centroid = folium.FeatureGroup(name=f"{i}- Centroid")
                     cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs="EPSG:4326")  # centroid df
-                    cdf.apply(self.add_point, karta=group_centroid, axis=1)
+                    cdf.apply(self._add_point, karta=group_centroid, axis=1)
                     group_centroid.add_to(karta)
             # Handle LineString geometries
             elif isinstance(geom, LineString):
                 group_line = folium.FeatureGroup(name=f"{i}- Line")
                 gdf.apply(
-                    self.add_line,
+                    self._add_line,
                     karta=group_line,
                     color=line_color,
                     opacity=line_opacity,
@@ -677,7 +677,7 @@ class Karta:
             else:  # if not isinstance(gdf, gpd.GeoDataFrame) or isinstance(geom, Point):
                 group_point = folium.FeatureGroup(name=f"{i}- Point")
                 gdf.apply(
-                    self.add_point,
+                    self._add_point,
                     karta=group_point,
                     color=point_color,
                     color_head=color_head,
@@ -753,7 +753,7 @@ class Karta:
                     )
                     # Add the buffered geometries to the map as polygons
                     bgdf.apply(
-                        self.add_poly,
+                        self._add_poly,
                         karta=group_buffer,
                         fill_color=fill_color,
                         highlight_color=fill_color,
@@ -776,7 +776,7 @@ class Karta:
                     )  # radius in meters
                     # Add the ring-shaped geometries to the map as polygons
                     bgdf.apply(
-                        self.add_poly,
+                        self._add_poly,
                         karta=group_ring,
                         fill_color=fill_color,
                         highlight_color=fill_color,
@@ -804,7 +804,7 @@ class Karta:
             group_geohash = folium.FeatureGroup(name=f"{i} - Geohash")
 
             cdf.apply(
-                self.add_poly,
+                self._add_poly,
                 karta=group_geohash,
                 fill_color=fill_color,
                 highlight_color=highlight_color,
@@ -830,7 +830,7 @@ class Karta:
             # Add S2 cells to the map as a polygon layer
             group_s2 = folium.FeatureGroup(name=f"{i} - S2")
             cdf.apply(
-                self.add_poly,
+                self._add_poly,
                 karta=group_s2,
                 fill_color=fill_color,
                 highlight_color=highlight_color,
@@ -856,7 +856,7 @@ class Karta:
             # Add H3 cells to the map as a polygon layer
             group_h3 = folium.FeatureGroup(name=f"{i} - H3")
             cdf.apply(
-                self.add_poly,
+                self._add_poly,
                 karta=group_h3,
                 fill_color=fill_color,
                 highlight_color=highlight_color,
@@ -915,7 +915,7 @@ class Karta:
         minlon, minlat, maxlon, maxlat = gdf.total_bounds  # Get the total bounds of the GeoDataFrame
         sw = [minlat, minlon]  # South-west corner
         ne = [maxlat, maxlon]  # North-east corner
-        karta = self.base_map(sw, ne)  # Create a base map using the bounding coordinates
+        karta = self._base_map(sw, ne)  # Create a base map using the bounding coordinates
 
         # Create a choropleth layer based on the GeoDataFrame
         choropleth = folium.Choropleth(
