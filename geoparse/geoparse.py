@@ -599,7 +599,7 @@ class Karta:
 
         # Handle `cells` input by converting cell IDs to geometries
         if cells:
-            res, geoms = SpatialIndex.cellpoly(cells, cell_type=cell_type)
+            res, geoms = SpatialIndex.cell_poly(cells, cell_type=cell_type)
             gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
             karta = Karta.plp(gdf, poly_popup={"ID": "id", "Resolution": "res"})
             return karta
@@ -812,8 +812,8 @@ class Karta:
                 cdf = gpd.GeoDataFrame({"geometry": [bb]}, crs="EPSG:4326")  # Create a bounding box GeoDataFrame
 
             # Convert geometries to geohash cells and their geometries
-            cells, _ = SpatialIndex.ppolycell(cdf, cell_type="geohash", res=geohash_res, compact=compact)
-            res, geoms = SpatialIndex.cellpoly(cells, cell_type="geohash")
+            cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type="geohash", res=geohash_res, compact=compact)
+            res, geoms = SpatialIndex.cell_poly(cells, cell_type="geohash")
             cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
 
             # Add geohash cells to the map as a polygon layer
@@ -839,8 +839,8 @@ class Karta:
                 cdf = gpd.GeoDataFrame({"geometry": [bb]}, crs="EPSG:4326")  # cell df
 
             # Convert geometries to S2 cells and their geometries
-            cells, _ = SpatialIndex.ppolycell(cdf, cell_type="s2", res=s2_res, compact=compact)
-            res, geoms = SpatialIndex.cellpoly(cells, cell_type="s2")
+            cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type="s2", res=s2_res, compact=compact)
+            res, geoms = SpatialIndex.cell_poly(cells, cell_type="s2")
             cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
 
             # Add S2 cells to the map as a polygon layer
@@ -865,8 +865,8 @@ class Karta:
                 cdf = gpd.GeoDataFrame({"geometry": [bb]}, crs="EPSG:4326")  # cell df
 
             # Convert geometries to H3 cells and their geometries
-            cells, _ = SpatialIndex.ppolycell(cdf, cell_type="h3", res=h3_res, compact=compact)
-            res, geoms = SpatialIndex.cellpoly(cells, cell_type="h3")
+            cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type="h3", res=h3_res, compact=compact)
+            res, geoms = SpatialIndex.cell_poly(cells, cell_type="h3")
             cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
 
             # Add H3 cells to the map as a polygon layer
@@ -1538,7 +1538,7 @@ class CellUtils:
         The function utilizes the H3 library for generating and compacting H3 cells and for calculating cell area. The area
         is always returned in square kilometers ("km^2").
         """
-        cells = SpatialIndex.polycell([geom], cell_type="h3", res=h3_res)
+        cells = SpatialIndex.poly_cell([geom], cell_type="h3", res=h3_res)
         area = h3.hex_area(h3_res, unit="km^2")
         if compact:
             cells = h3.compact(cells)
@@ -1803,33 +1803,33 @@ class SpatialIndex:
 
     Methods:
     --------
-    pointcell(lats, lons, cell_type, res):
+    point_cell(lats, lons, cell_type, res):
         Converts latitude and longitude coordinates into spatial index representations.
 
-    polycell(geoms, cell_type, res, dump):
+    poly_cell(geoms, cell_type, res, dump):
         Converts a list of geometries into a set of unique spatial cells.
 
-    ppointcell(lats, lons, cell_type, res):
+    ppoint_cell(lats, lons, cell_type, res):
         Converts latitude and longitude coordinates into spatial index representations in parallel.
 
-    ppolycell(mdf, cell_type, res, compact, dump, verbose):
+    ppoly_cell(mdf, cell_type, res, compact, dump, verbose):
         Performs parallelized conversion of geometries in a GeoDataFrame to cell identifiers.
 
-    cellpoint(cells, cell_type):
+    cell_point(cells, cell_type):
         Converts a list of cell IDs into their corresponding centroids.
 
-    cellpoly(cells, cell_type):
+    cell_poly(cells, cell_type):
         Converts a list of spatial cells to their corresponding geometries and resolution levels.
 
-    pcellpoint(cells, cell_type):
+    pcell_point(cells, cell_type):
         Converts a list of cell IDs into their corresponding latitude and longitude points in parallel.
 
-    pcellpoly(cells, cell_type):
-        Parallelized version of `cellpoly`, converting a list of spatial cells to geometries and resolution levels.
+    pcell_poly(cells, cell_type):
+        Parallelized version of `cell_poly`, converting a list of spatial cells to geometries and resolution levels.
     """
 
     @staticmethod
-    def pointcell(lats: list[float], lons: list[float], cell_type: str, res: int) -> list:
+    def point_cell(lats: list[float], lons: list[float], cell_type: str, res: int) -> list:
         """
         Convert latitude and longitude coordinates into spatial index representations using various cell encoding types.
 
@@ -1865,7 +1865,7 @@ class SpatialIndex:
         --------
         >>> lats = [37.7749, 34.0522]
         >>> lons = [-122.4194, -118.2437]
-        >>> pointcell(lats, lons, "geohash", 6)
+        >>> point_cell(lats, lons, "geohash", 6)
         ['9q8yy', '9qh0b']
         """
         if cell_type == "geohash":
@@ -1880,7 +1880,7 @@ class SpatialIndex:
             raise ValueError(f"Unsupported cell type: {cell_type}. Choose 'geohash', 's2', 's2_int', or 'h3'.")
 
     @staticmethod
-    def polycell(
+    def poly_cell(
         geoms: List[Union[Polygon, MultiPolygon]], cell_type: str, res: int, dump: str = None
     ) -> Union[List[str], None]:
         """
@@ -1919,10 +1919,10 @@ class SpatialIndex:
         >>> from shapely.geometry import Polygon, MultiPolygon
         >>> geometries = [Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]), MultiPolygon([...])]
         >>> # Convert geometries to H3 cells at resolution 9
-        >>> h3_cells = polycell(geometries, cell_type="h3", res=9)
+        >>> h3_cells = poly_cell(geometries, cell_type="h3", res=9)
 
         >>> # Convert geometries to S2 cells and save to a directory
-        >>> polycell(geometries, cell_type="s2", res=10, dump="~/Desktop/spatial_cells")
+        >>> poly_cell(geometries, cell_type="s2", res=10, dump="~/Desktop/spatial_cells")
         """
 
         polys = []
@@ -1954,7 +1954,7 @@ class SpatialIndex:
             return None
 
     @staticmethod
-    def ppointcell(lats: list[float], lons: list[float], cell_type: str, res: int) -> list:
+    def ppoint_cell(lats: list[float], lons: list[float], cell_type: str, res: int) -> list:
         """
         Converts lists of latitude and longitude points to cell identifiers in parallel.
 
@@ -2000,7 +2000,7 @@ class SpatialIndex:
         >>> lons = [-122.4194, -74.0060]
         >>> cell_type = "h3"
         >>> res = 9
-        >>> ppointcell(lats, lons, cell_type, res)
+        >>> ppoint_cell(lats, lons, cell_type, res)
         ['8928308280fffff', '8a28308280fffff']
         """
         n_cores = cpu_count()
@@ -2012,13 +2012,13 @@ class SpatialIndex:
 
         # Parallelize the conversion using Pool.starmap
         with Pool(n_cores) as pool:
-            cells = pool.starmap(SpatialIndex.pointcell, args)
+            cells = pool.starmap(SpatialIndex.point_cell, args)
         cells = [item for sublist in cells for item in sublist]  # Flatten the list of cells
 
         return cells
 
     @staticmethod
-    def ppolycell(
+    def ppoly_cell(
         mdf: gpd.GeoDataFrame, cell_type: str, res: int, compact: bool = False, dump: str = None, verbose: bool = False
     ) -> Tuple[List[str], int]:
         """
@@ -2071,7 +2071,7 @@ class SpatialIndex:
         Example
         -------
         >>> # Assuming `mdf` is a GeoDataFrame with geometries:
-        >>> cells, count = ppolycell(mdf, cell_type="s2", res=10, compact=True, dump="~/Desktop/cells", verbose=True)
+        >>> cells, count = ppoly_cell(mdf, cell_type="s2", res=10, compact=True, dump="~/Desktop/cells", verbose=True)
         >>> print(f"Generated {count} cells: {cells}")
         """
         if verbose:
@@ -2132,14 +2132,14 @@ class SpatialIndex:
         # Parallel processing to generate cells
         if dump:
             with Pool(n_cores) as pool:
-                pool.starmap(SpatialIndex.polycell, args)
+                pool.starmap(SpatialIndex.poly_cell, args)
             if verbose:
                 elapsed_time = round(time() - start_time)
                 print(f"{elapsed_time} seconds.")
             return
         else:
             with Pool(n_cores) as pool:
-                cells = pool.starmap(SpatialIndex.polycell, args)
+                cells = pool.starmap(SpatialIndex.poly_cell, args)
             cells = [item for sublist in cells for item in sublist]  # Flatten the list of cells
 
             if verbose:
@@ -2171,7 +2171,7 @@ class SpatialIndex:
             return cells, cell_counts
 
     @staticmethod
-    def cellpoint(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float, float]]:
+    def cell_point(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float, float]]:
         """
         Converts a list of cell IDs into their corresponding centroids.
 
@@ -2207,16 +2207,16 @@ class SpatialIndex:
 
         Examples
         --------
-        >>> cellpoint(["ezs42", "u4pruydqqvj"], cell_type="geohash")
+        >>> cell_point(["ezs42", "u4pruydqqvj"], cell_type="geohash")
         [(42.6, -5.6), (57.64911, 10.40744)]
 
-        >>> cellpoint(["8928308280fffff"], cell_type="h3")
+        >>> cell_point(["8928308280fffff"], cell_type="h3")
         [(37.775938728915946, -122.41795063018799)]
 
-        >>> cellpoint([9744573459660040192], cell_type="s2_int")
+        >>> cell_point([9744573459660040192], cell_type="s2_int")
         [(37.7749, -122.4194)]
 
-        >>> cellpoint(["89c25c"], cell_type="s2")
+        >>> cell_point(["89c25c"], cell_type="s2")
         [(37.7749, -122.4194)]
         """
         if cell_type == "geohash":
@@ -2234,7 +2234,7 @@ class SpatialIndex:
             raise ValueError(f"Unsupported cell type: {cell_type}. Choose 'geohash', 's2', 's2_int', or 'h3'.")
 
     @staticmethod
-    def cellpoly(cells: list, cell_type: str) -> tuple:
+    def cell_poly(cells: list, cell_type: str) -> tuple:
         """
         Converts a list of spatial cells to their corresponding geometries and resolution levels.
 
@@ -2273,7 +2273,7 @@ class SpatialIndex:
         >>> from shapely.geometry import Polygon
         >>> cells = ["ezs42", "ezs43"]  # Geohash cells
         >>> cell_type = "geohash"
-        >>> res, geoms = cellpoly(cells, cell_type)
+        >>> res, geoms = cell_poly(cells, cell_type)
         >>> print(res)
         [5, 5]  # Resolution levels of the input cells
         >>> print(geoms)
@@ -2315,7 +2315,7 @@ class SpatialIndex:
         return res, geoms
 
     @staticmethod
-    def pcellpoint(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float, float]]:
+    def pcell_point(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float, float]]:
         """
         Converts a list of cell IDs into their corresponding latitude and longitude points in parallel.
 
@@ -2339,15 +2339,15 @@ class SpatialIndex:
 
         # Parallelize the conversion using Pool.starmap
         with Pool(n_cores) as pool:
-            points = pool.starmap(SpatialIndex.cellpoint, args)
+            points = pool.starmap(SpatialIndex.cell_point, args)
         points = [item for sublist in points for item in sublist]  # Flatten the list of cells
 
         return points
 
     @staticmethod
-    def pcellpoly(cells: List[Union[str, int]], cell_type: str) -> tuple:
+    def pcell_poly(cells: List[Union[str, int]], cell_type: str) -> tuple:
         """
-        Parallelized version of `cellpoly`, converting a list of spatial cells to geometries and resolution levels.
+        Parallelized version of `cell_poly`, converting a list of spatial cells to geometries and resolution levels.
 
         Parameters
         ----------
@@ -2374,7 +2374,7 @@ class SpatialIndex:
         args = zip(cell_chunks, [cell_type] * 4 * n_cores)
 
         with Pool(n_cores) as pool:
-            results = pool.starmap(SpatialIndex.cellpoly, args)
+            results = pool.starmap(SpatialIndex.cell_poly, args)
 
         # Unpack `res` and `geoms` from the result tuples
         res = [r for result in results for r in result[0]]
