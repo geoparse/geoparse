@@ -77,18 +77,32 @@ GeoParse can visualize the vector data on a map with the following tile layers.
 | <img src="tutorials/graphics/osm.png" width="400" height="400"> |
 
 ---
-## GeoParse Modules
+## GeoParse Classes
 
-GeoParse provides a powerful suite of tools for anyone working with geospatial data. It allows users to handle basic tasks like geocoding and visualization as well as more advanced features like spatial indexing and OSM-based analysis. It includes four key modules, each focusing on different aspects of geospatial tasks.
+GeoParse contains several classes and utility functions designed for geospatial data processing, visualization, and analysis. 
+It allows users to handle basic tasks like geocoding and visualization as well as more advanced features like spatial indexing and OSM-based analysis. 
+Below is a summary of the main classes and their functionalities:
 
-* **karta**: The [karta](https://github.com/geoparse/geoparse/blob/main/geoparse/karta.py) module, named after the Swedish word for "map," is used to visualize vector data (points, lines, and polygons) on a map. The primary function, `plp` (point, line, polygon), supports various visualization styles and configurations, including clustering, heatmaps, choropleth maps, and cell-based layers (e.g., H3, S2, geohash). `karta` is ideal for creating interactive visual maps from geospatial data.
+* **Karta Class**, named after the Swedish word for "map," is designed for creating and customizing interactive maps. It provides methods for adding points, lines, polygons, and choropleth layers to a map. The primary function, `plp` (point, line, polygon), supports various visualization styles and configurations, including clustering, heatmaps, and cell-based layers (e.g., H3, S2, geohash).
 
-* **gutils**: The [gutils](https://github.com/geoparse/geoparse/blob/main/geoparse/gutils.py) stands for Geospatial Utilities and provides a wide range of geospatial utilities that serve various tasks such as geometric statistics, transformations, geocoding (address to coordinates), and distance or area calculations.
+* **GeomUtils Class** stands for Geospatial Utilities and provides utility functions for working with geometry objects. Key functionalities include determining UTM projections, transforming geometries between coordinate reference systems (CRS), and calculating geometric statistics like area and perimeter.
 
-* **gindex**: The [gindex](https://github.com/geoparse/geoparse/blob/main/geoparse/gindex.py) module stands for Geospatial Index and specializes in spatial indexing systems. It converts geographic coordinates and geometries into spatial index representations and vice versa, utilizing popular encoding systems like Geohash, H3, and S2. It also accelerates computations through parallel processing, making it useful for efficient spatial queries and handling large datasets.
+* **CellUtils Class** stands for Cell Utilities and provides utility functions for compacting and uncompacting spatial cells like H3, S2, and Geohash. It also supports statistical analysis of spatial cells, such as calculating the number of cells and their area for a given geometry.
 
-* **osmtools**: The [osmtools](https://github.com/geoparse/geoparse/blob/main/geoparse/osmtools.py) stands for OpenStreetMap Tools and offers tools to work with OpenStreetMap (OSM) data and routing engines built on top of OSM. It allows users to retrieve OSM way geometries (either polygons or lines), decode encoded polyline strings (such as those used by Valhalla and similar services), and perform map matching of GPS coordinates to road networks. This module is essential for extracting, analyzing, and visualizing OSM data as well as processing GPS traces with routing services.
+* **OSMUtils Class** stands for OSM Utilities and provides utility functions for working with OpenStreetMap (OSM) data and routing engines built on top of OSM. It allows users to retrieve OSM way geometries (either polygons or lines) and perform map matching of GPS coordinates to road networks. 
 
+* **SpatialIndex Class** provides methods for spatial indexing operations. It converts geographic coordinates and geometries into spatial index representations and vice versa, utilizing popular encoding systems like H3, S2, and Geohash. It also accelerates computations through parallel processing, making it useful for efficient spatial queries and handling large datasets.
+
+* **SpatialOps Class** stands for Spatial Operations and provides methods for handling 3D geometries, converting LineStrings to Points, performing spatial intersections, and executing parallelized spatial overlay operations. It also includes utilities for calculating distances (e.g., haversine and Vincenty formulas) and geocoding addresses using the Google Geocoding API.
+
+### Key Features
+
+* **Interactive Map Creation:** Easily create and customize maps with points, lines, polygons, and choropleth layers.
+* **Parallel Processing:** Accelerate computations for large datasets using parallelized operations.
+* **Geometric Operations:** Perform advanced geometric operations like UTM projection, CRS transformation, and geometric statistics.
+* **Spatial Indexing:** Convert coordinates and geometries into spatial cells (Geohash, H3, S2) and vice versa.
+* **OSM Integration:** Retrieve and analyze OpenStreetMap data, including way geometries and map matching.
+* **Geocoding:** Convert addresses to geographic coordinates and vice versa using the Google Geocoding API.
 
 ---
 ## Examples
@@ -105,7 +119,9 @@ In the following example, we demonstrate how to display points from a CSV file, 
 
 ```python
 import pandas as pd
-from geoparse.karta import plp
+from geoparse.geoparse import Karta
+
+plp = Karta.plp
 
 df = pd.read_csv("data/great_britain_road_casualties-2023.csv")
 df.head()
