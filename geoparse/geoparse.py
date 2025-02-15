@@ -26,13 +26,8 @@ from shapely.ops import transform
 
 
 class Karta:
-    def __init__(self):
-        self.tiles = {
-            "cartodbpositron": "Light",
-            "cartodbdark_matter": "Dark",
-        }
-
-    def _base_map(self, sw: list or tuple, ne: list or tuple) -> folium.Map:
+    @staticmethod
+    def _base_map(sw: list or tuple, ne: list or tuple) -> folium.Map:
         """
         Creates a base map with multiple tile layers and fits the map to the specified bounding box.
 
@@ -61,15 +56,21 @@ class Karta:
         --------
         >>> sw = [51.2652, -0.5426]  # Southwest coordinate (London, UK)
         >>> ne = [51.7225, 0.2824]  # Northeast coordinate (London, UK)
-        >>> karta = _base_map(sw, ne)
+        >>> karta = Karta._base_map(sw, ne)
         >>> karta.save("map.html")  # Save the map to an HTML file
         """
         # Initialize the base map without any default tiles
         karta = folium.Map(tiles=None)
 
+        # Dictionary of tile layers to be added
+        tiles = {
+            "cartodbpositron": "Light",
+            "cartodbdark_matter": "Dark",
+        }
+
         # Add each tile layer to the map
-        for item in self.tiles:
-            folium.TileLayer(item, name=self.tiles[item], max_zoom=21).add_to(karta)
+        for item in tiles:
+            folium.TileLayer(item, name=tiles[item], max_zoom=21).add_to(karta)
 
         # Add OpenTopoMap as a tile layer
         folium.TileLayer(
@@ -96,7 +97,8 @@ class Karta:
 
         return karta
 
-    def _select_color(self, col: int or str, head: int = None, tail: int = None) -> str:
+    @staticmethod
+    def _select_color(col: int or str, head: int = None, tail: int = None) -> str:
         """
         Generates a consistent color based on the input column value by mapping it to a predefined color palette.
 
@@ -126,13 +128,13 @@ class Karta:
 
         Examples
         --------
-        >>> _select_color("Category1")
+        >>> Karta._select_color("Category1")
         '#e6194b'  # Red color from the palette
 
-        >>> _select_color(5)
+        >>> Karta._select_color(5)
         '#3cb44b'  # Green color from the palette
 
-        >>> _select_color("Example", head=0, tail=3)
+        >>> Karta._select_color("Example", head=0, tail=3)
         '#e12348'  # Bright Red from the palette
         """
         # Predefined color palette
@@ -189,8 +191,8 @@ class Karta:
 
         return palettet[idx]
 
+    @staticmethod
     def _add_point(
-        self,
         row: pd.Series,
         karta: folium.Map,
         color: str = "black",
@@ -258,7 +260,7 @@ class Karta:
         --------
         >>> row = pd.Series({"geometry": Point(40.748817, -73.985428), "color": "red"})
         >>> karta = folium.Map(location=[40.748817, -73.985428], zoom_start=12)
-        >>> _add_point(row, karta, "color")
+        >>> Karta._add_point(row, karta, "color")
         """
         try:
             # Attempt to extract coordinates from the geometry column if present
@@ -287,7 +289,7 @@ class Karta:
                 color = "black"
         # Determine color if column is specified
         elif color in row.index:  # color in DataFrame columns
-            color = self._select_color(row[color], color_head, color_tail)
+            color = Karta._select_color(row[color], color_head, color_tail)
 
         # Create a popup HTML if popup_dict is provided
         popup = "".join(f"{item}: <b>{row[popup_dict[item]]}</b><br>" for item in popup_dict) if popup_dict else None
@@ -297,8 +299,8 @@ class Karta:
             location=location, radius=radius, color=color, opacity=opacity, weight=weight, tooltip=popup
         ).add_to(karta)
 
+    @staticmethod
     def _add_line(
-        self,
         row: pd.Series,
         karta: folium.Map,
         color: str = "blue",
@@ -333,12 +335,12 @@ class Karta:
         -------
         >>> row = pd.Series({"geometry": LineString([(-74.006, 40.7128), (-73.9352, 40.7306)]), "road_name": "Broadway"})
         >>> karta = folium.Map(location=[40.72, -74.00], zoom_start=12)
-        >>> _add_line(row, karta, color="red", popup_dict={"Name": "road_name"})
+        >>> Karta._add_line(row, karta, color="red", popup_dict={"Name": "road_name"})
         """
         coordinates = [(coord[1], coord[0]) for coord in row.geometry.coords]
 
         # Handle color selection
-        color = self._select_color(row[color]) if color in row.index else color
+        color = Karta._select_color(row[color]) if color in row.index else color
 
         # Create popup if popup_dict is provided
         popup = "".join(f"{item}: <b>{row[popup_dict[item]]}</b><br>" for item in popup_dict) if popup_dict else None
@@ -346,8 +348,8 @@ class Karta:
         # Add polyline to the map
         folium.PolyLine(coordinates, color=color, weight=weight, opacity=opacity, tooltip=popup).add_to(karta)
 
+    @staticmethod
     def _add_poly(
-        self,
         row: pd.Series,
         karta: folium.Map,
         fill_color: str = "red",
@@ -392,10 +394,10 @@ class Karta:
         --------
         >>> row = pd.Series({"geometry": Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]), "fill_color": "blue"})
         >>> karta = folium.Map(location=[0.5, 0.5], zoom_start=10)
-        >>> _add_poly(row, karta, "fill_color", line_width=2)
+        >>> Karta._add_poly(row, karta, "fill_color", line_width=2)
         """
         # Determine fill color if specified column is present
-        fill_color = self._select_color(row[fill_color]) if fill_color in row.index else fill_color
+        fill_color = Karta._select_color(row[fill_color]) if fill_color in row.index else fill_color
 
         # Style function to apply to the polygon
         def style_function(x):
@@ -423,8 +425,8 @@ class Karta:
         gjson = folium.GeoJson(data=gjson, style_function=style_function, highlight_function=highlight_function, tooltip=popup)
         gjson.add_to(karta)
 
+    @staticmethod
     def plp(
-        self,
         gdf_list: Union[pd.DataFrame, gpd.GeoDataFrame, List[Union[pd.DataFrame, gpd.GeoDataFrame]]] = None,
         # Point
         cluster: bool = False,
@@ -599,7 +601,7 @@ class Karta:
         if cells:
             res, geoms = SpatialIndex.cellpoly(cells, cell_type=cell_type)
             gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
-            karta = self.plp(gdf, poly_popup={"ID": "id", "Resolution": "res"})
+            karta = Karta.plp(gdf, poly_popup={"ID": "id", "Resolution": "res"})
             return karta
 
         # Handle `osm_ways` input by converting OSM way IDs to geometries
@@ -607,9 +609,9 @@ class Karta:
             geoms = OSMUtils.ways_to_geom(osm_ways, url)
             gdf = gpd.GeoDataFrame({"way_id": osm_ways, "geometry": geoms}, crs="EPSG:4326")
             if isinstance(gdf.geometry[0], LineString):
-                karta = self.plp(gdf, line_popup={"way_id": "way_id"}, line_color="red")
+                karta = Karta.plp(gdf, line_popup={"way_id": "way_id"}, line_color="red")
             else:
-                karta = self.plp(
+                karta = Karta.plp(
                     gdf,
                     geohash_res=geohash_res,
                     s2_res=s2_res,
@@ -647,7 +649,7 @@ class Karta:
         # Create a base map using the bounding box
         sw = [minlat, minlon]  # South West (bottom left corner)
         ne = [maxlat, maxlon]  # North East (top right corner)
-        karta = self._base_map(sw, ne)  # Initialize folium map with the bounding box
+        karta = Karta._base_map(sw, ne)  # Initialize folium map with the bounding box
 
         # Iterate through each DataFrame or GeoDataFrame in the list to add layers to the map
         for i, gdf in enumerate(gdf_list, start=1):
@@ -656,7 +658,7 @@ class Karta:
             if isinstance(geom, Polygon) or isinstance(geom, MultiPolygon):
                 group_polygon = folium.FeatureGroup(name=f"{i}- Polygon")
                 gdf.apply(
-                    self._add_poly,
+                    Karta._add_poly,
                     karta=group_polygon,
                     fill_color=fill_color,
                     highlight_color=highlight_color,
@@ -671,13 +673,13 @@ class Karta:
                 if centroid:  # Show centroids of polygons if `centroid=True`
                     group_centroid = folium.FeatureGroup(name=f"{i}- Centroid")
                     cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs="EPSG:4326")  # centroid df
-                    cdf.apply(self._add_point, karta=group_centroid, axis=1)
+                    cdf.apply(Karta._add_point, karta=group_centroid, axis=1)
                     group_centroid.add_to(karta)
             # Handle LineString geometries
             elif isinstance(geom, LineString):
                 group_line = folium.FeatureGroup(name=f"{i}- Line")
                 gdf.apply(
-                    self._add_line,
+                    Karta._add_line,
                     karta=group_line,
                     color=line_color,
                     opacity=line_opacity,
@@ -691,7 +693,7 @@ class Karta:
             else:  # if not isinstance(gdf, gpd.GeoDataFrame) or isinstance(geom, Point):
                 group_point = folium.FeatureGroup(name=f"{i}- Point")
                 gdf.apply(
-                    self._add_point,
+                    Karta._add_point,
                     karta=group_point,
                     color=point_color,
                     color_head=color_head,
@@ -767,7 +769,7 @@ class Karta:
                     )
                     # Add the buffered geometries to the map as polygons
                     bgdf.apply(
-                        self._add_poly,
+                        Karta._add_poly,
                         karta=group_buffer,
                         fill_color=fill_color,
                         highlight_color=fill_color,
@@ -790,7 +792,7 @@ class Karta:
                     )  # radius in meters
                     # Add the ring-shaped geometries to the map as polygons
                     bgdf.apply(
-                        self._add_poly,
+                        Karta._add_poly,
                         karta=group_ring,
                         fill_color=fill_color,
                         highlight_color=fill_color,
@@ -818,7 +820,7 @@ class Karta:
             group_geohash = folium.FeatureGroup(name=f"{i} - Geohash")
 
             cdf.apply(
-                self._add_poly,
+                Karta._add_poly,
                 karta=group_geohash,
                 fill_color=fill_color,
                 highlight_color=highlight_color,
@@ -844,7 +846,7 @@ class Karta:
             # Add S2 cells to the map as a polygon layer
             group_s2 = folium.FeatureGroup(name=f"{i} - S2")
             cdf.apply(
-                self._add_poly,
+                Karta._add_poly,
                 karta=group_s2,
                 fill_color=fill_color,
                 highlight_color=highlight_color,
@@ -870,7 +872,7 @@ class Karta:
             # Add H3 cells to the map as a polygon layer
             group_h3 = folium.FeatureGroup(name=f"{i} - H3")
             cdf.apply(
-                self._add_poly,
+                Karta._add_poly,
                 karta=group_h3,
                 fill_color=fill_color,
                 highlight_color=highlight_color,
@@ -881,8 +883,9 @@ class Karta:
         folium.LayerControl(collapsed=False).add_to(karta)
         return karta
 
+    @staticmethod
     def choropleth(
-        self, gdf: gpd.GeoDataFrame, columns: list, bins: list, legend: str, palette: str = "YlOrRd", highlight: bool = True
+        gdf: gpd.GeoDataFrame, columns: list, bins: list, legend: str, palette: str = "YlOrRd", highlight: bool = True
     ) -> folium.Map:
         """
         Creates a choropleth map using the given GeoDataFrame and specified parameters.
@@ -929,7 +932,7 @@ class Karta:
         minlon, minlat, maxlon, maxlat = gdf.total_bounds  # Get the total bounds of the GeoDataFrame
         sw = [minlat, minlon]  # South-west corner
         ne = [maxlat, maxlon]  # North-east corner
-        karta = self._base_map(sw, ne)  # Create a base map using the bounding coordinates
+        karta = Karta._base_map(sw, ne)  # Create a base map using the bounding coordinates
 
         # Create a choropleth layer based on the GeoDataFrame
         choropleth = folium.Choropleth(
