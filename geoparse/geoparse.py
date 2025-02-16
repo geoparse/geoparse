@@ -163,22 +163,6 @@ class Karta:
             "#b77238",  # Fiery Orange
             "#b27c36",  # Tangerine
             "#ad8634",  # Burnt Orange
-            #        '#a79032', # Rust Orange
-            #        '#a29a30', # Pumpkin
-            #        '#9da42e', # Goldenrod
-            #        '#98ae2c', # Saffron
-            #        '#93b82a', # Amber
-            #        '#8ec228', # Apricot
-            #        '#89cc26', # Peach
-            #        '#84d624', # Cantaloupe
-            #        '#7fde22', # Honeydew
-            #        '#7ae820', # Lime
-            #        '#75f21e', # Chartreuse
-            #        '#70fc1c', # Neon Green
-            #        '#6bff1c', # Fluorescent Green
-            #        '#6bff49', # Grass Green
-            #        '#6bff83', # Periwinkle
-            #        '#6bffbc', # Pink
         ]
 
         # Check if the column is an integer or string
