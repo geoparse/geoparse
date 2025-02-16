@@ -3,18 +3,21 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+# Path setup
+
 import os
 import sys
 
 sys.path.insert(0, os.path.abspath(".."))
 
+
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "GeoParse"
-copyright = "2024, Abbas Kiasari"
+copyright = "2025, Abbas Kiasari"
 author = "Abbas Kiasari"
-release = "0.2.0"
+release = "0.4.1"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
