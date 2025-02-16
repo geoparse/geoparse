@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>geoparse &mdash; GeoParse 0.2.0 documentation</title>
+  <title>geoparse &mdash; GeoParse 0.4.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=938c9ccc"></script>
+      <script src="_static/documentation_options.js?v=c87aa342"></script>
       <script src="_static/doctools.js?v=9bcbadda"></script>
       <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
@@ -75,22 +75,68 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="geoparse.html">geoparse package</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="geoparse.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="geoparse.html#geoparse-gindex-module">geoparse.gindex module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="geoparse.html#geoparse-gutils-module">geoparse.gutils module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="geoparse.html#module-geoparse.karta">geoparse.karta module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="geoparse.html#geoparse.karta.base_map"><code class="docutils literal notranslate"><span class="pre">base_map()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="geoparse.html#geoparse.karta.choropleth"><code class="docutils literal notranslate"><span class="pre">choropleth()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="geoparse.html#geoparse.karta.choropleth_plp"><code class="docutils literal notranslate"><span class="pre">choropleth_plp()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="geoparse.html#geoparse.karta.color_map"><code class="docutils literal notranslate"><span class="pre">color_map()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="geoparse.html#geoparse.karta.grad_colors"><code class="docutils literal notranslate"><span class="pre">grad_colors()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="geoparse.html#geoparse.karta.plp"><code class="docutils literal notranslate"><span class="pre">plp()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="geoparse.html#geoparse.karta.points"><code class="docutils literal notranslate"><span class="pre">points()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="geoparse.html#geoparse.karta.polygons"><code class="docutils literal notranslate"><span class="pre">polygons()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="geoparse.html#geoparse.karta.row_polygons"><code class="docutils literal notranslate"><span class="pre">row_polygons()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="geoparse.html#module-geoparse.geoparse">geoparse.geoparse module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="geoparse.html#geoparse.geoparse.CellUtils"><code class="docutils literal notranslate"><span class="pre">CellUtils</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.CellUtils.compact_cells"><code class="docutils literal notranslate"><span class="pre">CellUtils.compact_cells()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.CellUtils.h3_stats"><code class="docutils literal notranslate"><span class="pre">CellUtils.h3_stats()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.CellUtils.uncompact_s2"><code class="docutils literal notranslate"><span class="pre">CellUtils.uncompact_s2()</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="geoparse.html#geoparse-osm-module">geoparse.osm module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="geoparse.html#geoparse-pprocessing-module">geoparse.pprocessing module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="geoparse.html#geoparse.geoparse.GeomUtils"><code class="docutils literal notranslate"><span class="pre">GeomUtils</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.GeomUtils.find_proj"><code class="docutils literal notranslate"><span class="pre">GeomUtils.find_proj()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.GeomUtils.trans_proj"><code class="docutils literal notranslate"><span class="pre">GeomUtils.trans_proj()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.GeomUtils.geom_stats"><code class="docutils literal notranslate"><span class="pre">GeomUtils.geom_stats()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.GeomUtils.bearing"><code class="docutils literal notranslate"><span class="pre">GeomUtils.bearing()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#id0"><code class="docutils literal notranslate"><span class="pre">GeomUtils.bearing()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#id1"><code class="docutils literal notranslate"><span class="pre">GeomUtils.find_proj()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.GeomUtils.flatten_3d"><code class="docutils literal notranslate"><span class="pre">GeomUtils.flatten_3d()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#id2"><code class="docutils literal notranslate"><span class="pre">GeomUtils.geom_stats()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.GeomUtils.line_to_points"><code class="docutils literal notranslate"><span class="pre">GeomUtils.line_to_points()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#id3"><code class="docutils literal notranslate"><span class="pre">GeomUtils.trans_proj()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="geoparse.html#geoparse.geoparse.Karta"><code class="docutils literal notranslate"><span class="pre">Karta</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.Karta.choropleth"><code class="docutils literal notranslate"><span class="pre">Karta.choropleth()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.Karta.plp"><code class="docutils literal notranslate"><span class="pre">Karta.plp()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="geoparse.html#geoparse.geoparse.OSMUtils"><code class="docutils literal notranslate"><span class="pre">OSMUtils</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.OSMUtils.way_to_geom"><code class="docutils literal notranslate"><span class="pre">OSMUtils.way_to_geom()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.OSMUtils.ways_to_geom"><code class="docutils literal notranslate"><span class="pre">OSMUtils.ways_to_geom()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.OSMUtils.decode"><code class="docutils literal notranslate"><span class="pre">OSMUtils.decode()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.OSMUtils.map_matching"><code class="docutils literal notranslate"><span class="pre">OSMUtils.map_matching()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#id4"><code class="docutils literal notranslate"><span class="pre">OSMUtils.way_to_geom()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#id5"><code class="docutils literal notranslate"><span class="pre">OSMUtils.ways_to_geom()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="geoparse.html#geoparse.geoparse.SpatialIndex"><code class="docutils literal notranslate"><span class="pre">SpatialIndex</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.SpatialIndex.cell_point"><code class="docutils literal notranslate"><span class="pre">SpatialIndex.cell_point()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.SpatialIndex.cell_poly"><code class="docutils literal notranslate"><span class="pre">SpatialIndex.cell_poly()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.SpatialIndex.pcell_point"><code class="docutils literal notranslate"><span class="pre">SpatialIndex.pcell_point()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.SpatialIndex.pcell_poly"><code class="docutils literal notranslate"><span class="pre">SpatialIndex.pcell_poly()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.SpatialIndex.point_cell"><code class="docutils literal notranslate"><span class="pre">SpatialIndex.point_cell()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.SpatialIndex.poly_cell"><code class="docutils literal notranslate"><span class="pre">SpatialIndex.poly_cell()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.SpatialIndex.ppoint_cell"><code class="docutils literal notranslate"><span class="pre">SpatialIndex.ppoint_cell()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.SpatialIndex.ppoly_cell"><code class="docutils literal notranslate"><span class="pre">SpatialIndex.ppoly_cell()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="geoparse.html#geoparse.geoparse.SpatialOps"><code class="docutils literal notranslate"><span class="pre">SpatialOps</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.SpatialOps.flatten_3d"><code class="docutils literal notranslate"><span class="pre">SpatialOps.flatten_3d()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.SpatialOps.line_to_points"><code class="docutils literal notranslate"><span class="pre">SpatialOps.line_to_points()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.SpatialOps.intersection"><code class="docutils literal notranslate"><span class="pre">SpatialOps.intersection()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.SpatialOps.quick_intersection"><code class="docutils literal notranslate"><span class="pre">SpatialOps.quick_intersection()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.SpatialOps.poverlay"><code class="docutils literal notranslate"><span class="pre">SpatialOps.poverlay()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.SpatialOps.geocoding_google"><code class="docutils literal notranslate"><span class="pre">SpatialOps.geocoding_google()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.SpatialOps.haversine"><code class="docutils literal notranslate"><span class="pre">SpatialOps.haversine()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#id8"><code class="docutils literal notranslate"><span class="pre">SpatialOps.intersection()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#id9"><code class="docutils literal notranslate"><span class="pre">SpatialOps.poverlay()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#id10"><code class="docutils literal notranslate"><span class="pre">SpatialOps.quick_intersection()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.SpatialOps.reverse_geocoding_google"><code class="docutils literal notranslate"><span class="pre">SpatialOps.reverse_geocoding_google()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="geoparse.html#geoparse.geoparse.SpatialOps.vincenty"><code class="docutils literal notranslate"><span class="pre">SpatialOps.vincenty()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="geoparse.html#module-geoparse">Module contents</a></li>
 </ul>
 </li>
@@ -106,7 +152,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2024, Abbas Kiasari.</p>
+    <p>&#169; Copyright 2025, Abbas Kiasari.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
