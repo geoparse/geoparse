@@ -12,19 +12,18 @@
 [![Code style: ruff](https://img.shields.io/badge/code%20style-Ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Contributors](https://img.shields.io/github/contributors/geoparse/geospatial)](https://github.com/geoparse/geospatial/graphs/contributors)
 
-
 GeoParse is a Python library designed for the visualization, analysis, and manipulation of vector geospatial data. It builds on top of popular libraries like GeoPandas and Folium, providing a powerful toolkit for working with geospatial data. GeoParse focuses on efficient geospatial indexing, geometry manipulations, and utilities to handle OpenStreetMap data with ease.
 
 ---
 
-## Key Features
+## ✨ Key Features
 * Efficient geospatial indexing using grid-based systems (H3, S2, Geohash)
 * Data visualization using Folium maps
 * Utilities for working with OpenStreetMap (OSM) data
 * Geometry manipulations and conversions between formats
   
 ---
-## Prerequisites
+## ✅ Prerequisites
 This repository uses [uv](https://docs.astral.sh/uv/) for Python package and project management.
 If you don't have it installed, you need to install it first.
 ```bash
@@ -45,19 +44,29 @@ uv self update
 ```
 
 ---
-## Installation
+## 🛠️ Installation
 
 
 `pip install git+https://github.com/geoparse/geoparse.git`
 
 ---
-## Ducumentation
+## 📖 Ducumentation
 The documentation HTML pages are located in `docs/_build/html/`. Open `index.html` to access the documentation, which includes comprehensive descriptions and working examples for each class and function. Additionally, the documentation is available online at [geoparse.io](https://geoparse.io/).
 
 We recommend starting your GeoParse journey with the [tutorial notebooks](https://github.com/geoparse/geoparse/tree/main/tutorials).
 
 ---
-## Tile Layers
+## 🤝 Contributions Welcome!  
+
+We appreciate contributions from the community! Before submitting a pull request, please:  
+✅ Ensure your code passes all tests `(uv run pytest --cov)`.  
+✅ Add a new test for any new functionality.  
+
+Thank you for helping improve this project! 🚀  
+
+
+---
+## 🔳 Tile Layers
 
 GeoParse can visualize the vector data on a map with the following tile layers.
 
