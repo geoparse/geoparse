@@ -1,8 +1,35 @@
 import unittest
 
+import folium
 from shapely.geometry import MultiPolygon, Polygon
 
-from geoparse.geoparse import SpatialIndex
+from geoparse.geoparse import Karta, SpatialIndex
+
+
+class TestKarta(unittest.TestCase):
+    def setUp(self):
+        # Example coordinates for setup (not used in this test)
+        self.lats = [37.7749, 34.0522]
+        self.lons = [-122.4194, -118.2437]
+
+    def test_base_map(self):
+        # Define southwest and northeast coordinates for the bounding box
+        sw = [51.2652, -0.5426]  # Southwest coordinate (London, UK)
+        ne = [51.7225, 0.2824]  # Northeast coordinate (London, UK)
+
+        # Call the _base_map method from the Karta class
+        karta = Karta._base_map(sw, ne)
+
+        # Verify that the returned object is a Folium Map
+        self.assertIsInstance(karta, folium.Map)
+
+        # Verify that the map has the expected tile layers
+        tile_layers = [
+            layer.tile_name for layer in karta._children.values() if isinstance(layer, folium.raster_layers.TileLayer)
+        ]
+        expected_tile_layers = ["Light", "Dark", "Outdoors", "Satellite", "OSM"]
+        for expected_layer in expected_tile_layers:
+            self.assertIn(expected_layer, tile_layers)
 
 
 class TestPointCell(unittest.TestCase):
