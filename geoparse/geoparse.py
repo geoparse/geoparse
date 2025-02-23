@@ -2860,3 +2860,6 @@ class SpatialOps:
                     if "postal_code" in component.get("types", []) and len(component["types"]) == 1:
                         return component.get("long_name", None)
         return None
+
+
+plp = Karta.plp
