@@ -17,6 +17,7 @@ import pandas as pd
 import pygeohash
 import pyproj
 import requests
+from branca.element import MacroElement, Template
 from folium import plugins
 from polygon_geohasher.polygon_geohasher import geohash_to_polygon, polygon_to_geohashes
 from s2 import s2
@@ -258,16 +259,16 @@ class Karta:
 
         if color == "speed":
             if pd.isna(row.speedlimit) or row.speedlimit < 0:
-                color = "violet"
+                color = "grey"
             elif row.speed <= row.speedlimit:
                 color = "blue"
-            elif row.speed <= 1.1 * row.speedlimit:
+            elif row.speed < 1.1 * row.speedlimit:
                 color = "green"
-            elif row.speed <= 1.2 * row.speedlimit:
+            elif row.speed < 1.2 * row.speedlimit:
                 color = "yellow"
-            elif row.speed <= 1.3 * row.speedlimit:
+            elif row.speed < 1.3 * row.speedlimit:
                 color = "orange"
-            elif row.speed <= 1.4 * row.speedlimit:
+            elif row.speed < 1.4 * row.speedlimit:
                 color = "red"
             else:
                 color = "black"
@@ -690,6 +691,105 @@ class Karta:
                     y=northing,
                     axis=1,
                 )
+                if point_color == "speed":
+                    template = """
+                    {% macro html(this, kwargs) %}
+
+                    <!doctype html>
+                    <html lang="en">
+                    <head>
+                      <meta charset="utf-8">
+                      <meta name="viewport" content="width=device-width, initial-scale=1">
+                      <title>jQuery UI Draggable - Default functionality</title>
+                      <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+
+                      <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+                      <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+
+                      <script>
+                      $( function() {
+                        $( "#maplegend" ).draggable({
+                                        start: function (event, ui) {
+                                            $(this).css({
+                                                right: "auto",
+                                                top: "auto",
+                                                bottom: "auto"
+                                            });
+                                        }
+                                    });
+                    });
+
+                      </script>
+                    </head>
+                    <body>
+
+
+                    <div id='maplegend' class='maplegend'
+                        style='position: absolute; z-index:9999; border:2px solid grey; background-color:rgba(255, 255, 255, 1);
+                         border-radius:6px; padding: 10px; font-size:14px; right: 95px; top: 10px;'>
+
+                    <!-- The next line is a comment -->
+                    <!-- <div class='legend-title'>Legend (draggable!)</div> -->
+                    <div class='legend-scale'>
+                      <ul class='legend-labels'>
+                        <li><span style='background:black;'></span>Speeding ≥ 40% </li>
+                        <li><span style='background:red;'></span>30% ≤ Speeding < 40%</li>
+                        <li><span style='background:orange;'></span>20% ≤ Speeding < 30%</li>
+                        <li><span style='background:yellow;'></span>10% ≤ Speeding < 20%</li>
+                        <li><span style='background:green;'></span>0 < Speeding < 10%</li>
+                        <li><span style='background:blue;'></span>Speeding ≤ 0</li>
+                      </ul>
+                    </div>
+                    </div>
+
+                    </body>
+                    </html>
+
+                    <style type='text/css'>
+                      .maplegend .legend-title {
+                        text-align: left;
+                        margin-bottom: 0;
+                        font-weight: bold;
+                        font-size: 90%;
+                        }
+                      .maplegend .legend-scale ul {
+                        margin: 0;
+                        margin-bottom: 0;
+                        padding: 0;
+                        float: left;
+                        list-style: none;
+                        }
+                      .maplegend .legend-scale ul li {
+                        font-size: 80%;
+                        list-style: none;
+                        margin-left: 0;
+                        line-height: 18px;
+                        margin-bottom: 1px;
+                        }
+                      .maplegend ul.legend-labels li span {
+                        display: block;
+                        float: left;
+                        height: 16px;
+                        width: 30px;
+                        margin-right: 5px;
+                        margin-left: 0;
+                        border: 1px solid #999;
+                        }
+                      .maplegend .legend-source {
+                        font-size: 80%;
+                        color: #777;
+                        clear: both;
+                        }
+                      .maplegend a {
+                        color: #777;
+                        }
+                    </style>
+                    {% endmacro %}"""
+
+                    macro = MacroElement()
+                    macro._template = Template(template)
+                    karta.get_root().add_child(macro)
+
                 group_point.add_to(karta)
 
                 # Add clustering, heatmap, line connections, and buffer/ring visualizations as specified
