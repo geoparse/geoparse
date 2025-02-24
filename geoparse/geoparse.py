@@ -99,7 +99,7 @@ class Karta:
         return karta
 
     @staticmethod
-    def _select_color(col: int or str, head: int = None, tail: int = None) -> str:
+    def _select_color(col: Union[int, float, str], head: int = None, tail: int = None) -> str:
         """
         Generates a consistent color based on the input column value by mapping it to a predefined color palette.
 
@@ -109,9 +109,9 @@ class Karta:
 
         Parameters
         ----------
-        col : int or str
-            The column value to be mapped to a color. It can be either an integer or a string.
-            - If an integer, it is directly used for color mapping.
+        col : int, float or str
+            The column value to be mapped to a color. It can be either a number or a string.
+            - If a number, it is directly used for color mapping.
             - If a string, it will be cleaned of non-alphanumeric characters, and a substring defined by `head` and `tail`
               can be selected for mapping.
 
@@ -167,8 +167,9 @@ class Karta:
         ]
 
         # Check if the column is an integer or string
-        if isinstance(col, int):
-            idx = col % len(palettet)  # Get color index using modulo arithmetic
+
+        if isinstance(col, (int, float)):  # Check for both int and float
+            idx = int(col) % len(palettet)  # Get color index using modulo arithmetic
         else:
             col = str(col)  # Convert to string
             col = re.sub(r"[\W_]+", "", col)  # Remove non-alphanumeric characters
