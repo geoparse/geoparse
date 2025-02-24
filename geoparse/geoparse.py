@@ -258,8 +258,8 @@ class Karta:
             return None
 
         if color == "speed":
-            if pd.isna(row.speedlimit) or row.speedlimit < 0:
-                color = "grey"
+            if pd.isna(row.speedlimit) or row.speedlimit <= 0:
+                color = "purple"
             elif row.speed <= row.speedlimit:
                 color = "blue"
             elif row.speed < 1.1 * row.speedlimit:
@@ -737,7 +737,8 @@ class Karta:
                         <li><span style='background:orange;'></span>20% ≤ Speeding < 30%</li>
                         <li><span style='background:yellow;'></span>10% ≤ Speeding < 20%</li>
                         <li><span style='background:green;'></span>0 < Speeding < 10%</li>
-                        <li><span style='background:blue;'></span>Speeding ≤ 0</li>
+                        <li><span style='background:blue;'></span>No speeding</li>
+                        <li><span style='background:purple;'  ></span>Speed limit unavailable</li>
                       </ul>
                     </div>
                     </div>
