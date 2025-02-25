@@ -166,7 +166,9 @@ class Karta:
             "#ad8634",  # Burnt Orange
         ]
 
-        # Check if the column is an integer or string
+        # Handle NaN (return black)
+        if col is None or (isinstance(col, float) and math.isnan(col)):
+            return "#000000"
 
         if isinstance(col, (int, float)):  # Check for both int and float
             idx = int(col) % len(palettet)  # Get color index using modulo arithmetic
