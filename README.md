@@ -12,7 +12,12 @@
 [![Code style: ruff](https://img.shields.io/badge/code%20style-Ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Contributors](https://img.shields.io/github/contributors/geoparse/geospatial)](https://github.com/geoparse/geospatial/graphs/contributors)
 
-GeoParse is a Python library designed for the visualization, analysis, and manipulation of vector geospatial data. It builds on top of popular libraries like GeoPandas and Folium, providing a powerful toolkit for working with geospatial data. GeoParse focuses on efficient geospatial indexing, geometry manipulations, and utilities to handle OpenStreetMap data with ease.
+GeoParse is a Python library designed for the visualization, analysis, and manipulation of vector geospatial data.
+It supports a wide range of applications, including telematics analysis (e.g., vehicle trajectories and movement patterns),
+footfall analytics (e.g., pedestrian density and mobility trends), and infrastructure mapping (e.g., roads, rivers, water streams, buildings, and lakes).
+
+GeoParse builds on top of popular libraries like GeoPandas and Folium, providing a powerful toolkit for working with geospatial data. It focuses on straightforward
+visualization, efficient spatial indexing, advanced geometry manipulations, and user-friendly utilities for handling OpenStreetMap data effortlessly.
 
 ---
 
