@@ -63,7 +63,7 @@ Below is a summary of the main classes and their functionalities:
 
 * **Karta Class** named after the Swedish word for "map," is designed for creating and customizing interactive maps. It provides methods for adding points, lines, polygons, and choropleth layers to a map. The primary function, `plp` (point, line, polygon), supports various visualization styles and configurations, including clustering, heatmaps, and cell-based layers (e.g., H3, S2, geohash).
 
-* **GeomUtils Class** stands for Geospatial Utilities and provides utility functions for working with geometry objects. Key functionalities include determining UTM projections, transforming geometries between coordinate reference systems (CRS), and calculating geometric statistics like area and perimeter.
+* **GeomUtils Class** stands for Geometry Utilities and provides utility functions for working with geometry objects. Key functionalities include determining UTM projections, transforming geometries between coordinate reference systems (CRS), and calculating geometric statistics like area and perimeter.
 
 * **CellUtils Class** stands for Cell Utilities and provides utility functions for compacting and uncompacting spatial cells like H3, S2, and Geohash. It also supports statistical analysis of spatial cells, such as calculating the number of cells and their area for a given geometry.
 
