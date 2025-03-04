@@ -137,8 +137,9 @@ You can run [GeoParse examples](https://github.com/geoparse/geoparse/tree/main/t
 
 `Karta` is used for visualization and accepts either a pandas `DataFrame` or a GeoPandas `GeoDataFrame` to render geometry data. For a `DataFrame`, the `plp` function in `Karta` automatically identifies columns with names containing "lat" and "lon" (case-insensitive) to use as latitude and longitude for plotting points on the map. If no columns contain these keywords, or if more than two columns contain these keywords, you must explicitly specify the latitude and longitude using the `y` and `x` parameters, respectively, e.g., `plp(df, x="easting", y="northing")`. Note that plp assumes all data is in the [EPSG:4326](https://epsg.io/4326) projection. For a `GeoDataFrame`, the `plp` function can render Shapely objects such as `Point`, `LineString`, `Polygon`, and `MultiPolygon`.
 
+<details>
+<summary><h2>Point</h2></summary>
 
-## Point
 In the following example, we demonstrate how to display points from a CSV file, customize the map with point colors and popups, and add layers such as heatmaps and clusters.
 
 ```python
@@ -209,7 +210,10 @@ plp(df, antpath=True, line=True)
   </tr>
 </table>
 
-## Line and Polygon
+</details>
+
+<details>
+<summary><h2>Line and Polygon</h2></summary>
 
 Using `GeoPandas`, we can read a geospatial file and display its contents using `plp` function. The left image illustrates the border of Luxembourg, represented as a Shapely `Polygon` object. The center image depicts the main roads in Luxembourg, represented as Shapely `LineString` objects. Additionally, `plp` can accept two `GeoDataFrame` objects as a list and display both of them on a single map, as shown in the right image.
 
@@ -235,8 +239,10 @@ If the `compact` parameter is set to True, `plp` calculates the parent cell IDs 
 |![](tutorials/graphics/geohash_compact.png)         | ![](tutorials/graphics/s2_compact.png)                 | ![](tutorials/graphics/h3_compact.png)                                |
  
 
----
-## OSM Ways
+</details>
+
+<details>
+<summary><h2>OSM Ways</h2></summary>
 
 The `plp` function can also accept `OpenStreetMap` (OSM) Way IDs instead of `DataFrame` or `GeoDataFrame` objects and visualize them as `LineString` or `Polygon` geometries. The left image illustrates two ways of the Tokyo Metro Line represented as `LineString` geometries, while the right image depicts three ways in the Louvre Museum visualized as `Polygon` geometries.
 
@@ -245,6 +251,7 @@ The `plp` function can also accept `OpenStreetMap` (OSM) Way IDs instead of `Dat
 | `plp(osm_ways=[893074361, 666201240])`  | `plp(osm_ways=[335265936, 53820456, 1117218957], s2_res=22, compact=True)` | 
 |![](tutorials/graphics/osm_way_line.png) | ![](tutorials/graphics/osm_way_polygon.gif)                                | 
 
+</details>
 </details>
 
 <details>
