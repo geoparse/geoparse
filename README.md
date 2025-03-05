@@ -12,6 +12,7 @@
 [![Code style: ruff](https://img.shields.io/badge/code%20style-Ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Contributors](https://img.shields.io/github/contributors/geoparse/geospatial)](https://github.com/geoparse/geospatial/graphs/contributors)
 
+# Overview
 GeoParse is a Python library designed for the visualization, analysis, and manipulation of vector geospatial data.
 It supports a wide range of applications, including telematics analysis (e.g., vehicle trajectories and movement patterns),
 footfall analytics (e.g., pedestrian density and mobility trends), and infrastructure mapping (e.g., roads, rivers, water streams, buildings, and lakes).
@@ -24,10 +25,16 @@ visualization, efficient spatial indexing, advanced geometry manipulations, and 
 <details>
 <summary><h1>✨ Key Features</h1></summary>
 
-* Efficient geospatial indexing using grid-based systems (H3, S2, Geohash)
-* Data visualization using Folium maps
-* Utilities for working with OpenStreetMap (OSM) data
-* Geometry manipulations and conversions between formats
+* **Interactive Map Creation:** Generate interactive maps with multiple tile layers (e.g., OpenStreetMap, Satellite, Dark Mode) using [folium](https://github.com/python-visualization/folium).
+* **Support Multiple Formats:** Visualize data from CSV and GIS formats like Shapefile, GPKG, GeoJSON, and GeoParquet.
+* **Heatmaps and Clusters:** Generate heatmaps and clusters from point data to visualize density and patterns.
+* **Choropleth Maps:** Create thematic maps to visualize data distributions across regions.
+* **Spatial Indexing:** Convert geometries into spatial grids like [Geohash](https://en.wikipedia.org/wiki/Geohash), [S2](https://github.com/google/s2geometry), and [H3](https://github.com/uber/h3) for efficient spatial queries, analysis and grid visualization.
+* **Parallelized Spatial Operations:** Perform spatial operations in parallel for large datasets.
+* **Geospatial Utilities:** Perform advanced spatial operations like intersection, union, and distance calculations (e.g., Haversine, Vincenty).
+* **OSM Integration:** Fetch and convert [OpenStreetMap (OSM)](https://www.openstreetmap.org/about) way IDs into Shapely geometries for visualization and analysis.
+* **Geocoding and Reverse Geocoding:** Integrate with Google Maps API to convert addresses to coordinates and vice versa.
+* **Map Matching:** Align GPS points to road networks using [Valhalla](https://github.com/valhalla/valhalla) routing engine.
 </details>
 
 
