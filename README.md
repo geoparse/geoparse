@@ -11,14 +11,15 @@
 [![PythonVersion](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue?style=flat&logo=python&logoColor=white&labelColor=gray)](https://www.python.org/)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-Ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Contributors](https://img.shields.io/github/contributors/geoparse/geospatial)](https://github.com/geoparse/geospatial/graphs/contributors)
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 
 # Overview
 GeoParse is a Python library designed for the visualization, analysis, and manipulation of vector geospatial data.
 It supports a wide range of applications, including telematics analysis (e.g., vehicle trajectories and movement patterns),
 footfall analytics (e.g., pedestrian density and mobility trends), and infrastructure mapping (e.g., roads, rivers, water streams, buildings, and lakes).
 
-GeoParse builds on top of popular libraries like GeoPandas and Folium, providing a powerful toolkit for working with geospatial data. It focuses on straightforward
-visualization, efficient spatial indexing, advanced geometry manipulations, and user-friendly utilities for handling OpenStreetMap data effortlessly.
+GeoParse builds on top of popular libraries like GeoPandas and folium, providing a powerful toolkit for working with geospatial data.
+It focuses on straightforward visualization, efficient spatial indexing, advanced geometry manipulations, and user-friendly utilities for handling OpenStreetMap data effortlessly.
 
 ---
 
@@ -45,30 +46,18 @@ GeoParse contains several classes and utility functions designed for geospatial 
 It allows users to handle basic tasks like geocoding and visualization as well as more advanced features like spatial indexing and OSM-based analysis. 
 Below is a summary of the main classes and their functionalities:
 
-* **Karta Class** named after the Swedish word for "map," is designed for creating and customizing interactive maps. It provides methods for adding points, lines, polygons, and choropleth layers to a map. The primary function, `plp` (point, line, polygon), supports various visualization styles and configurations, including clustering, heatmaps, and cell-based layers (e.g., H3, S2, geohash).
+1. **Karta Class** named after the Swedish word for "map," is designed for creating and customizing interactive maps. It provides methods for adding points, lines, polygons, and choropleth layers to a map. The primary function, `plp` (point, line, polygon), supports various visualization styles and configurations, including clustering, heatmaps, and cell-based layers (e.g., H3, S2, geohash).
 
-* **GeomUtils Class** stands for Geometry Utilities and provides utility functions for working with geometry objects. Key functionalities include determining UTM projections, transforming geometries between coordinate reference systems (CRS), and calculating geometric statistics like area and perimeter.
+2. **GeomUtils Class** stands for Geometry Utilities and provides utility functions for working with geometry objects. Key functionalities include determining UTM projections, transforming geometries between coordinate reference systems (CRS), and calculating geometric statistics like area and perimeter.
 
-* **CellUtils Class** stands for Cell Utilities and provides utility functions for compacting and uncompacting spatial cells like H3, S2, and Geohash. It also supports statistical analysis of spatial cells, such as calculating the number of cells and their area for a given geometry.
+3. **CellUtils Class** stands for Cell Utilities and provides utility functions for compacting and uncompacting spatial cells like H3, S2, and Geohash. It also supports statistical analysis of spatial cells, such as calculating the number of cells and their area for a given geometry.
 
-* **OSMUtils Class** stands for OSM Utilities and provides utility functions for working with OpenStreetMap (OSM) data and routing engines built on top of OSM. It allows users to retrieve OSM way geometries (either polygons or lines) and perform map matching of GPS coordinates to road networks. 
+4. **OSMUtils Class** stands for OSM Utilities and provides utility functions for working with OpenStreetMap (OSM) data and routing engines built on top of OSM. It allows users to retrieve OSM way geometries (either polygons or lines) and perform map matching of GPS coordinates to road networks. 
 
-* **SpatialIndex Class** provides methods for spatial indexing operations. It converts geographic coordinates and geometries into spatial index representations and vice versa, utilizing popular encoding systems like H3, S2, and Geohash. It also accelerates computations through parallel processing, making it useful for efficient spatial queries and handling large datasets.
+5. **SpatialIndex Class** provides methods for spatial indexing operations. It converts geographic coordinates and geometries into spatial index representations and vice versa, utilizing popular encoding systems like H3, S2, and Geohash. It also accelerates computations through parallel processing, making it useful for efficient spatial queries and handling large datasets.
 
-* **SpatialOps Class** stands for Spatial Operations and provides methods for handling 3D geometries, converting LineStrings to Points, performing spatial intersections, and executing parallelized spatial overlay operations. It also includes utilities for calculating distances (e.g., haversine and Vincenty formulas) and geocoding addresses using the Google Geocoding API.
-
-### Key Features
-
-* **Interactive Map Creation:** Easily create and customize maps with points, lines, polygons, and choropleth layers.
-* **Parallel Processing:** Accelerate computations for large datasets using parallelized operations.
-* **Geometric Operations:** Perform advanced geometric operations like UTM projection, CRS transformation, and geometric statistics.
-* **Spatial Indexing:** Convert coordinates and geometries into spatial cells (Geohash, H3, S2) and vice versa.
-* **OSM Integration:** Retrieve and analyze OpenStreetMap data, including way geometries and map matching.
-* **Geocoding:** Convert addresses to geographic coordinates and vice versa using the Google Geocoding API.
-
+6. **SpatialOps Class** stands for Spatial Operations and provides methods for handling 3D geometries, converting LineStrings to Points, performing spatial intersections, and executing parallelized spatial overlay operations. It also includes utilities for calculating distances (e.g., haversine and Vincenty formulas) and geocoding addresses using the Google Geocoding API.
 </details>
-
-
 
 <details>
 <summary><h1>🛠️ Installation</h1></summary>
