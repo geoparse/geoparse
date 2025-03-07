@@ -1,7 +1,7 @@
 
-<h1 align="center"><img align="center" src="tutorials/data/geoparse_logo.png" alt="GeoParse Logo" width="200"/></h1>
+<h1 align="center"><img align="center" src="https://geoparse.io/graphics/geoparse_logo.png" alt="GeoParse Logo" width="200"/></h1>
 <h1 align="center">GeoParse</h1>
-<h3 align="center">It's all about points <img src="tutorials/data/point.png" width="10"/> lines <img src="tutorials/data/line.png" width="40"/> and polygons <img src="tutorials/data/polygon.png" width="30"/></h3>
+<h3 align="center">It's all about points <img src="https://geoparse.io/graphics/point.png" width="10"/> lines <img src="https://geoparse.io/graphics/line.png" width="40"/> and polygons <img src="https://geoparse.io/graphics/polygon.png" width="30"/></h3>
 
 ---
 
@@ -72,9 +72,8 @@ pip install git+https://github.com/geoparse/geoparse.git
 <details>
 <summary><h1>📖 Ducumentation</h1></summary>
 
-The documentation HTML pages are located in `docs/_build/html/`. Open `index.html` to access the documentation, which includes comprehensive descriptions and working examples for each class and function. Additionally, the documentation is available online at [geoparse.io](https://geoparse.io/).
-
-We recommend starting your GeoParse journey with the [tutorial notebooks](https://github.com/geoparse/geoparse/tree/main/tutorials).
+The documentation is available online at [geoparse.io](https://geoparse.io/).
+We suggest starting your GeoParse exploration with the [tutorial notebooks](https://github.com/geoparse/geoparse/tree/main/tutorials).
 
 </details>
 
@@ -87,7 +86,7 @@ GeoParse can visualize the vector data on a map with the following tile layers.
 | Light                                                                                              | Dark                                                                                       |
 | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | 
 | A minimalist, light-colored basemap that serves as a subtle background, emphasizing overlaid data. | A high-contrast, dark-themed map ideal for vibrant data overlays and nighttime aesthetics. |
-| <img src="https://geoparse.io/graphics/light.png" width="400" height="400">                                  | <img src="https://geoparse.io/graphics/dark.png" width="400" height="400">                           |
+| <img src="https://geoparse.io/graphics/light.png" width="400" height="400">                        | <img src="https://geoparse.io/graphics/dark.png" width="400" height="400">                 |
 
 | Outdoors                                                                                          | Satellite                                                                                       |
 | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
