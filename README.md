@@ -116,9 +116,7 @@ In the following example, we demonstrate how to display points from a CSV file, 
 
 ```python
 import pandas as pd
-from geoparse.geoparse import Karta
-
-plp = Karta.plp
+from geoparse.geoparse import plp
 
 df = pd.read_csv("data/great_britain_road_casualties-2023.csv")
 df.head()
