@@ -226,13 +226,16 @@ The `plp` function can also accept `OpenStreetMap` (OSM) Way IDs instead of `Dat
 </details>
 </details>
 
-<details>
-<summary><h1>🤝 Contributions Welcome!</h1></summary>
-<details>
-<summary><h2>✅ Prerequisitess</h2></summary>
 
-This repository uses [uv](https://docs.astral.sh/uv/) for Python package and project management.
-If you don't have it installed, you need to install it first.
+<details>
+<summary><h1>🤝 Contributing to GeoParse</h1></summary>
+
+We appreciate all contributions, including bug reports, fixes, documentation improvements, feature enhancements, and ideas. 
+Your input makes this project better!
+
+## 🔧 Getting Started
+GeoParse uses [uv](https://docs.astral.sh/uv/) for Python package and project management.
+If you don't have `uv` installed, you need to install it first.
 ```bash
 # On Linux and macOS
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -242,19 +245,40 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ```bash
 # On Windows
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-
 ```
 
-You can also update it using the following command if you have `uv` installed:
-```
+You can also update `uv` using the following command if you already have it installed:
+```sh
 uv self update
 ```
-</details>
+After cloning the repository, sync dependencies using:
+```sh
+uv sync --locked
+```
+This ensures all dependencies match the locked versions.
 
+## 🎨 Code Style
 
-We appreciate contributions from the community! Before submitting a pull request, please:  
-✅ Ensure your code passes all tests `(uv run pytest --cov)`.  
-✅ Add a new test for any new functionality.  
+GeoParse follows [PEP 8](https://peps.python.org/pep-0008/) style
+and uses [Ruff](https://github.com/astral-sh/ruff) for linting and formatting.
+Set up Ruff as a pre-commit hook to enforce style consistency:.
+
+```sh
+uv run pre-commit install
+```
+
+## 🧪 Running Tests
+Before submitting changes, please ensure all tests pass.
+```sh
+uv run pytest --cov
+```
+If adding new functionality, include corresponding tests.
+
+## 🚀 Raising a Pull Requests
+Once your changes are ready, push them to your branch and open a pull request.
+We will review your contribution and may request updates before merging.
+
+For bug reports and feature requests, please use the GitHub Issues tab.
 
 Thank you for helping improve this project! 🚀  
 </details>
