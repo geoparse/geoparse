@@ -87,17 +87,17 @@ GeoParse can visualize the vector data on a map with the following tile layers.
 | Light                                                                                              | Dark                                                                                       |
 | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | 
 | A minimalist, light-colored basemap that serves as a subtle background, emphasizing overlaid data. | A high-contrast, dark-themed map ideal for vibrant data overlays and nighttime aesthetics. |
-| <img src="tutorials/graphics/light.png" width="400" height="400">                                  | <img src="tutorials/graphics/dark.png" width="400" height="400">                           |
+| <img src="https://geoparse.io/graphics/light.png" width="400" height="400">                                  | <img src="https://geoparse.io/graphics/dark.png" width="400" height="400">                           |
 
 | Outdoors                                                                                          | Satellite                                                                                       |
 | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | Designed for outdoor enthusiasts, featuring hiking trails, biking paths, natural landmarks, and elevation contours. | A basemap displaying satellite imagery of the Earth's surface, useful for real-world context and analyses requiring detailed imagery. |
-| <img src="tutorials/graphics/outdoors.png" width="400" height="400">                              | <img src="tutorials/graphics/satellite.png" width="400" height="400">                           |
+| <img src="https://geoparse.io/graphics/outdoors.png" width="400" height="400">                              | <img src="https://geoparse.io/graphics/satellite.png" width="400" height="400">                           |
 
 | OSM |
 | --- |
 | A general-purpose map powered by OpenStreetMap, showcasing roads, buildings, and points of interest. |
-| <img src="tutorials/graphics/osm.png" width="400" height="400"> |
+| <img src="https://geoparse.io/graphics/osm.png" width="400" height="400"> |
 
 </details>
 
@@ -152,10 +152,10 @@ plp(df,
   </tr>
   <tr>
     <td>
-      <img src="tutorials/graphics/casualty_map.gif"  height="480">
+      <img src="https://geoparse.io/graphics/casualty_map.gif"  height="480">
     </td>
     <td>
-      <img src="tutorials/graphics/casualty_popup.gif" height="480">
+      <img src="https://geoparse.io/graphics/casualty_popup.gif" height="480">
     </td>
   </tr>
 </table>
@@ -175,10 +175,10 @@ plp(df, antpath=True, line=True)
   </tr>
   <tr>
     <td>
-      <img src="tutorials/graphics/casualty_heatmap_cluster.gif" height="480">
+      <img src="https://geoparse.io/graphics/casualty_heatmap_cluster.gif" height="480">
     </td>
     <td>
-      <img src="tutorials/graphics/trajectory.gif" height="480">
+      <img src="https://geoparse.io/graphics/trajectory.gif" height="480">
     </td>
   </tr>
 </table>
@@ -193,7 +193,7 @@ Using `GeoPandas`, we can read a geospatial file and display its contents using 
 | Polygn                                       | LineString                                        | Both                                                            |
 | -------------------------------------------- | --------------------------------------------------|---------------------------------------------------------------- | 
 | `plp(border_gdf)`                            | `plp(road_gdf, line_color='gold', line_weight=1)` | `plp([border_gdf, road_gdf], line_color='gold', line_weight=1)` |
-|![](tutorials/graphics/luxembourg_border.png) | ![](tutorials/graphics/luxembourg_roads.png)      | ![](tutorials/graphics/luxembourg_border_roads.png)             |
+|![](https://geoparse.io/graphics/luxembourg_border.png) | ![](https://geoparse.io/graphics/luxembourg_roads.png)      | ![](https://geoparse.io/graphics/luxembourg_border_roads.png)             |
 
 
 Using the `plp` function, we can also add spatial index polygonal layers such as `GeoHash`, Google `S2`, and Uber `H3`. 
@@ -202,14 +202,14 @@ Using the `plp` function, we can also add spatial index polygonal layers such as
 | Geohash                                      | S2                                                | H3                                                              |
 | -------------------------------------------- | --------------------------------------------------|---------------------------------------------------------------- | 
 | `plp(border_gdf, geohash_res=5)`             | `plp(border_gdf, s2_res=11)`                      | `plp(border_gdf, h3_res=6)`                                     |
-|![](tutorials/graphics/geohash_5.png)         | ![](tutorials/graphics/s2_11.png)                 | ![](tutorials/graphics/h3_6.png)                                |
+|![](https://geoparse.io/graphics/geohash_5.png)         | ![](https://geoparse.io/graphics/s2_11.png)                 | ![](https://geoparse.io/graphics/h3_6.png)                                |
  
 If the `compact` parameter is set to True, `plp` calculates the parent cell IDs to create a compact representation of the cells.
 
 | Geohash                                      | S2                                                | H3                                                              |
 | -------------------------------------------- | --------------------------------------------------|---------------------------------------------------------------- | 
 | `plp(border_gdf, geohash_res=7, compact=True)`             | `plp(border_gdf, s2_res=15, compact=True)`                      | `plp(border_gdf, h3_res=10, compact=True)`                                     |
-|![](tutorials/graphics/geohash_compact.png)         | ![](tutorials/graphics/s2_compact.png)                 | ![](tutorials/graphics/h3_compact.png)                                |
+|![](https://geoparse.io/graphics/geohash_compact.png)         | ![](https://geoparse.io/graphics/s2_compact.png)                 | ![](https://geoparse.io/graphics/h3_compact.png)                                |
  
 
 </details>
@@ -222,7 +222,7 @@ The `plp` function can also accept `OpenStreetMap` (OSM) Way IDs instead of `Dat
 |                                         |                                                                            | 
 | --------------------------------------- | ---------------------------------------------------------------------------|
 | `plp(osm_ways=[893074361, 666201240])`  | `plp(osm_ways=[335265936, 53820456, 1117218957], s2_res=22, compact=True)` | 
-|![](tutorials/graphics/osm_way_line.png) | ![](tutorials/graphics/osm_way_polygon.gif)                                | 
+|![](https://geoparse.io/graphics/osm_way_line.png) | ![](https://geoparse.io/graphics/osm_way_polygon.gif)                                | 
 
 </details>
 </details>
