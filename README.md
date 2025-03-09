@@ -272,6 +272,9 @@ uv run pytest --cov
 ```
 If adding new functionality, include corresponding tests.
 
+## <img src="https://upload.wikimedia.org/wikipedia/commons/3/38/Jupyter_logo.svg" alt="Jupyter Logo" width="30"> Jupyter Notebooks
+If you'd like to contribute by working on the Jupyter Notebook files in the tutorial, please ensure that you clear the output of all cells before submitting your changes. This helps to reduce the file size and keeps the repository clean.
+
 ## 🚀 Raising a Pull Requests
 Once your changes are ready, push them to your branch and open a pull request.
 We will review your contribution and may request updates before merging.
