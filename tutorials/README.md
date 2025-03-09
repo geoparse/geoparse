@@ -8,5 +8,5 @@
 
 # Tutorials
 
-1. [Getting started](https://geoparse.io/tutorials/karta.html)
+1. [Data Visualization](https://geoparse.io/tutorials/karta.html)
 
