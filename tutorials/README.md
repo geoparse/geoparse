@@ -1,5 +1,5 @@
 <h1 align="center"><img align="center" src="https://geoparse.io/graphics/geoparse_logo.png" alt="GeoParse Logo" width="100"/></h1>
-<h2 align="center">GeoParse</h2ß>
+<h2 align="center">GeoParse</h2>
 
 ---
 
