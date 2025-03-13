@@ -36,20 +36,24 @@ With GeoParse, you can:
 # Ducumentation
 The documentation is available online at [geoparse.io](https://geoparse.io/).
 
-# Installation
+# Install
 ```sh
 pip install git+https://github.com/geoparse/geoparse.git
 ```
 
 # Tutorials
-GeoParse contains several classes and utility functions designed for geospatial data processing, visualization, and analysis. 
-It allows users to handle basic tasks like geocoding and visualization as well as more advanced features like spatial indexing and OSM-based analysis. 
-We suggest starting your GeoParse exploration with the [tutorial notebooks](https://github.com/geoparse/geoparse/tree/main/tutorials).
-The HTML pages for the notebook tutorials are available at [https://geoparse.io/tutorials/index.html](https://geoparse.io/tutorials/index.html).
+We recommend starting your GeoParse journey with the HTML versions of the tutorial notebooks, available at https://geoparse.io/tutorials/index.html.
+
+The notebooks cover a wide range of use cases to help you get familiar with GeoParse’s capabilities. 
+You can find them on GitHub at https://github.com/geoparse/geoparse/tree/main/tutorials. 
+To run the notebooks, use the following command after setting up the environment described in the [contributing](https://github.com/geoparse/geoparse/blob/main/CONTRIBUTING.md) guide on GitHub:
+```sh
+jupyter lab 
+```
 
 # Contributing to GeoParse
 We appreciate all contributions, including bug reports, fixes, documentation improvements, feature enhancements, and ideas. 
-A detailed overview on how to contribute can be found in the contributing guide on GitHub.
+A detailed overview on how to contribute can be found in the [contributing](https://github.com/geoparse/geoparse/blob/main/CONTRIBUTING.md) guide on GitHub.
 
 # License and Credits
-GeoParse is licensed under the MIT license and is written and maintained by Abbas Kiasari (abbas@geoparse.io).
+GeoParse is licensed under the [MIT license](https://github.com/geoparse/geoparse/blob/main/LICENSE) and is written and maintained by Abbas Kiasari (abbas@geoparse.io).
