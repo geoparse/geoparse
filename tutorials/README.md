@@ -2,13 +2,13 @@
 <h2 align="center">GeoParse</h2>
 
 
-<h3 align="center">It's all about points <img src="https://geoparse.io/graphics/point.png" width="10"/> lines <img src="https://geoparse.io/graphics/line.png" width="40"/> and polygons <img src="https://geoparse.io/graphics/polygon.png" width="30"/></h3>
+<h3 align="center">All About Points <img src="https://geoparse.io/graphics/point.png" width="10"/> Lines <img src="https://geoparse.io/graphics/line.png" width="40"/> and Polygons <img src="https://geoparse.io/graphics/polygon.png" width="30"/></h3>
 
 ---
 
 # Tutorials
 
-1. [Karta Class](https://geoparse.io/tutorials/karta.html) named after the Swedish word for "*map*", is designed for creating and customizing interactive maps. It provides methods for adding points, lines, polygons, and choropleth layers to a map. The primary function, `plp` (point, line, polygon), supports various visualization styles and configurations, including clustering, heatmaps, and cell-based layers (e.g., H3, S2, geohash).
+1. [Karta Class](https://geoparse.io/tutorials/karta.html) named after the Swedish word for *map*, is designed for creating and customizing interactive maps. It provides methods for adding points, lines, polygons, and choropleth layers to a map. The primary function, `plp` (point, line, polygon), supports various visualization styles and configurations, including clustering, heatmaps, and cell-based layers (e.g., H3, S2, geohash).
 
 2. **GeomUtils Class** stands for *Geometry Utilities* and provides utility functions for working with geometry objects. Key functionalities include determining UTM projections, transforming geometries between coordinate reference systems (CRS), and calculating geometric statistics like area and perimeter.
 
@@ -24,7 +24,7 @@
 
 
 <details>
-<summary><h1>🧩 Tile Layers</h1></summary>
+<summary><h1>Tile Layers</h1></summary>
 
 GeoParse can visualize the vector data on a map with the following tile layers.
 
@@ -46,7 +46,7 @@ GeoParse can visualize the vector data on a map with the following tile layers.
 </details>
 
 <details>
-<summary><h1>💡 Examples </h1></summary>
+<summary><h1>Examples </h1></summary>
 
 You can run [GeoParse examples](https://github.com/geoparse/geoparse/tree/main/tutorials) on MyBinder. No installation required. [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/geoparse/geoparse/main?labpath=tutorials%2F00_visualization.ipynb)
 
