@@ -42,7 +42,7 @@ pip install git+https://github.com/geoparse/geoparse.git
 ```
 
 # Tutorials
-We recommend starting your GeoParse journey with the HTML versions of the tutorial notebooks, available [here](https://geoparse.io/tutorials/index.html).
+We recommend starting your GeoParse journey with the HTML versions of the tutorial notebooks, available [here](https://geoparse.io/tutorials/karta.html).
 The notebooks cover a wide range of use cases to help you get familiar with GeoParse’s capabilities. 
 You can find them on [GitHub](https://github.com/geoparse/geoparse/tree/main/tutorials). 
 To run the notebooks, use the following command after setting up the environment described in the [contributing](https://github.com/geoparse/geoparse/blob/main/CONTRIBUTING.md) guide on GitHub:
