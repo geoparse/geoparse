@@ -14,8 +14,10 @@
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 
 GeoParse is an open-source project that provides tools for the visualization, analysis, and manipulation of vector geospatial data.
-It supports a wide range of applications, including telematics analysis (e.g., vehicle trajectories and movement patterns),
-footfall analytics (e.g., pedestrian density and mobility trends), and infrastructure mapping (e.g., roads, rivers, water streams, buildings, and lakes).
+It supports a wide range of applications, including
+footfall analytics (e.g., pedestrian density and mobility trends),
+telematics analysis (e.g., vehicle trajectories and movement patterns), and
+infrastructure mapping (e.g., roads, rivers, water streams, buildings, and lakes).
 
 GeoParse builds on top of popular libraries like GeoPandas and folium, providing a powerful toolkit for working with geospatial data.
 It focuses on straightforward visualization, efficient spatial indexing, advanced geometry manipulations, and user-friendly utilities for handling OpenStreetMap data effortlessly.
