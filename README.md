@@ -29,7 +29,7 @@ It focuses on straightforward visualization, efficient spatial indexing, advance
 
 With GeoParse, you can:
 
-1. **Create Interactive Maps** – Generate interactive maps with multiple tile layers (e.g., OpenStreetMap, Satellite, Dark Mode) using [folium](https://github.com/python-visualization/folium).
+1. **Create Interactive Maps** – Generate interactive maps with multiple tile layers (e.g., OpenStreetMap, Satellite, Dark Mode) using [Folium](https://github.com/python-visualization/folium).
 2. **Visualize Multiple Formats** – Display data from CSV and GIS formats like Shapefile, GPKG, GeoJSON, and GeoParquet.
 3. **Generate Heatmaps and Clusters** – Create heatmaps and clusters from point data to visualize density and patterns.
 4. **Build Choropleth Maps** – Create thematic maps to visualize data distributions across regions.
