@@ -19,7 +19,12 @@ infrastructure mapping (e.g., roads, rivers, water streams, buildings, and lakes
 and
 footfall analytics (e.g., pedestrian density and mobility trends).
 
-GeoParse builds on top of popular libraries like [GDAL](https://gdal.org/en/stable/), [GeoPandas](https://geopandas.org/en/stable/) and [Folium](https://python-visualization.github.io/folium/latest/), providing a powerful toolkit for working with geospatial data.
+GeoParse builds on top of popular tools and libraries like 
+[GDAL](https://gdal.org/en/stable/), 
+[GeoPandas](https://geopandas.org/en/stable/), 
+[Folium](https://python-visualization.github.io/folium/latest/), 
+and [Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API) 
+providing a powerful toolkit for working with geospatial data.
 It focuses on straightforward visualization, efficient spatial indexing, advanced geometry manipulations, and user-friendly utilities for handling OpenStreetMap data effortlessly.
 
 With GeoParse, you can:
