@@ -1,4 +1,3 @@
-
 <h1 align="center"><img align="center" src="https://geoparse.io/graphics/geoparse_logo.png" alt="GeoParse Logo" width="200"/></h1>
 <h1 align="center">GeoParse</h1>
 <h3 align="center">All About Points <img src="https://geoparse.io/graphics/point.png" width="10"/> Lines <img src="https://geoparse.io/graphics/line.png" width="40"/> and Polygons <img src="https://geoparse.io/graphics/polygon.png" width="30"/></h3>
@@ -15,16 +14,22 @@
 
 GeoParse is an open-source project that provides tools for the visualization, analysis, and manipulation of vector geospatial data.
 It supports a wide range of applications, including
-footfall analytics (e.g., pedestrian density and mobility trends),
-telematics analysis (e.g., vehicle trajectories and movement patterns), and
-infrastructure mapping (e.g., roads, rivers, water streams, buildings, and lakes).
+telematics analysis (e.g., vehicle trajectories and movement patterns),
+infrastructure mapping (e.g., roads, rivers, water streams, buildings, and lakes),
+and
+footfall analytics (e.g., pedestrian density and mobility trends).
 
-GeoParse builds on top of popular libraries like GeoPandas and folium, providing a powerful toolkit for working with geospatial data.
+GeoParse builds on top of popular tools and libraries like 
+[GDAL](https://gdal.org/en/stable/), 
+[GeoPandas](https://geopandas.org/en/stable/), 
+[Folium](https://python-visualization.github.io/folium/latest/), 
+and [Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API) 
+providing a powerful toolkit for working with geospatial data.
 It focuses on straightforward visualization, efficient spatial indexing, advanced geometry manipulations, and user-friendly utilities for handling OpenStreetMap data effortlessly.
 
 With GeoParse, you can:
 
-1. **Create Interactive Maps** – Generate interactive maps with multiple tile layers (e.g., OpenStreetMap, Satellite, Dark Mode) using [folium](https://github.com/python-visualization/folium).
+1. **Create Interactive Maps** – Generate interactive maps with multiple tile layers (e.g., OpenStreetMap, Satellite, Dark Mode) using [Folium](https://github.com/python-visualization/folium).
 2. **Visualize Multiple Formats** – Display data from CSV and GIS formats like Shapefile, GPKG, GeoJSON, and GeoParquet.
 3. **Generate Heatmaps and Clusters** – Create heatmaps and clusters from point data to visualize density and patterns.
 4. **Build Choropleth Maps** – Create thematic maps to visualize data distributions across regions.
