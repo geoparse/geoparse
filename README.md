@@ -29,7 +29,7 @@ It focuses on straightforward visualization, efficient spatial indexing, advance
 
 With GeoParse, you can:
 
-1. **Create Interactive Maps** – Generate interactive maps with multiple tile layers (e.g., OpenStreetMap, Satellite, Dark Mode) using [Folium](https://github.com/python-visualization/folium).
+1. **Create Interactive Maps** – Generate interactive maps with multiple tile layers (e.g., OpenStreetMap, Satellite, Dark Mode).
 2. **Visualize Multiple Formats** – Display data from CSV and GIS formats like Shapefile, GPKG, GeoJSON, and GeoParquet.
 3. **Generate Heatmaps and Clusters** – Create heatmaps and clusters from point data to visualize density and patterns.
 4. **Build Choropleth Maps** – Create thematic maps to visualize data distributions across regions.
@@ -52,7 +52,10 @@ pip install git+https://github.com/geoparse/geoparse.git
 We recommend starting your GeoParse journey with the HTML versions of the tutorial notebooks, available [here](https://geoparse.io/tutorials/karta.html).
 The notebooks cover a wide range of use cases to help you get familiar with GeoParse’s capabilities. 
 You can find them on [GitHub](https://github.com/geoparse/geoparse/tree/main/tutorials). 
-To run the notebooks, use the following command after setting up the environment described in the [contributing](https://github.com/geoparse/geoparse/blob/main/CONTRIBUTING.md) guide on GitHub:
+To run the notebooks, use the following command after setting up the environment described in the 
+[contributing](https://github.com/geoparse/geoparse/blob/main/CONTRIBUTING.md#environment-setup)
+guide on GitHub:
+
 ```sh
 jupyter lab 
 ```
