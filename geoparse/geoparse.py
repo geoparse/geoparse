@@ -63,22 +63,8 @@ class Karta:
         # Initialize the base map without any default tiles
         karta = folium.Map(tiles=None)
 
-        # Dictionary of tile layers to be added
-        tiles = {
-            "cartodbpositron": "Light",
-            "cartodbdark_matter": "Dark",
-        }
-
-        # Add each tile layer to the map
-        for item in tiles:
-            folium.TileLayer(item, name=tiles[item], max_zoom=21).add_to(karta)
-
-        # Add OpenTopoMap as a tile layer
-        folium.TileLayer(
-            tiles="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
-            attr='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://opentopomap.org/">OpenTopoMap</a>',
-            name="Outdoors",
-        ).add_to(karta)
+        # Add OpenStreetMap (OSM) tile layer
+        folium.TileLayer("openstreetmap", name="OSM", max_zoom=19).add_to(karta)
 
         # Add a satellite tile layer (Esri World Imagery)
         folium.TileLayer(
@@ -90,8 +76,22 @@ class Karta:
             max_zoom=19,
         ).add_to(karta)
 
-        # Add OpenStreetMap (OSM) tile layer
-        folium.TileLayer("openstreetmap", name="OSM", max_zoom=19).add_to(karta)
+        # Add OpenTopoMap as a tile layer
+        folium.TileLayer(
+            tiles="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+            attr='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://opentopomap.org/">OpenTopoMap</a>',
+            name="Outdoors",
+        ).add_to(karta)
+
+        # Dictionary of tile layers to be added
+        tiles = {
+            "cartodbdark_matter": "Dark",
+            "cartodbpositron": "Light",
+        }
+
+        # Add each tile layer to the map
+        for item in tiles:
+            folium.TileLayer(item, name=tiles[item], max_zoom=21).add_to(karta)
 
         # Fit the map's view to the bounding box defined by the southwest and northeast coordinates
         karta.fit_bounds([sw, ne])
