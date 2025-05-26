@@ -2164,7 +2164,7 @@ class SpatialIndex:
         """
         if verbose:
             print(datetime.now())
-            print("\nSlicing the bounding box of polygons ... ", end="")
+            print("\nSlicing the bounding box of polygons ...")
             start_time = time()
 
         # Determine the number of slices and grid cells based on CPU cores
@@ -2197,9 +2197,10 @@ class SpatialIndex:
 
         if verbose:
             elapsed_time = round(time() - start_time)
-            print(f"{elapsed_time} seconds.   {slices} slices created.")
+            print(f"    {slices} slices created")
+            print(f"    {elapsed_time} seconds")
 
-            print("Performing intersection between grid and polygons ... ", end="")
+            print("Performing intersection between grid and polygons ...")
             start_time = time()
 
         # Perform intersection between input geometries and grid cells
@@ -2207,9 +2208,13 @@ class SpatialIndex:
 
         if verbose:
             elapsed_time = round(time() - start_time)
-            print(f"{elapsed_time} seconds.   {len(gmdf)} intersected slices.")
+            print(f"    {len(gmdf)} intersected slices")
+            print(f"    {elapsed_time} seconds")
 
-            print("Calculating cell IDs in parallel ... ", end="")
+            if dump:
+                print(f"Writing cell IDs into {dump}/{cell_type}/{res}/ in parallel ...")
+            else:
+                print("Calculating cell IDs in parallel ...")
             start_time = time()
 
         # Shuffle geometries for even load distribution across chunks
@@ -2223,7 +2228,7 @@ class SpatialIndex:
                 pool.starmap(SpatialIndex.poly_cell, args)
             if verbose:
                 elapsed_time = round(time() - start_time)
-                print(f"{elapsed_time} seconds.")
+                print(f"    {elapsed_time} seconds")
             return
         else:
             with Pool(n_cores) as pool:
@@ -2232,29 +2237,32 @@ class SpatialIndex:
 
             if verbose:
                 elapsed_time = round(time() - start_time)
-                print(f"{elapsed_time} seconds.")
+                print(f"    {len(cells)} cells")
+                print(f"    {elapsed_time} seconds")
 
             # Remove duplicates based on cell type
             if cell_type in {"geohash", "s2"}:
                 if verbose:
-                    print("Removing duplicate cells ... ", end="")
+                    print("Removing duplicate cells ...")
                     start_time = time()
                 cells = list(set(cells))  # Remove duplicate cells
                 if verbose:
                     elapsed_time = round(time() - start_time)
-                    print(f"{elapsed_time} seconds.")
+                    print(f"    {len(cells)} cells")
+                    print(f"    {elapsed_time} seconds")
 
             cell_counts = len(cells)  # Total unique cell count
 
             # Compact the cells if needed
             if compact:
                 if verbose:
-                    print("Compacting cells ... ", end="")
+                    print("Compacting cells ...")
                     start_time = time()
                 cells = CellUtils.compact_cells(cells, cell_type)
                 if verbose:
                     elapsed_time = round(time() - start_time)
-                    print(f"{elapsed_time} seconds.")
+                    print(f"    {len(cells)} cells")
+                    print(f"    {elapsed_time} seconds.")
 
             return cells, cell_counts
 
