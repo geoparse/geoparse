@@ -2197,7 +2197,7 @@ class SpatialIndex:
 
         if verbose:
             elapsed_time = round(time() - start_time)
-            print(f"    {slices} slices created")
+            print(f"    {slices:,} slices created")
             print(f"    {elapsed_time} seconds")
 
             print("Performing intersection between grid and polygons ...")
@@ -2208,7 +2208,7 @@ class SpatialIndex:
 
         if verbose:
             elapsed_time = round(time() - start_time)
-            print(f"    {len(gmdf)} intersected slices")
+            print(f"    {len(gmdf):,} intersected slices")
             print(f"    {elapsed_time} seconds")
 
             if dump:
@@ -2237,7 +2237,7 @@ class SpatialIndex:
 
             if verbose:
                 elapsed_time = round(time() - start_time)
-                print(f"    {len(cells)} cells")
+                print(f"    {len(cells):,} cells")
                 print(f"    {elapsed_time} seconds")
 
             # Remove duplicates based on cell type
@@ -2248,7 +2248,7 @@ class SpatialIndex:
                 cells = list(set(cells))  # Remove duplicate cells
                 if verbose:
                     elapsed_time = round(time() - start_time)
-                    print(f"    {len(cells)} cells")
+                    print(f"    {len(cells):,} cells")
                     print(f"    {elapsed_time} seconds")
 
             cell_counts = len(cells)  # Total unique cell count
@@ -2261,8 +2261,8 @@ class SpatialIndex:
                 cells = CellUtils.compact_cells(cells, cell_type)
                 if verbose:
                     elapsed_time = round(time() - start_time)
-                    print(f"    {len(cells)} cells")
-                    print(f"    {elapsed_time} seconds.")
+                    print(f"    {len(cells):,} cells")
+                    print(f"    {elapsed_time} seconds")
 
             return cells, cell_counts
 
