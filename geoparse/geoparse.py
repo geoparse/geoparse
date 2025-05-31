@@ -2212,7 +2212,8 @@ class SpatialIndex:
             print(f"    {elapsed_time} seconds")
 
             if dump:
-                print(f"Writing cell IDs into {dump}/{cell_type}/{res}/ in parallel ...")
+                cells_path = os.path.abspath(os.path.expanduser(f"{dump}/{cell_type}/{res}"))
+                print(f"Writing cell IDs into {cells_path} in parallel ...")
             else:
                 print("Calculating cell IDs in parallel ...")
             start_time = time()
