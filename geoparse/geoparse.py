@@ -2162,14 +2162,18 @@ class SpatialIndex:
         >>> cells, count = ppoly_cell(mdf, cell_type="s2", res=10, compact=True, dump="~/Desktop/cells", verbose=True)
         >>> print(f"Generated {count} cells: {cells}")
         """
+        # Determine the number of slices and grid cells based on CPU cores
+        n_cores = cpu_count()
+        slices = 128 * n_cores
+
+        if dump and not verbose:
+            cells_path = os.path.abspath(os.path.expanduser(f"{dump}/{cell_type}/{res}"))
+            print(f"Writing cell IDs in parallel to {4 * n_cores} files in {cells_path} directory ...")
+
         if verbose:
             print(datetime.now())
             print("\nSlicing the bounding box of polygons ...")
             start_time = time()
-
-        # Determine the number of slices and grid cells based on CPU cores
-        n_cores = cpu_count()
-        slices = 128 * n_cores
 
         # Calculate the bounding box dimensions
         minlon, minlat, maxlon, maxlat = mdf.total_bounds
@@ -2213,7 +2217,7 @@ class SpatialIndex:
 
             if dump:
                 cells_path = os.path.abspath(os.path.expanduser(f"{dump}/{cell_type}/{res}"))
-                print(f"Writing cell IDs into {cells_path} in parallel ...")
+                print(f"Writing cell IDs in parallel to {4 * n_cores} files in {cells_path} directory ...")
             else:
                 print("Calculating cell IDs in parallel ...")
             start_time = time()
