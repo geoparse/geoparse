@@ -88,7 +88,7 @@ GeoParse can visualize the vector data on a map with the following tile layers.
 | A general-purpose map powered by OpenStreetMap, showcasing roads, buildings, and points of interest. |
 | <img src="https://geoparse.io/graphics/osm.png" width="400" height="400"> |
 
-<
+
 
 ## Examples
 
@@ -191,7 +191,7 @@ If the `compact` parameter is set to True, `plp` calculates the parent cell IDs 
 | Geohash                                      | S2                                                | H3                                                              |
 | -------------------------------------------- | --------------------------------------------------|---------------------------------------------------------------- | 
 | `plp(border_gdf, geohash_res=7, compact=True)`             | `plp(border_gdf, s2_res=15, compact=True)`                      | `plp(border_gdf, h3_res=10, compact=True)`                                     |
-|![](https://geoparse.io/graphics/geohash_compact.png)         | ![](https://geoparse.io/graphics/s2_compact.png)                 | ![](https://geoparse.io/graphics/h3_compact.png)                                |
+|![](https://geoparse.io/graphics/geohash_compact.png)         | ![](https://geoparse.io/graphics/s2_compact.png)                 | ![](https://geoparse.io/graphics/h3_compact.gif)                                |
  
 
 ### OSM Ways
