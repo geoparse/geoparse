@@ -117,28 +117,29 @@ After loading the data, we can easily display it on a map using `plp(df)`. For a
 
 <table>
   <tr>
-    <td style="vertical-align: bottom;">
+    <td style="vertical-align: bottom; text-align: center;">
       <pre><code>plp(df)</code></pre>
     </td>
-    <td style="vertical-align: bottom;">
+    <td style="vertical-align: bottom; text-align: center;">
       <pre><code>plp(df, point_color="purple")</code></pre>
     </td>
-    <td style="vertical-align: bottom;">
-      <pre><code> plp(df, point_color="#cc5500") </code></pre>
+    <td style="vertical-align: bottom; text-align: center;">
+      <pre><code>plp(df, point_color="#cc5500")</code></pre>
     </td>
   </tr>
   <tr>
-    <td>
-      <img src="https://geoparse.io/graphics/casualty_map.png" height="360">
+    <td style="text-align: center;">
+      <img src="https://geoparse.io/graphics/casualty_map.png" height="360" alt="Default plot">
     </td>
-    <td>
-      <img src="https://geoparse.io/graphics/casualty_map_purple.png" height="360">
+    <td style="text-align: center;">
+      <img src="https://geoparse.io/graphics/casualty_map_purple.png" height="360" alt="Purple points plot">
     </td>
-    <td>
-      <img src="https://geoparse.io/graphics/casualty_map_brown.png" height="360">
+    <td style="text-align: center;">
+      <img src="https://geoparse.io/graphics/casualty_map_brown.png" height="360" alt="Brown points plot">
     </td>
   </tr>
 </table>
+
 
 `plp` can also add heatmap and cluster layers to the map. In the left image, we see the clusters and heatmap of fatal road crashes in Great Britain. If you are working with trajectory data, `plp` can display the direction of movement using the antpath parameter, as shown in the right image.
 
