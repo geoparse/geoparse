@@ -121,22 +121,21 @@ After loading the data, we can easily display it on a map using `plp(df)`. For a
       <pre><code>plp(df)</code></pre>
     </td>
     <td style="vertical-align: bottom;">
-      <pre><code>
-plp(df, 
-    point_color = 'speed_limit', 
-    point_popup = {
-        'Date': 'date',
-        'Number of Casualties': 'number_of_casualties'
-    }
-)</code></pre>
+      <pre><code>plp(df, point_color="purple")</code></pre>
+    </td>
+    <td style="vertical-align: bottom;">
+      <pre><code> plp(df, point_color="#cc5500") </code></pre>
     </td>
   </tr>
   <tr>
     <td>
-      <img src="https://geoparse.io/graphics/casualty_map.gif"  height="480">
+      <img src="https://geoparse.io/graphics/casualty_map.png" height="360">
     </td>
     <td>
-      <img src="https://geoparse.io/graphics/casualty_popup.gif" height="480">
+      <img src="https://geoparse.io/graphics/casualty_map_purple.png" height="360">
+    </td>
+    <td>
+      <img src="https://geoparse.io/graphics/casualty_map_brown.png" height="360">
     </td>
   </tr>
 </table>
