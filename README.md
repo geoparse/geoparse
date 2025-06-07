@@ -118,7 +118,7 @@ After loading the data, we can easily display it on a map using `plp(df)`. For a
 <table>
   <tr>
     <td style="vertical-align: bottom; text-align: center;">
-      <pre><code>plp(df)</code></pre>
+      <pre><code>plp(df)                      </code></pre>
     </td>
     <td style="vertical-align: bottom; text-align: center;">
       <pre><code>plp(df, point_color="purple")</code></pre>
