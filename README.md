@@ -92,7 +92,7 @@ GeoParse can visualize the vector data on a map with the following tile layers.
 
 ## Karta Class
 
-`Karta` is used for visualization and accepts either a pandas `DataFrame` or a GeoPandas `GeoDataFrame` to render geometry data. For a `DataFrame`, the `plp` function in `Karta` automatically identifies columns with names containing "lat" and "lon" (case-insensitive) to use as latitude and longitude for plotting points on the map. If no columns contain these keywords, or if more than two columns contain these keywords, you must explicitly specify the latitude and longitude using the `y` and `x` parameters, respectively, e.g., `plp(df, x="easting", y="northing")`. Note that plp assumes all data is in the [EPSG:4326](https://epsg.io/4326) projection. For a `GeoDataFrame`, the `plp` function can render Shapely objects such as `Point`, `LineString`, `Polygon`, and `MultiPolygon`.
+`Karta` is used for visualization and accepts either a pandas `DataFrame` or a GeoPandas `GeoDataFrame` to render geometry data. For a `DataFrame`, the `plp` method in `Karta` class automatically identifies columns with names containing "lat" and "lon" (case-insensitive) to use as latitude and longitude for plotting points on the map. If no columns contain these keywords, or if more than two columns contain these keywords, you must explicitly specify the latitude and longitude using the `y` and `x` parameters, respectively, e.g., `plp(df, x="easting", y="northing")`. Note that plp assumes all data is in the [EPSG:4326](https://epsg.io/4326) projection. For a `GeoDataFrame`, the `plp` function can render Shapely objects such as `Point`, `LineString`, `Polygon`, and `MultiPolygon`.
 
 ### Point
 
@@ -113,7 +113,10 @@ df.head()
 | 15/01/2023 | 19:51 | 51.671577 | -0.037543  | 1                  | 1                    | 30          |
 | 16/01/2023 | 19:22 | 51.447944 | 0.117279   | 2                  | 1                    | 30          |
 
-After loading the data, we can easily display it on a map using `plp(df)`. For a more advanced visualization, we can customize the color of the points based on a feature value (e.g., `speed_limit` in the right map) and create HTML popups that display the attributes of each point.
+After loading the data, you can easily visualize it on a map using `plp(df)`.
+By default, the `plp` method displays points in blue (left figure), but you can change the point color using the `point_color` argument (center figure).
+To apply custom colors, you can also use RGB hex codes (right figure).
+
 
 <table>
   <tr>
@@ -139,6 +142,11 @@ After loading the data, we can easily display it on a map using `plp(df)`. For a
     </td>
   </tr>
 </table>
+
+
+For a more advanced visualization, we can customize the color of the points based on a feature value (e.g., `speed_limit` in the right map) and create HTML popups that display the attributes of each point.
+
+
 
 
 `plp` can also add heatmap and cluster layers to the map. In the left image, we see the clusters and heatmap of fatal road crashes in Great Britain. If you are working with trajectory data, `plp` can display the direction of movement using the antpath parameter, as shown in the right image.
