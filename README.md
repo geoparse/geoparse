@@ -153,11 +153,12 @@ For a more advanced visualization, we can customize the color of the points base
     </td>
     <td style="vertical-align: bottom;">
       <pre><code>
-        plp(df, 
-            point_color="speed_limit", 
-            point_popup={"Date": "date", 
-                         "Speed limit": "speed_limit"}
-           )
+plp(df, 
+    point_color="speed_limit", 
+    point_popup={"Date": "date", 
+                 "Speed limit": "speed_limit"
+                }
+   )
       </code></pre>
     </td>
   </tr>
