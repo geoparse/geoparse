@@ -146,6 +146,31 @@ To apply custom colors, you can also use RGB hex codes (right figure).
 
 For a more advanced visualization, we can customize the color of the points based on a feature value (e.g., `speed_limit` in the right map) and create HTML popups that display the attributes of each point.
 
+<table>
+  <tr>
+    <td style="vertical-align: bottom;">
+      <pre><code>plp(df, point_color="speed_limit")</code></pre>
+    </td>
+    <td style="vertical-align: bottom;">
+      <pre><code>
+plp(df, 
+    point_color="speed_limit", 
+    point_popup={"Date": "date", 
+                 "Speed limit": "speed_limit"
+                }
+   )
+      </code></pre>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <img src="https://geoparse.io/graphics/colour_speed.png" height="480">
+    </td>
+    <td>
+      <img src="https://geoparse.io/graphics/colour_speed_popup.png" height="480">
+    </td>
+  </tr>
+</table>
 
 
 
