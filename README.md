@@ -124,10 +124,20 @@ To apply custom colors, you can also use RGB hex codes (right figure).
       <pre><code>plp(df)                      </code></pre>
     </td>
     <td style="vertical-align: bottom; text-align: center;">
-      <pre><code>plp(df, point_color="purple")</code></pre>
+      <pre><code>
+plp(
+    df,
+    point_color="purple"
+)
+      </code></pre>
     </td>
     <td style="vertical-align: bottom; text-align: center;">
-      <pre><code>plp(df, point_color="#cc5500")</code></pre>
+      <pre><code>
+plp(
+    df,
+    point_color="#cc5500"
+)
+      </code></pre>
     </td>
   </tr>
   <tr>
@@ -149,16 +159,23 @@ For a more advanced visualization, we can customize the color of the points base
 <table>
   <tr>
     <td style="vertical-align: bottom;">
-      <pre><code>plp(df, point_color="speed_limit")</code></pre>
+      <pre><code>
+plp(
+    df,
+    point_color="speed_limit"
+)
+      </code></pre>
     </td>
     <td style="vertical-align: bottom;">
       <pre><code>
-plp(df, 
-    point_color="speed_limit", 
-    point_popup={"Date": "date", 
-                 "Speed limit": "speed_limit"
-                }
-   )
+plp(
+    df,
+    point_color="speed_limit",
+    point_popup={
+        "Date": "date",
+        "Speed limit": "speed_limit"
+    }
+)
       </code></pre>
     </td>
   </tr>
