@@ -191,7 +191,48 @@ plp(
 
 
 
-`plp` can also add heatmap and cluster layers to the map. In the left image, we see the clusters and heatmap of fatal road crashes in Great Britain. If you are working with trajectory data, `plp` can display the direction of movement using the antpath parameter, as shown in the right image.
+The `plp` function can also add heatmap and cluster layers to the map. In the left image, we see a heatmap of fatal road crashes in Great Britain. The center image displays the cluster view. Both layers can also be shown together on a single map, as demonstrated in the right image.
+
+Let 
+<table>
+  <tr>
+    <td style="vertical-align: bottom; text-align: center;">
+      <pre><code>
+plp(df, heatmap=True)
+      </code></pre>
+    </td>
+    <td style="vertical-align: bottom; text-align: center;">
+      <pre><code>
+plp(df, cluster=True)
+      </code></pre>
+    </td>
+    <td style="vertical-align: bottom; text-align: center;">
+      <pre><code>
+plp(
+    df, 
+    heatmap=True,
+    cluster=True
+)
+      </code></pre>
+    </td>
+  </tr>
+  <tr>
+    <td style="text-align: center;">
+      <img src="https://geoparse.io/graphics/casualty_heatmap.png" height="360" alt="Default plot">
+    </td>
+    <td style="text-align: center;">
+      <img src="https://geoparse.io/graphics/casualty_cluster.png" height="360" alt="Purple points plot">
+    </td>
+    <td style="text-align: center;">
+      <img src="https://geoparse.io/graphics/casualty_heatmap_cluster.png" height="360" alt="Brown points plot">
+    </td>
+  </tr>
+</table>
+
+
+
+
+If you are working with trajectory data, `plp` can display the direction of movement using the antpath parameter, as shown in the right image.
 
 <table>
   <tr>
