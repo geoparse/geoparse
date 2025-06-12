@@ -208,7 +208,11 @@ plp(df, cluster=True)
     </td>
     <td style="vertical-align: bottom; text-align: center;">
       <pre><code>
-plp(df, heatmap=True, cluster=True)
+plp(
+    df, 
+    heatmap=True,
+    cluster=True
+)
       </code></pre>
     </td>
   </tr>
