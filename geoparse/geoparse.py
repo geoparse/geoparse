@@ -850,10 +850,13 @@ class Karta:
                 # Create a buffer visualization if `buffer_radius > 0`
                 if buffer_radius > 0:
                     group_buffer = folium.FeatureGroup(name=f"{i}- Buffer")
-                    bgdf = gdf.copy()  # buffered gdf: Create a copy of the GeoDataFrame to modify geometries
+                    if not isinstance(gdf, gpd.GeoDataFrame):
+                        bgdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(lons, lats), crs="EPSG:4326")
+                    else:
+                        bgdf = gdf.copy()  # buffered gdf: Create a copy of the GeoDataFrame to modify geometries
                     # Apply buffer to geometries using the specified radius in meters
                     bgdf["geometry"] = (
-                        bgdf.to_crs(GeomUtils.find_proj(gdf.geometry.values[0])).buffer(buffer_radius).to_crs("EPSG:4326")
+                        bgdf.to_crs(GeomUtils.find_proj(bgdf.geometry.values[0])).buffer(buffer_radius).to_crs("EPSG:4326")
                     )
                     # Add the buffered geometries to the map as polygons
                     bgdf.apply(
