@@ -873,12 +873,15 @@ class Karta:
                 # Create ring visualization if `ring_outer_radius > 0`
                 if ring_outer_radius > 0:
                     group_ring = folium.FeatureGroup(name=f"{i}- Ring")
-                    bgdf = gdf.copy()  # buffered gdf: Create a copy of the GeoDataFrame to modify geometries
+                    if not isinstance(gdf, gpd.GeoDataFrame):
+                        bgdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(lons, lats), crs="EPSG:4326")
+                    else:
+                        bgdf = gdf.copy()  # buffered gdf: Create a copy of the GeoDataFrame to modify geometries
                     # Create ring shapes by applying an outer and inner buffer, subtracting the inner from the outer
                     bgdf["geometry"] = (
-                        bgdf.to_crs(GeomUtils.find_proj(gdf.geometry.values[0]))
+                        bgdf.to_crs(GeomUtils.find_proj(bgdf.geometry.values[0]))
                         .buffer(ring_outer_radius)
-                        .difference(bgdf.to_crs(GeomUtils.find_proj(gdf.geometry.values[0])).buffer(ring_inner_radius))
+                        .difference(bgdf.to_crs(GeomUtils.find_proj(bgdf.geometry.values[0])).buffer(ring_inner_radius))
                         .to_crs("EPSG:4326")
                     )  # radius in meters
                     # Add the ring-shaped geometries to the map as polygons
