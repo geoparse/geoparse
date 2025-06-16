@@ -242,7 +242,11 @@ plp(df, buffer_radius=100)
     </td>
     <td style="vertical-align: bottom;">
       <pre><code>
-plp(df, ring_inner_radius=100, ring_outer_radius=200)
+plp(
+    df, 
+    ring_inner_radius=100,
+    ring_outer_radius=200
+)
       </code></pre>
     </td>
   </tr>
