@@ -193,7 +193,6 @@ plp(
 
 The `plp` function can also add heatmap and cluster layers to the map. In the left image, we see a heatmap of fatal road crashes in Great Britain. The center image displays the cluster view. Both layers can also be shown together on a single map, as demonstrated in the right image.
 
-Let 
 <table>
   <tr>
     <td style="vertical-align: bottom; text-align: center;">
