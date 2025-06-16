@@ -230,6 +230,39 @@ plp(
 </table>
 
 
+`plp` can create a buffer zone around each point. This buffer is a circular area centered on the point, useful for visualizing spatial influence or conducting proximity-based analysis, such as identifying features within 100 meters of a crash site. `plp` can also create a ring-shaped buffer, sometimes called a "donut buffer," around each point. Each ring is defined by an inner and outer radius. For example, the code in the next cell creates a ring that starts 100 meters from each point and extends out to 200 meters. This is useful when you want to exclude the immediate area around a point and focus on a specific surrounding zone instead.
+
+
+<table>
+  <tr>
+    <td style="vertical-align: bottom;">
+      <pre><code>
+plp(df, buffer_radius=100)
+      </code></pre>
+    </td>
+    <td style="vertical-align: bottom;">
+      <pre><code>
+plp(
+    df, 
+    ring_inner_radius=100,
+    ring_outer_radius=200
+)
+      </code></pre>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <img src="https://geoparse.io/graphics/casualty_buffer.png" height="480">
+    </td>
+    <td>
+      <img src="https://geoparse.io/graphics/casualty_ring.png" height="480">
+    </td>
+  </tr>
+</table>
+
+
+
+
 
 
 If you are working with trajectory data, `plp` can display the direction of movement using the antpath parameter, as shown in the right image.
