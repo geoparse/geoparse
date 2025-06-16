@@ -230,7 +230,8 @@ plp(
 </table>
 
 
-`plp` can create a buffer zone around each point. This buffer is a circular area centered on the point, useful for visualizing spatial influence or conducting proximity-based analysis, such as identifying features within 100 meters of a crash site. `plp` can also create a ring-shaped buffer, sometimes called a "donut buffer," around each point. Each ring is defined by an inner and outer radius. For example, the code in the next cell creates a ring that starts 100 meters from each point and extends out to 200 meters. This is useful when you want to exclude the immediate area around a point and focus on a specific surrounding zone instead.
+`plp` can create a buffer zone around each point, forming a circular area centered on the point. This is useful for visualizing spatial influence or performing proximity-based analysis. For example, it can help identify features within 100 meters of a crash site, as shown in the left figure. `plp` can also generate a ring-shaped buffer, sometimes called a "donut buffer," around each point. Each ring is defined by an inner and outer radius. In the example shown in the right cell, the ring starts 100 meters from each point and extends to 200 meters. This approach is useful when you want to exclude the immediate area around a point and focus on a specific surrounding zone.
+
 
 
 <table>
