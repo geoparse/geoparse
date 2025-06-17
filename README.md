@@ -53,25 +53,23 @@ pip install git+https://github.com/geoparse/geoparse.git
 
 # Tutorials
 
-1. [Karta Class](https://geoparse.io/tutorials/karta.html) named after the Swedish word for *map*, is designed for creating and customizing interactive maps. It provides methods for adding points, lines, polygons, and choropleth layers to a map. The primary function, `plp` (point, line, polygon), supports various visualization styles and configurations, including clustering, heatmaps, and cell-based layers (e.g., H3, S2, geohash).
+GeoParse includes the following classes for visualizing and analyzing geospatial data.
 
-2. **GeomUtils Class** stands for *Geometry Utilities* and provides utility functions for working with geometry objects. Key functionalities include determining UTM projections, transforming geometries between coordinate reference systems (CRS), and calculating geometric statistics like area and perimeter.
+1. [Karta Class](https://geoparse.io/tutorials/karta.html) named after the Swedish word for *map*, is designed for creating and customizing interactive maps.
 
-3. **CellUtils Class** stands for *Cell Utilities* and provides utility functions for compacting and uncompacting spatial cells like H3, S2, and Geohash. It also supports statistical analysis of spatial cells, such as calculating the number of cells and their area for a given geometry.
+3. **GeomUtils Class** stands for *Geometry Utilities* and provides utility functions for working with geometry objects. Key functionalities include determining UTM projections, transforming geometries between coordinate reference systems (CRS), and calculating geometric statistics like area and perimeter.
 
-4. **OSMUtils Class** stands for *OSM Utilities* and provides utility functions for working with OpenStreetMap (OSM) data and routing engines built on top of OSM. It allows users to retrieve OSM way geometries (either polygons or lines) and perform map matching of GPS coordinates to road networks. 
+4. **CellUtils Class** stands for *Cell Utilities* and provides utility functions for compacting and uncompacting spatial cells like H3, S2, and Geohash. It also supports statistical analysis of spatial cells, such as calculating the number of cells and their area for a given geometry.
 
-5. **SpatialIndex Class** provides methods for *spatial indexing* operations. It converts geographic coordinates and geometries into spatial index representations and vice versa, utilizing popular encoding systems like H3, S2, and Geohash. It also accelerates computations through parallel processing, making it useful for efficient spatial queries and handling large datasets.
+5. **OSMUtils Class** stands for *OSM Utilities* and provides utility functions for working with OpenStreetMap (OSM) data and routing engines built on top of OSM. It allows users to retrieve OSM way geometries (either polygons or lines) and perform map matching of GPS coordinates to road networks. 
 
-6. **SpatialOps Class** stands for *Spatial Operations* and provides methods for handling 3D geometries, converting LineStrings to Points, performing spatial intersections, and executing parallelized spatial overlay operations. It also includes utilities for calculating distances (e.g., haversine and Vincenty formulas) and geocoding addresses using the Google Geocoding API.
+6. **SpatialIndex Class** provides methods for *spatial indexing* operations. It converts geographic coordinates and geometries into spatial index representations and vice versa, utilizing popular encoding systems like H3, S2, and Geohash. It also accelerates computations through parallel processing, making it useful for efficient spatial queries and handling large datasets.
 
+7. **SpatialOps Class** stands for *Spatial Operations* and provides methods for handling 3D geometries, converting LineStrings to Points, performing spatial intersections, and executing parallelized spatial overlay operations. It also includes utilities for calculating distances (e.g., haversine and Vincenty formulas) and geocoding addresses using the Google Geocoding API.
 
+## Karta Class
 
-
-
-## Tile Layers
-
-GeoParse can visualize the vector data on a map with the following tile layers.
+Karta class provides methods for adding points, lines, polygons, and choropleth layers to a map. The primary function, `plp` (point, line, polygon), supports various visualization styles and configurations, including clustering, heatmaps, and cell-based layers (e.g., H3, S2, geohash). `plp` can visualize the vector data on a map with the following tile layers.
 
 | Light                                                                                              | Dark                                                                                       |
 | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | 
@@ -90,9 +88,7 @@ GeoParse can visualize the vector data on a map with the following tile layers.
 
 
 
-## Karta Class
-
-`Karta` is used for visualization and accepts either a pandas `DataFrame` or a GeoPandas `GeoDataFrame` to render geometry data. For a `DataFrame`, the `plp` method in `Karta` class automatically identifies columns with names containing "lat" and "lon" (case-insensitive) to use as latitude and longitude for plotting points on the map. If no columns contain these keywords, or if more than two columns contain these keywords, you must explicitly specify the latitude and longitude using the `y` and `x` parameters, respectively, e.g., `plp(df, x="easting", y="northing")`. Note that plp assumes all data is in the [EPSG:4326](https://epsg.io/4326) projection. For a `GeoDataFrame`, the `plp` function can render Shapely objects such as `Point`, `LineString`, `Polygon`, and `MultiPolygon`.
+`plp` accepts either a pandas `DataFrame` or a GeoPandas `GeoDataFrame` to render geometry data. For a `DataFrame`, the `plp` method in `Karta` class automatically identifies columns with names containing "lat" and "lon" (case-insensitive) to use as latitude and longitude for plotting points on the map. If no columns contain these keywords, or if more than two columns contain these keywords, you must explicitly specify the latitude and longitude using the `y` and `x` parameters, respectively, e.g., `plp(df, x="easting", y="northing")`. Note that plp assumes all data is in the [EPSG:4326](https://epsg.io/4326) projection. For a `GeoDataFrame`, the `plp` function can render Shapely objects such as `Point`, `LineString`, `Polygon`, and `MultiPolygon`.
 
 ### Point
 
