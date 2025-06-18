@@ -256,27 +256,24 @@ plp(
   </tr>
 </table>
 
-
-
-
-
-
 If you are working with trajectory data, `plp` can display the direction of movement using the antpath parameter, as shown in the right image.
 
 <table>
   <tr>
     <td style="vertical-align: bottom;">
-      <pre><code>plp(df, heatmap=True, cluster=True)</code></pre>
+      <pre><code>
+plp(df, line=True)
+      </code></pre>
     </td>
     <td style="vertical-align: bottom;">
       <pre><code>
-plp(df, antpath=True, line=True)
+plp(df, antpath=True)
       </code></pre>
     </td>
   </tr>
   <tr>
     <td>
-      <img src="https://geoparse.io/graphics/casualty_heatmap_cluster.gif" height="480">
+      <img src="https://geoparse.io/graphics/trajectory.gif" height="480">
     </td>
     <td>
       <img src="https://geoparse.io/graphics/trajectory.gif" height="480">
