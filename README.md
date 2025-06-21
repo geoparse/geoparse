@@ -91,7 +91,6 @@ Karta class provides methods for adding points, lines, polygons, and choropleth 
 `plp` accepts either a pandas `DataFrame` or a GeoPandas `GeoDataFrame` to render geometry data. For a `DataFrame`, the `plp` method in `Karta` class automatically identifies columns with names containing "lat" and "lon" (case-insensitive) to use as latitude and longitude for plotting points on the map. If no columns contain these keywords, or if more than two columns contain these keywords, you must explicitly specify the latitude and longitude using the `y` and `x` parameters, respectively, e.g., `plp(df, x="easting", y="northing")`. Note that plp assumes all data is in the [EPSG:4326](https://epsg.io/4326) projection. For a `GeoDataFrame`, the `plp` function can render Shapely objects such as `Point`, `LineString`, `Polygon`, and `MultiPolygon`.
 
 ### Point
-
 In the following example, we demonstrate how to display points from a CSV file, customize the map with point colors and popups, and add layers such as heatmaps and clusters.
 
 ```python
@@ -185,8 +184,7 @@ plp(
   </tr>
 </table>
 
-
-
+#### Heatmap and cluster
 The `plp` function can also add heatmap and cluster layers to the map. In the left image, we see a heatmap of fatal road crashes in Great Britain. The center image displays the cluster view. Both layers can also be shown together on a single map, as demonstrated in the right image.
 
 <table>
@@ -225,6 +223,7 @@ plp(
 </table>
 
 
+#### Buffer and ring
 `plp` can create a buffer zone around each point, forming a circular area centered on the point. This is useful for visualizing spatial influence or performing proximity-based analysis. For example, it can help identify features within 100 meters of a crash site, as shown in the left figure. `plp` can also generate a ring-shaped buffer, sometimes called a "donut buffer," around each point. Each ring is defined by an inner and outer radius. In the example shown in the right cell, the ring starts 100 meters from each point and extends to 200 meters. This approach is useful when you want to exclude the immediate area around a point and focus on a specific surrounding zone.
 
 
@@ -256,7 +255,8 @@ plp(
   </tr>
 </table>
 
-If you are working with trajectory data, `plp` can display the direction of movement using the antpath parameter, as shown in the right image.
+#### Trajectory 
+`plp` can treat a trajectory as a series of points and visualize it, as described in the previous sections. By default, the points are colored blue, but this can be changed using the `point_color` parameter. As with other point visualizations mentioned earlier, you can customize the color based on a feature value, e.g., `vin` in the right-hand map, to distinguish between different journeys.
 
 <table>
   <tr>
@@ -278,7 +278,6 @@ If you are working with trajectory data, `plp` can display the direction of move
 </table>
 
 ### Line and Polygon
-
 Using `GeoPandas`, we can read a geospatial file and display its contents using `plp` function. The left image illustrates the border of Luxembourg, represented as a Shapely `Polygon` object. The center image depicts the main roads in Luxembourg, represented as Shapely `LineString` objects. Additionally, `plp` can accept two `GeoDataFrame` objects as a list and display both of them on a single map, as shown in the right image.
 
 | Polygn                                       | LineString                                        | Both                                                            |
