@@ -264,7 +264,7 @@ plp(
       <pre><code>plp(df)</code></pre>
     </td>
     <td style="vertical-align: bottom;">
-      <pre><code>plp([df, df2], point_color='vin')</code></pre>
+      <pre><code>plp([df, df2], point_color="vin")</code></pre>
     </td>
   </tr>
   <tr>
