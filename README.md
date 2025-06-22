@@ -261,18 +261,18 @@ plp(
 <table>
   <tr>
     <td style="vertical-align: bottom;">
-      <pre><code>plp(df, line=True)</code></pre>
+      <pre><code>plp(df)</code></pre>
     </td>
     <td style="vertical-align: bottom;">
-      <pre><code>plp(df, antpath=True)</code></pre>
+      <pre><code>plp([df, df2], point_color="vin")</code></pre>
     </td>
   </tr>
   <tr>
     <td>
-      <img src="https://geoparse.io/graphics/trajectory_line.png" height="480">
+      <img src="https://geoparse.io/graphics/trajectory_points.png" height="480">
     </td>
     <td>
-      <img src="https://geoparse.io/graphics/trajectory_antpath.gif" height="480">
+      <img src="https://geoparse.io/graphics/trajs.png" height="480">
     </td>
   </tr>
 </table>
