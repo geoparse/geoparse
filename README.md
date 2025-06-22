@@ -272,7 +272,7 @@ plp(
       <img src="https://geoparse.io/graphics/trajectory_points.png" height="480">
     </td>
     <td>
-      <img src="https://geoparse.io/graphics/trajectories.png" height="480">
+      <img src="https://geoparse.io/graphics/trajs.png" height="480">
     </td>
   </tr>
 </table>
