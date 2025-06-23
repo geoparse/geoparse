@@ -256,7 +256,7 @@ plp(
 </table>
 
 #### Trajectory 
-`plp` can treat a trajectory as a series of points and visualize it, as described in the previous sections. By default, the points are colored blue, but this can be changed using the `point_color` parameter. As with other point visualizations mentioned earlier, you can customize the color based on a feature value, e.g., `vin` in the right-hand map, to distinguish between different journeys.
+`plp` processes a trajectory as an ordered set of points and renders it using point-based visualization, as previously described. By default, the points are colored blue, but this can be changed using the `point_color` parameter. As with other point visualizations mentioned earlier, you can customize the color based on a feature value, e.g., `vin` (vehicle identification number) in the right-hand map, to distinguish between different journeys.
 
 <table>
   <tr>
@@ -276,6 +276,29 @@ plp(
     </td>
   </tr>
 </table>
+
+
+In addition, specifically for trajectories, `plp` can display lines that connect points to form continuous paths. It also supports animated ant paths for line geometries, allowing users to visualize the direction of movement.
+
+<table>
+  <tr>
+    <td style="vertical-align: bottom;">
+      <pre><code>plp(df, line=True)</code></pre>
+    </td>
+    <td style="vertical-align: bottom;">
+      <pre><code>plp(df, antpath=True)</code></pre>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <img src="https://geoparse.io/graphics/trajectory_line.png" height="480">
+    </td>
+    <td>
+      <img src="https://geoparse.io/graphics/trajectory_antpath.gif" height="480">
+    </td>
+  </tr>
+</table>
+
 
 ### Line and Polygon
 Using `GeoPandas`, we can read a geospatial file and display its contents using `plp` function. The left image illustrates the border of Luxembourg, represented as a Shapely `Polygon` object. The center image depicts the main roads in Luxembourg, represented as Shapely `LineString` objects. Additionally, `plp` can accept two `GeoDataFrame` objects as a list and display both of them on a single map, as shown in the right image.
