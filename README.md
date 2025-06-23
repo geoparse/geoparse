@@ -291,10 +291,10 @@ In addition, specifically for trajectories, `plp` can display lines that connect
   </tr>
   <tr>
     <td>
-      <img src="https://geoparse.io/graphics/trajectory_line2.png" height="480">
+      <img src="https://geoparse.io/graphics/trajectory_line.png" height="480">
     </td>
     <td>
-      <img src="https://geoparse.io/graphics/trajectory_antpath2.gif" height="480">
+      <img src="https://geoparse.io/graphics/trajectory_antpath.gif" height="480">
     </td>
   </tr>
 </table>
