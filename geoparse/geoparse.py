@@ -184,6 +184,8 @@ class Karta:
         row: pd.Series,
         karta: folium.Map,
         color: str = "black",
+        speed_field: str = "speed",
+        speed_limit_field: str = "speedlimit",
         color_head: int = None,
         color_tail: int = None,
         opacity: float = 0.5,
@@ -260,18 +262,18 @@ class Karta:
         if any(math.isnan(item) for item in location):
             return None
 
-        if color == "speed":
-            if pd.isna(row.speedlimit) or row.speedlimit <= 0:
+        if color == speed_field:
+            if pd.isna(row[speed_limit_field]) or row[speed_limit_field] <= 0:
                 color = "purple"
-            elif row.speed <= row.speedlimit:
+            elif row[speed_field] <= row[speed_limit_field]:
                 color = "blue"
-            elif row.speed < 1.1 * row.speedlimit:
+            elif row[speed_field] < 1.1 * row[speed_limit_field]:
                 color = "green"
-            elif row.speed < 1.2 * row.speedlimit:
+            elif row[speed_field] < 1.2 * row[speed_limit_field]:
                 color = "yellow"
-            elif row.speed < 1.3 * row.speedlimit:
+            elif row[speed_field] < 1.3 * row[speed_limit_field]:
                 color = "orange"
-            elif row.speed < 1.4 * row.speedlimit:
+            elif row[speed_field] < 1.4 * row[speed_limit_field]:
                 color = "red"
             else:
                 color = "black"
@@ -424,6 +426,8 @@ class Karta:
         point_color: str = "blue",
         color_head: Optional[str] = None,
         color_tail: Optional[str] = None,
+        speed_field: str = "speed",
+        speed_limit_field: str = "speedlimit",
         point_opacity: float = 0.5,
         point_radius: int = 3,
         point_weight: int = 6,
@@ -488,6 +492,12 @@ class Karta:
 
         color_tail : str, optional
             Substring index for the tail to extract color.
+
+        speed_field : str, default "speed"
+            Name of the speed field in DataFrame or GeoDataFrame.
+
+        speed_limit_field : str, default "speedlimit"
+            Name of the speed limit field in DataFrame or GeoDataFrame.
 
         point_opacity : float, default 0.5
             Opacity of the points. Value should be between 0 and 1.
@@ -686,6 +696,8 @@ class Karta:
                     color=point_color,
                     color_head=color_head,
                     color_tail=color_tail,
+                    speed_field=speed_field,
+                    speed_limit_field=speed_limit_field,
                     opacity=point_opacity,
                     radius=point_radius,
                     weight=point_weight,
