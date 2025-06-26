@@ -97,7 +97,7 @@ In the following example, we demonstrate how to display points from a CSV file, 
 import pandas as pd
 from geoparse.geoparse import plp
 
-df = pd.read_csv("data/great_britain_road_casualties-2023.csv")
+df = pd.read_csv("https://geoparse.io/tutorials/data/fatal_crash_great_britain_2023.csv")
 df.head()
 ```
 | date       | time  | latitude  | longitude  | number_of_vehicles | number_of_casualties | speed_limit |
@@ -255,8 +255,21 @@ plp(
   </tr>
 </table>
 
-#### Trajectory 
+#### Trajectory - Visualization
 `plp` processes a trajectory as an ordered set of points and renders it using point-based visualization, as previously described. By default, the points are colored blue, but this can be changed using the `point_color` parameter. As with other point visualizations mentioned earlier, you can customize the color based on a feature value, e.g., `vin` (vehicle identification number) in the right-hand map, to distinguish between different journeys.
+
+```python
+df = pd.read_csv("https://geoparse.io/tutorials/data/trajectory.csv", dtype={"speedlimit": "Int8"})
+df.head()
+```
+| vin | lat       | lon       | dt                  | speed | highway      | name           | ref  | speedlimit |
+|-----|-----------|-----------|---------------------|-------|--------------|----------------|------|------------|
+| 13  | 53.420805 | -2.212972 | 2023-11-18 23:46:35 | 0.0   | residential  | Lane End Road  | NaN  | \<NA\>     |
+| 13  | 53.420618 | -2.213305 | 2023-11-18 23:47:35 | 19.0  | trunk        | Kingsway       | A34  | 40         |
+| 13  | 53.418982 | -2.214270 | 2023-11-18 23:48:35 | 32.6  | trunk        | Kingsway       | A34  | 40         |
+| 13  | 53.414234 | -2.217178 | 2023-11-18 23:49:35 | 30.1  | trunk        | Kingsway       | A34  | 40         |
+| 13  | 53.407416 | -2.221233 | 2023-11-18 23:50:35 | 37.6  | trunk        | Kingsway       | A34  | 40         |
+
 
 <table>
   <tr>
@@ -298,6 +311,65 @@ In addition, specifically for trajectories, `plp` can display lines that connect
     </td>
   </tr>
 </table>
+
+
+#### Trajectory - Speeding detection
+
+If we pass the `speed_mph` column to `point_color` and also provide the `speed_field` and `speed_limit_field` to the `plp` function, it will plot each GPS point and color them based on the vehicle’s speed. The `point_color="speed_mph"` argument controls the color mapping, while `speed_field` and `speed_limit_field` specify which columns contain the actual vehicle speed and the corresponding legal speed limit, respectively. To help interpret speeding severity, a color-coded speed band is applied based on the percentage by which the vehicle exceeds the speed limit:
+
+    Black: Speeding ≥ 40%
+    Red: 30% ≤ Speeding < 40%
+    Orange: 20% ≤ Speeding < 30%
+    Yellow: 10% ≤ Speeding < 20%
+    Green: 0% < Speeding < 10%
+    Blue: No speeding
+    Purple: Speed limit unavailable
+    
+Using the `point_popup` argument, when a user hovers over a point on the map, a popup will display relevant information for that location. This feature supports exploratory analysis of driving behavior in relation to road regulations. Combined with the visual encoding of speeding severity, it allows users to quickly identify areas of excessive speeding, compliance, or missing speed limit data.
+<table>
+  <tr>
+    <td style="vertical-align: bottom;">
+      <pre><code>
+plp(
+    df,
+    speed_field="speed_mph",
+    speed_limit_field="speedlimit_mph",
+    point_color="speed_mph",
+)
+</code></pre>
+    </td>
+    <td style="vertical-align: bottom;">
+      <pre><code>
+plp(
+    df,
+    speed_field="speed_mph",
+    speed_limit_field="speedlimit_mph",
+    point_color="speed_mph",
+    point_popup={
+        "Time": "dt", 
+        "Speed (mile/h)": "speed_mph", 
+        "Speed Limit (mile/h)": "speedlimit_mph"
+    }
+)
+</code></pre>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <img src="https://geoparse.io/graphics/trajectory_speeding.png?cache_bust=1" height="480">
+    </td>
+    <td>
+      <img src="https://geoparse.io/graphics/trajectory_speeding_popup.png?cache_bust=1" height="480">
+    </td>
+  </tr>
+</table>
+
+
+
+
+
+
+
 
 
 ### Line and Polygon
