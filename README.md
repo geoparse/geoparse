@@ -315,14 +315,14 @@ In addition, specifically for trajectories, `plp` can display lines that connect
 
 #### Trajectory - Speeding detection
 
-If we pass the `speed_mph` column to `point_color` and also provide the `speed_field` and `speed_limit_field` to the `plp` function, it will plot each GPS point and color them based on the vehicle’s speed. The `point_color="speed_mph"` argument controls the color mapping, while `speed_field` and `speed_limit_field` specify which columns contain the actual vehicle speed and the corresponding legal speed limit, respectively. To help interpret speeding severity, a color-coded speed band is applied based on the percentage by which the vehicle exceeds the speed limit:
+By passing the name of the speed column (`speed_mph` in the above example) to the `point_color` parameter, and specifying both `speed_field` and `speed_limit_field` in the `plp` function, each GPS point is plotted and color-coded based on how the vehicle's speed compares to the road's speed limit. The `speed_field` and s`peed_limit_field` parameters indicate which columns contain the actual vehicle speed and the legal speed limit, respectively. To convey speeding severity, a color-coded band is applied according to the percentage by which the vehicle exceeds the speed limit. For instance, a speeding value of 10% corresponds to driving at 55 miles per hour on a road with a 50 mile per hour limit.
 
-    Black: Speeding ≥ 40%
-    Red: 30% ≤ Speeding < 40%
-    Orange: 20% ≤ Speeding < 30%
-    Yellow: 10% ≤ Speeding < 20%
-    Green: 0% < Speeding < 10%
     Blue: No speeding
+    Green: 0% < Speeding < 10%
+    Yellow: 10% ≤ Speeding < 20%
+    Orange: 20% ≤ Speeding < 30%
+    Red: 30% ≤ Speeding < 40%
+    Black: Speeding ≥ 40%
     Purple: Speed limit unavailable
     
 Using the `point_popup` argument, when a user hovers over a point on the map, a popup will display relevant information for that location. This feature supports exploratory analysis of driving behavior in relation to road regulations. Combined with the visual encoding of speeding severity, it allows users to quickly identify areas of excessive speeding, compliance, or missing speed limit data.
