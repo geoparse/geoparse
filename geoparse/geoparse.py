@@ -706,7 +706,7 @@ class Karta:
                     y=northing,
                     axis=1,
                 )
-                if point_color == "speed":
+                if point_color == speed_field:
                     template = """
                     {% macro html(this, kwargs) %}
 
