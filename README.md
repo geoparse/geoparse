@@ -356,10 +356,10 @@ plp(
   </tr>
   <tr>
     <td>
-      <img src="https://geoparse.io/graphics/traj_speeding.png?cache_bust=1" height="480">
+      <img src="https://geoparse.io/graphics/speeding.png?cache_bust=1" height="480">
     </td>
     <td>
-      <img src="https://geoparse.io/graphics/traj_speeding_popup.png?cache_bust=1" height="480">
+      <img src="https://geoparse.io/graphics/speeding_popup.png?cache_bust=1" height="480">
     </td>
   </tr>
 </table>
