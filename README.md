@@ -84,7 +84,7 @@ Karta class provides methods for adding points, lines, polygons, and choropleth 
 | OSM |
 | --- |
 | A general-purpose map powered by OpenStreetMap, showcasing roads, buildings, and points of interest. |
-| <img src="https://geoparse.io/graphics/layer_osm_new_york.png?cache_bust=1" width="400" height="400"> |
+| <img src="https://geoparse.io/graphics/layer_osm_new_york.png?cache_bust=1" height="400"> |
 
 
 
