@@ -282,10 +282,10 @@ df.head()
   </tr>
   <tr>
     <td>
-      <img src="https://geoparse.io/graphics/trajectory_points.png" height="480">
+      <img src="https://geoparse.io/graphics/traj_points.png" height="480">
     </td>
     <td>
-      <img src="https://geoparse.io/graphics/trajectories.png?cache_bust=1" height="480">
+      <img src="https://geoparse.io/graphics/trajs.png?cache_bust=1" height="480">
     </td>
   </tr>
 </table>
@@ -304,10 +304,10 @@ In addition, specifically for trajectories, `plp` can display lines that connect
   </tr>
   <tr>
     <td>
-      <img src="https://geoparse.io/graphics/trajectory_line.png?cache_bust=1" height="480">
+      <img src="https://geoparse.io/graphics/traj_line.png?cache_bust=1" height="480">
     </td>
     <td>
-      <img src="https://geoparse.io/graphics/trajectory_antpath.gif?cache_bust=1" height="480">
+      <img src="https://geoparse.io/graphics/traj_antpath.gif?cache_bust=1" height="480">
     </td>
   </tr>
 </table>
@@ -315,7 +315,7 @@ In addition, specifically for trajectories, `plp` can display lines that connect
 
 #### Trajectory - Speeding detection
 
-By passing the name of the speed column (`speed_mph` in the above example) to the `point_color` parameter, and specifying both `speed_field` and `speed_limit_field` in the `plp` function, each GPS point is plotted and color-coded based on how the vehicle's speed compares to the road's speed limit. The `speed_field` and s`peed_limit_field` parameters indicate which columns contain the actual vehicle speed and the legal speed limit, respectively. To convey speeding severity, a color-coded band is applied according to the percentage by which the vehicle exceeds the speed limit. For instance, a speeding value of 10% corresponds to driving at 55 miles per hour on a road with a 50 mile per hour limit.
+By passing the name of the speed column (`speed_mph` in the above example) to the `point_color` parameter, and specifying both `speed_field` and `speed_limit_field` in the `plp` function, each GPS point is plotted and color-coded based on how the vehicle's speed compares to the road's speed limit. The `speed_field` and `speed_limit_field` parameters indicate which columns contain the actual vehicle speed and the legal speed limit, respectively. To convey speeding severity, a color-coded band is applied according to the percentage by which the vehicle exceeds the speed limit. For instance, a speeding value of 10% corresponds to driving at 55 miles per hour on a road with a 50 mile per hour limit.
 
     Blue: No speeding
     Green: 0% < Speeding < 10%
@@ -356,10 +356,10 @@ plp(
   </tr>
   <tr>
     <td>
-      <img src="https://geoparse.io/graphics/trajectory_speeding.png?cache_bust=1" height="480">
+      <img src="https://geoparse.io/graphics/speeding.png?cache_bust=1" height="480">
     </td>
     <td>
-      <img src="https://geoparse.io/graphics/trajectory_speeding_popup.png?cache_bust=1" height="480">
+      <img src="https://geoparse.io/graphics/speeding_popup.png?cache_bust=1" height="480">
     </td>
   </tr>
 </table>
