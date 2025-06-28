@@ -282,10 +282,10 @@ df.head()
   </tr>
   <tr>
     <td>
-      <img src="https://geoparse.io/graphics/trajectory_points.png" height="480">
+      <img src="https://geoparse.io/graphics/traj_points.png" height="480">
     </td>
     <td>
-      <img src="https://geoparse.io/graphics/trajectories.png?cache_bust=1" height="480">
+      <img src="https://geoparse.io/graphics/trajs.png?cache_bust=1" height="480">
     </td>
   </tr>
 </table>
@@ -304,10 +304,10 @@ In addition, specifically for trajectories, `plp` can display lines that connect
   </tr>
   <tr>
     <td>
-      <img src="https://geoparse.io/graphics/trajectory_line.png?cache_bust=1" height="480">
+      <img src="https://geoparse.io/graphics/traj_line.png?cache_bust=1" height="480">
     </td>
     <td>
-      <img src="https://geoparse.io/graphics/trajectory_antpath.gif?cache_bust=1" height="480">
+      <img src="https://geoparse.io/graphics/traj_antpath.gif?cache_bust=1" height="480">
     </td>
   </tr>
 </table>
