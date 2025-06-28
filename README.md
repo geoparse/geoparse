@@ -79,12 +79,12 @@ Karta class provides methods for adding points, lines, polygons, and choropleth 
 | Outdoors                                                                                          | Satellite                                                                                       |
 | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | Designed for outdoor enthusiasts, featuring hiking trails, biking paths, natural landmarks, and elevation contours. | A basemap displaying satellite imagery of the Earth's surface, useful for real-world context and analyses requiring detailed imagery. |
-| <img src="https://geoparse.io/graphics/outdoors.png" width="400" height="400">                              | <img src="https://geoparse.io/graphics/satellite.png" width="400" height="400">                           |
+| <img src="https://geoparse.io/graphics/layer_outdoors_kiasar.png?cache_bust=1" width="400" height="400">                              | <img src="https://geoparse.io/graphics/layer_satellite_venice.png?cache_bust=1" width="400" height="400">                           |
 
 | OSM |
 | --- |
 | A general-purpose map powered by OpenStreetMap, showcasing roads, buildings, and points of interest. |
-| <img src="https://geoparse.io/graphics/osm.png" width="400" height="400"> |
+| <img src="https://geoparse.io/graphics/layer_osm_new_york.png?cache_bust=1" width="400" height="400"> |
 
 
 
