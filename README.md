@@ -84,9 +84,7 @@ Karta class provides methods for adding points, lines, polygons, and choropleth 
 | OSM |
 | --- |
 | A general-purpose map powered by OpenStreetMap, showcasing roads, buildings, and points of interest (POIs). |
-| <img src="https://geoparse.io/graphics/layer_osm_sf.png?cache_bust=1" height="400"> |
-
-
+| <div align="center"><img src="https://geoparse.io/graphics/layer_osm_sf.png?cache_bust=1" height="400"></div> |
 
 `plp` accepts either a pandas `DataFrame` or a GeoPandas `GeoDataFrame` to render geometry data. For a `DataFrame`, the `plp` method in `Karta` class automatically identifies columns with names containing "lat" and "lon" (case-insensitive) to use as latitude and longitude for plotting points on the map. If no columns contain these keywords, or if more than two columns contain these keywords, you must explicitly specify the latitude and longitude using the `y` and `x` parameters, respectively, e.g., `plp(df, x="easting", y="northing")`. Note that plp assumes all data is in the [EPSG:4326](https://epsg.io/4326) projection. For a `GeoDataFrame`, the `plp` function can render Shapely objects such as `Point`, `LineString`, `Polygon`, and `MultiPolygon`.
 
