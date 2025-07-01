@@ -147,7 +147,10 @@ plp(
 </table>
 
 
-For a more advanced visualization, we can customize the color of the points based on a feature value (e.g., `speed_limit` in the right map) and create HTML popups that display the attributes of each point.
+To enhance interpretability, `plp` allows grouping and coloring points based on the values of a specific feature such as `number_of_casualties`. 
+In the visualizations below, crash points are color-coded: blue for 1 casualty, green for 2, and red for 3. 
+Additionally, by using the `point_popup` argument, hovering over a point reveals a popup with detailed contextual information, 
+as illustrated in the image on the right.
 
 <table>
   <tr>
@@ -155,7 +158,7 @@ For a more advanced visualization, we can customize the color of the points base
       <pre><code>
 plp(
     df,
-    point_color="speed_limit"
+    point_color="number_of_casualties"
 )
       </code></pre>
     </td>
@@ -163,10 +166,10 @@ plp(
       <pre><code>
 plp(
     df,
-    point_color="speed_limit",
+    point_color="number_of_casualties",
     point_popup={
         "Date": "date",
-        "Speed limit": "speed_limit"
+        "Casualties": "number_of_casualties"
     }
 )
       </code></pre>
@@ -174,10 +177,10 @@ plp(
   </tr>
   <tr>
     <td>
-      <img src="https://geoparse.io/graphics/colour_speed.png" height="480">
+      <div align="center"><img src="https://geoparse.io/graphics/casualty_colored.png?cache_bust=1" height="400"></div>
     </td>
     <td>
-      <img src="https://geoparse.io/graphics/colour_speed_popup.png" height="480">
+      <div align="center"><img src="https://geoparse.io/graphics/casualty_colored_popup.png?cache_bust=1" height="400"></div>
     </td>
   </tr>
 </table>
