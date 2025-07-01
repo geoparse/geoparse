@@ -177,10 +177,10 @@ plp(
   </tr>
   <tr>
     <td>
-      <img src="https://geoparse.io/graphics/casualty_colored.png?cache_bust=1" height="400">
+      <div align="center"><img src="https://geoparse.io/graphics/casualty_colored.png?cache_bust=1" height="400"></div>
     </td>
     <td>
-      <img src="https://geoparse.io/graphics/casualty_colored_popup.png?cache_bust=1" height="400">
+      <div align="center"><img src="https://geoparse.io/graphics/casualty_colored_popup.png?cache_bust=1" height="400"></div>
     </td>
   </tr>
 </table>
