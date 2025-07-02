@@ -73,11 +73,11 @@ Karta class provides methods for adding points, lines, polygons, and choropleth 
 
 | Light | Dark  |
 | ----- | ----- | 
-| A minimalist, light-colored basemap that serves as a subtle background, emphasizing overlaid data. | A high-contrast, dark-themed map ideal for vibrant data overlays and nighttime aesthetics. |
+| A minimalist, light-colored basemap that serves as a subtle background, emphasizing overlaid data.                                   | A high-contrast, dark-themed map ideal for vibrant data overlays and nighttime aesthetics.                            |
 | <img src="https://geoparse.io/graphics/layer_light_london.png?cache_bust=1" width="400" height="400"> | <img src="https://geoparse.io/graphics/layer_dark_london.png?cache_bust=1" width="400" height="400"> |
 
-| Outdoors                                                                                          | Satellite                                                                                       |
-| ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Outdoors | Satellite |
+| -------- | --------- |
 | Designed for outdoor enthusiasts, featuring hiking trails, biking paths, natural landmarks, and elevation contours. | A basemap displaying satellite imagery of the Earth's surface, useful for real-world context and analyses requiring detailed imagery. |
 | <img src="https://geoparse.io/graphics/layer_outdoors_kiasar.png?cache_bust=1" width="400" height="400">                              | <img src="https://geoparse.io/graphics/layer_satellite_venice.png?cache_bust=1" width="400" height="400">                           |
 
