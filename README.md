@@ -363,14 +363,6 @@ plp(
   </tr>
 </table>
 
-
-
-
-
-
-
-
-
 ### Line and Polygon
 Using `GeoPandas`, we can read a geospatial file and display its contents using `plp` function. The left image illustrates the border of Luxembourg, represented as a Shapely `Polygon` object. The center image depicts the main roads in Luxembourg, represented as Shapely `LineString` objects. Additionally, `plp` can accept two `GeoDataFrame` objects as a list and display both of them on a single map, as shown in the right image.
 
