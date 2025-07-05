@@ -97,13 +97,13 @@ from geoparse.geoparse import plp
 df = pd.read_csv("https://geoparse.io/tutorials/data/fatal_crash_great_britain_2023.csv")
 df.head()
 ```
-| date       | time  | latitude  | longitude  | number_of_vehicles | number_of_casualties | speed_limit |
-|------------|-------|-----------|------------|--------------------|----------------------|-------------|
-| 03/01/2023 | 19:12 | 51.356551 | -0.097759  | 1                  | 1                    | 30          |
-| 07/01/2023 | 10:05 | 51.593701 | 0.022379   | 1                  | 1                    | 30          |
-| 14/01/2023 | 16:15 | 51.466689 | -0.011289  | 1                  | 1                    | 20          |
-| 15/01/2023 | 19:51 | 51.671577 | -0.037543  | 1                  | 1                    | 30          |
-| 16/01/2023 | 19:22 | 51.447944 | 0.117279   | 2                  | 1                    | 30          |
+| date       | time  | latitude  | longitude  | number_of_casualties | speed_limit | highway  |
+|------------|-------|-----------|------------|----------------------|-------------|----------|
+| 03/01/2023 | 19:12 | 51.356551 | -0.097759  | 1                    | 30          | primary  |
+| 07/01/2023 | 10:05 | 51.593701 | 0.022379   | 1                    | 30          | primary  |
+| 14/01/2023 | 16:15 | 51.466689 | -0.011289  | 1                    | 20          | primary  |
+| 15/01/2023 | 19:51 | 51.671577 | -0.037543  | 1                    | 30          | tertiary |
+| 16/01/2023 | 19:22 | 51.447944 | 0.117279   | 1                    | 30          | primary  |
 
 After loading the data, you can easily visualize it on a map using `plp(df)`.
 By default, the `plp` method displays points in blue (left figure), but you can change the point color using the `point_color` argument (center figure).
@@ -355,13 +355,21 @@ plp(
   </tr>
   <tr>
     <td>
-      <img src="https://geoparse.io/graphics/speeding.png?cache_bust=1" height="480">
+      <img src="https://geoparse.io/graphics/traj_speeding.png?cache_bust=1" height="480">
     </td>
     <td>
-      <img src="https://geoparse.io/graphics/speeding_popup.png?cache_bust=1" height="480">
+      <img src="https://geoparse.io/graphics/traj_speeding_popup.png?cache_bust=1" height="480">
     </td>
   </tr>
 </table>
+
+It's worth mentioning that the default values for `speed_field` and `speed_limit_field` are `speed` and `speedlimit`, respectively. 
+So in this case, there's no need to specify these arguments.
+
+```python
+df = df.rename(columns={"speed_mph": "speed", "speedlimit_mph": "speedlimit"})
+plp(df, point_color="speed")
+```
 
 ### Line and Polygon
 Using `GeoPandas`, we can read a geospatial file and display its contents using `plp` function. The left image illustrates the border of Luxembourg, represented as a Shapely `Polygon` object. The center image depicts the main roads in Luxembourg, represented as Shapely `LineString` objects. Additionally, `plp` can accept two `GeoDataFrame` objects as a list and display both of them on a single map, as shown in the right image.
