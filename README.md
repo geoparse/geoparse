@@ -282,7 +282,7 @@ df.head()
   </tr>
   <tr>
     <td>
-      <img src="https://geoparse.io/graphics/traj_points.png" height="480">
+      <img src="https://geoparse.io/graphics/traj_points.png?cache_bust=1" height="480">
     </td>
     <td>
       <img src="https://geoparse.io/graphics/trajs.png?cache_bust=1" height="480">
