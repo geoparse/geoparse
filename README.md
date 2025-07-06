@@ -273,19 +273,21 @@ df.head()
 
 <table>
   <tr>
-    <td style="vertical-align: bottom;">
-      <pre><code>plp(df)</code></pre>
+    <td width="410" align="left">
+        <pre><code>plp(df)</code></pre>
     </td>
-    <td style="vertical-align: bottom;">
-      <pre><code>plp([df, df2], point_color="vin")</code></pre>
+    <td width="410" align="left">
+      <pre><code>plp([df, df2],
+    point_color="vin"
+)</code></pre>
     </td>
   </tr>
   <tr>
     <td>
-      <img src="https://geoparse.io/graphics/traj_points.png?cache_bust=1" height="480">
+      <img src="https://geoparse.io/graphics/traj_points.png?cache_bust=1" width="400">
     </td>
     <td>
-      <img src="https://geoparse.io/graphics/trajs.png?cache_bust=1" height="480">
+      <img src="https://geoparse.io/graphics/trajs.png?cache_bust=1" width="400">
     </td>
   </tr>
 </table>
