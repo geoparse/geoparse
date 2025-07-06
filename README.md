@@ -276,7 +276,7 @@ df.head()
     <td width="410" style="vertical-align: top;">
         <pre><code>plp(df)</code></pre>
     </td>
-    <td width="450" style="vertical-align: top;">
+    <td width="447" style="vertical-align: top;">
       <pre><code>plp([df, df2],
     point_color="vin"
 )</code></pre>
