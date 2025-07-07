@@ -112,24 +112,18 @@ To apply custom colors, you can also use RGB hex codes (right figure).
 
 <table>
   <tr>
+    <td style="vertical-align: top;">plp(df)                      </td>
     <td style="vertical-align: top;">
-      <pre><code>plp(df)                      </code></pre>
-    </td>
-    <td style="vertical-align: top;">
-      <pre><code>
-plp(
+      <pre><code>plp(
     df,
     point_color="purple"   
-)
-      </code></pre>
+)</code></pre>
     </td>
     <td style="vertical-align: top;">
-      <pre><code>
-plp(
+      <pre><code>plp(
     df,
     point_color="#cc5500"
-)
-      </code></pre>
+)</code></pre>
     </td>
   </tr>
   <tr>
