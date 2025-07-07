@@ -112,18 +112,18 @@ To apply custom colors, you can also use RGB hex codes (right figure).
 
 <table>
   <tr>
-    <td style="vertical-align: bottom; text-align: center;">
+    <td style="vertical-align: top;">
       <pre><code>plp(df)                      </code></pre>
     </td>
-    <td style="vertical-align: bottom; text-align: center;">
+    <td style="vertical-align: top;">
       <pre><code>
 plp(
     df,
-    point_color="purple"
+    point_color="purple"   
 )
       </code></pre>
     </td>
-    <td style="vertical-align: bottom; text-align: center;">
+    <td style="vertical-align: top;">
       <pre><code>
 plp(
     df,
@@ -133,15 +133,9 @@ plp(
     </td>
   </tr>
   <tr>
-    <td style="text-align: center;">
-      <img src="https://geoparse.io/graphics/casualty_map.png" height="360" alt="Default plot">
-    </td>
-    <td style="text-align: center;">
-      <img src="https://geoparse.io/graphics/casualty_map_purple.png" height="360" alt="Purple points plot">
-    </td>
-    <td style="text-align: center;">
-      <img src="https://geoparse.io/graphics/casualty_map_brown.png" height="360" alt="Brown points plot">
-    </td>
+    <td width="33%"><img src="https://geoparse.io/graphics/casualty_map.png?"/></td>
+    <td width="33%"><img src="https://geoparse.io/graphics/casualty_map_purple.png?"/></td>
+    <td width="33%"><img src="https://geoparse.io/graphics/casualty_map_brown.png?"/></td>
   </tr>
 </table>
 
