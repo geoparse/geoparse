@@ -109,7 +109,7 @@ After loading the data, you can easily visualize it on a map using `plp(df)`.
 By default, the `plp` method displays points in blue (left figure), but you can change the point color using the `point_color` argument (center figure).
 To apply custom colors, you can also use RGB hex codes (right figure).
 
-<table width="100%" style="border-collapse: collapse;">
+<table width="100%">
   <tr>
     <td style="vertical-align: top;"><pre><code>plp(df)                  </code></pre></td>
     <td style="vertical-align: top;">
@@ -125,7 +125,7 @@ To apply custom colors, you can also use RGB hex codes (right figure).
   </tr>
   <tr>
     <td width="33%"><img src="https://geoparse.io/graphics/casualty_map.png?"/></td>
-    <td width="33%"><img src="https://geoparse.io/graphics/casualty_map_purple.png?"/></td>
+    <td width="34%"><img src="https://geoparse.io/graphics/casualty_map_purple.png?"/></td>
     <td width="33%"><img src="https://geoparse.io/graphics/casualty_map_brown.png?"/></td>
   </tr>
 </table>
