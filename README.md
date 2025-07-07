@@ -109,8 +109,7 @@ After loading the data, you can easily visualize it on a map using `plp(df)`.
 By default, the `plp` method displays points in blue (left figure), but you can change the point color using the `point_color` argument (center figure).
 To apply custom colors, you can also use RGB hex codes (right figure).
 
-<table width="100%">
-<table>
+<table width="100%" style="border-collapse: collapse;">
   <tr>
     <td style="vertical-align: top;"><pre><code>plp(df)                  </code></pre></td>
     <td style="vertical-align: top;">
