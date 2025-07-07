@@ -73,17 +73,17 @@ Karta class provides methods for adding points, lines, polygons, and choropleth 
 | Light | Dark |
 | ----- | ---- | 
 | A minimalist, light-colored basemap that serves as a subtle background, emphasizing overlaid data. | A high-contrast, dark-themed map ideal for vibrant data overlays and nighttime aesthetics. |
-| <img src="https://geoparse.io/graphics/layer_light_london.png?cache_bust=1" height="400">          | <img src="https://geoparse.io/graphics/layer_dark_london.png?cache_bust=1" height="400">   |
+| <img src="https://geoparse.io/graphics/layer_light_london.png?" height="400">          | <img src="https://geoparse.io/graphics/layer_dark_london.png?" height="400">   |
 
 | Outdoors | Satellite |
 | -------- | --------- |
 | Designed for outdoor enthusiasts, featuring hiking trails, biking paths, natural landmarks, and elevation contours. | A basemap displaying satellite imagery of the Earth's surface, useful for real-world context and analyses requiring detailed imagery. |
-| <img src="https://geoparse.io/graphics/layer_outdoors_kiasar.png?cache_bust=1" height="400"> | <img src="https://geoparse.io/graphics/layer_satellite_venice.png?cache_bust=1" height="400"> |
+| <img src="https://geoparse.io/graphics/layer_outdoors_kiasar.png?" height="400"> | <img src="https://geoparse.io/graphics/layer_satellite_venice.png?" height="400"> |
 
 | OSM |
 | --- |
 | A general-purpose map powered by OpenStreetMap, showcasing roads, buildings, and points of interest (POIs).   |
-| <div align="center"><img src="https://geoparse.io/graphics/layer_osm_sf.png?cache_bust=1" height="400"></div> |
+| <div align="center"><img src="https://geoparse.io/graphics/layer_osm_sf.png?" height="400"></div> |
 
 `plp` accepts either a pandas `DataFrame` or a GeoPandas `GeoDataFrame` to render geometry data. For a `DataFrame`, the `plp` method in `Karta` class automatically identifies columns with names containing "lat" and "lon" (case-insensitive) to use as latitude and longitude for plotting points on the map. If no columns contain these keywords, or if more than two columns contain these keywords, you must explicitly specify the latitude and longitude using the `y` and `x` parameters, respectively, e.g., `plp(df, x="easting", y="northing")`. Note that plp assumes all data is in the [EPSG:4326](https://epsg.io/4326) projection. For a `GeoDataFrame`, the `plp` function can render Shapely objects such as `Point`, `LineString`, `Polygon`, and `MultiPolygon`.
 
@@ -109,39 +109,24 @@ After loading the data, you can easily visualize it on a map using `plp(df)`.
 By default, the `plp` method displays points in blue (left figure), but you can change the point color using the `point_color` argument (center figure).
 To apply custom colors, you can also use RGB hex codes (right figure).
 
-
-<table>
+<table width="100%">
   <tr>
-    <td style="vertical-align: bottom; text-align: center;">
-      <pre><code>plp(df)                      </code></pre>
+    <td style="vertical-align: top;"><pre><code>plp(df)                  </code></pre></td>
+    <td style="vertical-align: top;">
+      <pre><code>plp(df,
+    point_color="purple"   
+)</code></pre>
     </td>
-    <td style="vertical-align: bottom; text-align: center;">
-      <pre><code>
-plp(
-    df,
-    point_color="purple"
-)
-      </code></pre>
-    </td>
-    <td style="vertical-align: bottom; text-align: center;">
-      <pre><code>
-plp(
-    df,
-    point_color="#cc5500"
-)
-      </code></pre>
+    <td style="vertical-align: top;">
+      <pre><code>plp(df,
+    point_color="#cc5500" 
+)</code></pre>
     </td>
   </tr>
   <tr>
-    <td style="text-align: center;">
-      <img src="https://geoparse.io/graphics/casualty_map.png" height="360" alt="Default plot">
-    </td>
-    <td style="text-align: center;">
-      <img src="https://geoparse.io/graphics/casualty_map_purple.png" height="360" alt="Purple points plot">
-    </td>
-    <td style="text-align: center;">
-      <img src="https://geoparse.io/graphics/casualty_map_brown.png" height="360" alt="Brown points plot">
-    </td>
+    <td width="33%"><img src="https://geoparse.io/graphics/casualty_map.png?"/></td>
+    <td width="34%"><img src="https://geoparse.io/graphics/casualty_map_purple.png?"/></td>
+    <td width="33%"><img src="https://geoparse.io/graphics/casualty_map_brown.png?"/></td>
   </tr>
 </table>
 
@@ -176,10 +161,10 @@ plp(
   </tr>
   <tr>
     <td>
-      <div align="center"><img src="https://geoparse.io/graphics/casualty_colored.png?cache_bust=1" height="400"></div>
+      <div align="center"><img src="https://geoparse.io/graphics/casualty_colored.png?" height="400"></div>
     </td>
     <td>
-      <div align="center"><img src="https://geoparse.io/graphics/casualty_colored_popup.png?cache_bust=1" height="400"></div>
+      <div align="center"><img src="https://geoparse.io/graphics/casualty_colored_popup.png?" height="400"></div>
     </td>
   </tr>
 </table>
@@ -283,8 +268,8 @@ df.head()
     </td>
   </tr>
   <tr>
-    <td><img src="https://geoparse.io/graphics/traj_points.png?cache_bust=1"></td>
-    <td><img src="https://geoparse.io/graphics/trajs.png?cache_bust=1"></td>
+    <td><img src="https://geoparse.io/graphics/traj_points.png?"></td>
+    <td><img src="https://geoparse.io/graphics/trajs.png?"></td>
   </tr>
 </table>
 
@@ -302,10 +287,10 @@ In addition, specifically for trajectories, `plp` can display lines that connect
   </tr>
   <tr>
     <td>
-      <img src="https://geoparse.io/graphics/traj_line.png?cache_bust=1" height="480">
+      <img src="https://geoparse.io/graphics/traj_line.png?" height="480">
     </td>
     <td>
-      <img src="https://geoparse.io/graphics/traj_antpath.gif?cache_bust=1" height="480">
+      <img src="https://geoparse.io/graphics/traj_antpath.gif?" height="480">
     </td>
   </tr>
 </table>
@@ -353,10 +338,10 @@ plp(
   </tr>
   <tr>
     <td>
-      <img src="https://geoparse.io/graphics/traj_speeding.png?cache_bust=1" height="480">
+      <img src="https://geoparse.io/graphics/traj_speeding.png?" height="480">
     </td>
     <td>
-      <img src="https://geoparse.io/graphics/traj_speeding_popup.png?cache_bust=1" height="480">
+      <img src="https://geoparse.io/graphics/traj_speeding_popup.png?" height="480">
     </td>
   </tr>
 </table>
