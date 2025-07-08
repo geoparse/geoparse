@@ -390,7 +390,7 @@ If the `compact` parameter is set to True, `plp` calculates the parent cell IDs 
     <td style="vertical-align: top;">
       <pre><code>plp(
     cells=[
-        "862664c87ffffff",
+        "862664c87ffffff",               
         "862664cb7ffffff",
         "862664c97ffffff",
         "862664c9fffffff",
