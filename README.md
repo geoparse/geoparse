@@ -369,14 +369,14 @@ Using the `plp` function, we can also add spatial index polygonal layers such as
 | Geohash                                      | S2                                                | H3                                                              |
 | -------------------------------------------- | --------------------------------------------------|---------------------------------------------------------------- | 
 | `plp(border_gdf, geohash_res=5)`             | `plp(border_gdf, s2_res=11)`                      | `plp(border_gdf, h3_res=6)`                                     |
-|![](https://geoparse.io/graphics/geohash_5.png)         | ![](https://geoparse.io/graphics/s2_11.png)                 | ![](https://geoparse.io/graphics/h3_6.png)                                |
+|![](https://geoparse.io/graphics/luxembourg_geohash.png?)         | ![](https://geoparse.io/graphics/luxembourg_s2.png?)                 | ![](https://geoparse.io/graphics/luxembourg_h3.png?)                                |
  
 If the `compact` parameter is set to True, `plp` calculates the parent cell IDs to create a compact representation of the cells.
 
 | Geohash                                      | S2                                                | H3                                                              |
 | -------------------------------------------- | --------------------------------------------------|---------------------------------------------------------------- | 
 | `plp(border_gdf, geohash_res=7, compact=True)`             | `plp(border_gdf, s2_res=15, compact=True)`                      | `plp(border_gdf, h3_res=10, compact=True)`                                     |
-|![](https://geoparse.io/graphics/geohash_compact.png)         | ![](https://geoparse.io/graphics/s2_compact.png)                 | ![](https://geoparse.io/graphics/h3_compact.gif)                                |
+|![](https://geoparse.io/graphics/luxembourg_geohash_compact.png?)         | ![](https://geoparse.io/graphics/luxembourg_s2_compact.png?)                 | ![](https://geoparse.io/graphics/luxembourg_h3_compact.png?)                                |
  
 
 ### OSM Ways
