@@ -363,7 +363,7 @@ Using `GeoPandas`, we can read a geospatial file and display its contents using 
 |![](https://geoparse.io/graphics/luxembourg_border.png?) | ![](https://geoparse.io/graphics/luxembourg_roads.png?)      | ![](https://geoparse.io/graphics/luxembourg_border_roads.png?)             |
 
 
-Using the `plp` function, we can also add spatial index polygonal layers such as `GeoHash`, Google `S2`, and Uber `H3`. 
+Using the `plp` function, we can also add spatial index polygonal layers such as GeoHash, S2, and H3. 
 
 
 | Geohash                                      | S2                                                | H3                                                              |
