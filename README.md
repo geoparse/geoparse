@@ -124,9 +124,9 @@ To apply custom colors, you can also use RGB hex codes (right figure).
     </td>
   </tr>
   <tr>
-    <td width="32%"><img src="https://geoparse.io/graphics/casualty_map.png?"/></td>
-    <td width="36%"><img src="https://geoparse.io/graphics/casualty_map_purple.png?"/></td>
-    <td width="32%"><img src="https://geoparse.io/graphics/casualty_map_brown.png?"/></td>
+    <td width="32%"><img src="https://geoparse.io/graphics/casualty_map.png?"></td>
+    <td width="37%"><img src="https://geoparse.io/graphics/casualty_map_purple.png?"></td>
+    <td width="31%"><img src="https://geoparse.io/graphics/casualty_map_brown.png?"></td>
   </tr>
 </table>
 
