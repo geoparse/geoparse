@@ -124,9 +124,9 @@ To apply custom colors, you can also use RGB hex codes (right figure).
     </td>
   </tr>
   <tr>
-    <td width="33%"><img src="https://geoparse.io/graphics/casualty_map.png?"/></td>
-    <td width="34%"><img src="https://geoparse.io/graphics/casualty_map_purple.png?"/></td>
-    <td width="33%"><img src="https://geoparse.io/graphics/casualty_map_brown.png?"/></td>
+    <td width="32%"><img src="https://geoparse.io/graphics/casualty_map_2.png?"></td>
+    <td width="37%"><img src="https://geoparse.io/graphics/casualty_map_purple_2.png?"></td>
+    <td width="31%"><img src="https://geoparse.io/graphics/casualty_map_brown_2.png?"></td>
   </tr>
 </table>
 
@@ -360,33 +360,63 @@ Using `GeoPandas`, we can read a geospatial file and display its contents using 
 | Polygn                                       | LineString                                        | Both                                                            |
 | -------------------------------------------- | --------------------------------------------------|---------------------------------------------------------------- | 
 | `plp(border_gdf)`                            | `plp(road_gdf, line_color='gold', line_weight=1)` | `plp([border_gdf, road_gdf], line_color='gold', line_weight=1)` |
-|![](https://geoparse.io/graphics/luxembourg_border.png) | ![](https://geoparse.io/graphics/luxembourg_roads.png)      | ![](https://geoparse.io/graphics/luxembourg_border_roads.png)             |
+|![](https://geoparse.io/graphics/luxembourg_border.png?) | ![](https://geoparse.io/graphics/luxembourg_roads.png?)      | ![](https://geoparse.io/graphics/luxembourg_border_roads.png?)             |
 
 
-Using the `plp` function, we can also add spatial index polygonal layers such as `GeoHash`, Google `S2`, and Uber `H3`. 
+Using the `plp` function, we can also add spatial index polygonal layers such as GeoHash, S2, and H3. 
 
 
 | Geohash                                      | S2                                                | H3                                                              |
 | -------------------------------------------- | --------------------------------------------------|---------------------------------------------------------------- | 
 | `plp(border_gdf, geohash_res=5)`             | `plp(border_gdf, s2_res=11)`                      | `plp(border_gdf, h3_res=6)`                                     |
-|![](https://geoparse.io/graphics/geohash_5.png)         | ![](https://geoparse.io/graphics/s2_11.png)                 | ![](https://geoparse.io/graphics/h3_6.png)                                |
+|![](https://geoparse.io/graphics/luxembourg_geohash.png?)         | ![](https://geoparse.io/graphics/luxembourg_s2.png?)                 | ![](https://geoparse.io/graphics/luxembourg_h3.png?)                                |
  
 If the `compact` parameter is set to True, `plp` calculates the parent cell IDs to create a compact representation of the cells.
 
 | Geohash                                      | S2                                                | H3                                                              |
 | -------------------------------------------- | --------------------------------------------------|---------------------------------------------------------------- | 
 | `plp(border_gdf, geohash_res=7, compact=True)`             | `plp(border_gdf, s2_res=15, compact=True)`                      | `plp(border_gdf, h3_res=10, compact=True)`                                     |
-|![](https://geoparse.io/graphics/geohash_compact.png)         | ![](https://geoparse.io/graphics/s2_compact.png)                 | ![](https://geoparse.io/graphics/h3_compact.gif)                                |
- 
+|![](https://geoparse.io/graphics/luxembourg_geohash_compact.png?)         | ![](https://geoparse.io/graphics/luxembourg_s2_compact.png?)                 | ![](https://geoparse.io/graphics/luxembourg_h3_compact.png?)                                |
+
+### Geospatial Indices
+`plp` takes a list of geospatial indices (such as Geohash, S2, or H3) instead of `DataFrame` or `GeoDataFrame` objects and visualize them as Polygon geometries. 
+
+<table width="100%">
+  <tr>
+    <td style="vertical-align: top;"><pre><code>plp(
+    cells=["gcpuz9", "gcpuzf", "u10hb1"], 
+    cell_type="geohash"
+)</code></pre></td>
+    <td style="vertical-align: top;">
+      <pre><code>plp(
+    cells=[
+        "862664c87ffffff",               
+        "862664cb7ffffff",
+        "862664c97ffffff",
+        "862664c9fffffff",
+        "862664c8fffffff",
+        "862664cafffffff",
+        "862664ca7ffffff",
+    ],
+    cell_type="h3",
+)</code></pre>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="https://geoparse.io/graphics/geohash_list.png?"></td>
+    <td width="50%"><img src="https://geoparse.io/graphics/h3_list.png?"></td>
+  </tr>
+</table>
+
 
 ### OSM Ways
 
-The `plp` function can also accept `OpenStreetMap` (OSM) Way IDs instead of `DataFrame` or `GeoDataFrame` objects and visualize them as `LineString` or `Polygon` geometries. The left image illustrates two ways of the Tokyo Metro Line represented as `LineString` geometries, while the right image depicts three ways in the Louvre Museum visualized as `Polygon` geometries.
+The `plp` function can also accept `OpenStreetMap (OSM)` Way IDs and visualize them as `LineString` or `Polygon` geometries. The left image illustrates two ways of the Tokyo Metro Line represented as `LineString` geometries, while the right image depicts three ways in the Louvre Museum visualized as `Polygon` geometries.
 
 |                                         |                                                                            | 
 | --------------------------------------- | ---------------------------------------------------------------------------|
 | `plp(osm_ways=[893074361, 666201240])`  | `plp(osm_ways=[335265936, 53820456, 1117218957], s2_res=22, compact=True)` | 
-|![](https://geoparse.io/graphics/osm_way_line.png) | ![](https://geoparse.io/graphics/osm_way_polygon.gif)                                | 
+|![](https://geoparse.io/graphics/osm_way_line.png?) | ![](https://geoparse.io/graphics/osm_way_polygon.gif?)          | 
 
 
 
