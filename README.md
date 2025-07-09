@@ -141,7 +141,7 @@ as illustrated in the image on the right.
     <td style="vertical-align: top;">
       <pre><code>plp(
     df,
-    point_color="number_of_casualties      "
+    point_color="number_of_casualties"        
 )
 </code></pre>
     </td>
