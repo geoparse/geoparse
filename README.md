@@ -136,19 +136,17 @@ In the visualizations below, crash points are color-coded: blue for 1 casualty, 
 Additionally, by using the `point_popup` argument, hovering over a point reveals a popup with detailed contextual information, 
 as illustrated in the image on the right.
 
-<table>
+<table width="100%">
   <tr>
-    <td style="vertical-align: bottom;">
-      <pre><code>
-plp(
+    <td style="vertical-align: top;">
+      <pre><code>plp(
     df,
-    point_color="number_of_casualties"
+    point_color="number_of_casualties"       
 )
-      </code></pre>
+</code></pre>
     </td>
-    <td style="vertical-align: bottom;">
-      <pre><code>
-plp(
+    <td style="vertical-align: top;">
+      <pre><code>plp(
     df,
     point_color="number_of_casualties",
     point_popup={
@@ -156,16 +154,12 @@ plp(
         "Casualties": "number_of_casualties"
     }
 )
-      </code></pre>
+</code></pre>
     </td>
   </tr>
   <tr>
-    <td>
-      <div align="center"><img src="https://geoparse.io/graphics/casualty_colored.png?" height="400"></div>
-    </td>
-    <td>
-      <div align="center"><img src="https://geoparse.io/graphics/casualty_colored_popup.png?" height="400"></div>
-    </td>
+    <td width="50%"><img src="https://geoparse.io/graphics/casualty_colored.png?"></td>
+    <td width="50%"><img src="https://geoparse.io/graphics/casualty_colored_popup.png?"></td>
   </tr>
 </table>
 
