@@ -141,7 +141,7 @@ as illustrated in the image on the right.
     <td style="vertical-align: top;">
       <pre><code>plp(
     df,
-    point_color="number_of_casualties"
+    point_color="number_of_casualties      "
 )
 </code></pre>
     </td>
@@ -159,7 +159,7 @@ as illustrated in the image on the right.
   </tr>
   <tr>
     <td width="50%"><img src="https://geoparse.io/graphics/casualty_colored.png?"></td>
-    <td width="30%"><img src="https://geoparse.io/graphics/casualty_colored_popup.png?"></td>
+    <td width="50%"><img src="https://geoparse.io/graphics/casualty_colored_popup.png?"></td>
   </tr>
 </table>
 
