@@ -159,7 +159,7 @@ as illustrated in the image on the right.
   </tr>
   <tr>
     <td width="50%"><img src="https://geoparse.io/graphics/casualty_colored.png?"></td>
-    <td width="50%"><img src="https://geoparse.io/graphics/casualty_colored_popup.png?"></td>
+    <td width="45%"><img src="https://geoparse.io/graphics/casualty_colored_popup.png?"></td>
   </tr>
 </table>
 
