@@ -421,6 +421,8 @@ class Karta:
         # Point
         cluster: bool = False,
         heatmap: bool = False,
+        heatmap_only: bool = True,
+        heatmap_radius: int = 12,
         line: bool = False,
         antpath: bool = False,
         point_color: str = "blue",
@@ -477,6 +479,12 @@ class Karta:
 
         heatmap : bool, default False
             If True, creates a heatmap layer using Folium's `HeatMap` for points.
+
+        heatmap_only : bool, default True
+            If True, displays only the heatmap layer without the individual points.
+
+        heatmap_radius : int, default 12
+            Radius of each point of the heatmap
 
         line : bool, default False
             If True, connects points using Folium's `PolyLine` to form lines.
@@ -689,124 +697,125 @@ class Karta:
 
             # Handle DataFrame or Point geometry
             else:  # if not isinstance(gdf, gpd.GeoDataFrame) or isinstance(geom, Point):
-                group_point = folium.FeatureGroup(name=f"{i}- Point")
-                gdf.apply(
-                    Karta._add_point,
-                    karta=group_point,
-                    color=point_color,
-                    color_head=color_head,
-                    color_tail=color_tail,
-                    speed_field=speed_field,
-                    speed_limit_field=speed_limit_field,
-                    opacity=point_opacity,
-                    radius=point_radius,
-                    weight=point_weight,
-                    popup_dict=point_popup,
-                    x=easting,
-                    y=northing,
-                    axis=1,
-                )
-                if point_color == speed_field:
-                    template = """
-                    {% macro html(this, kwargs) %}
+                if not heatmap or not heatmap_only:
+                    group_point = folium.FeatureGroup(name=f"{i}- Point")
+                    gdf.apply(
+                        Karta._add_point,
+                        karta=group_point,
+                        color=point_color,
+                        color_head=color_head,
+                        color_tail=color_tail,
+                        speed_field=speed_field,
+                        speed_limit_field=speed_limit_field,
+                        opacity=point_opacity,
+                        radius=point_radius,
+                        weight=point_weight,
+                        popup_dict=point_popup,
+                        x=easting,
+                        y=northing,
+                        axis=1,
+                    )
+                    if point_color == speed_field:
+                        template = """
+                        {% macro html(this, kwargs) %}
 
-                    <!doctype html>
-                    <html lang="en">
-                    <head>
-                      <meta charset="utf-8">
-                      <meta name="viewport" content="width=device-width, initial-scale=1">
-                      <title>jQuery UI Draggable - Default functionality</title>
-                      <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+                        <!doctype html>
+                        <html lang="en">
+                        <head>
+                          <meta charset="utf-8">
+                          <meta name="viewport" content="width=device-width, initial-scale=1">
+                          <title>jQuery UI Draggable - Default functionality</title>
+                          <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
 
-                      <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
-                      <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+                          <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+                          <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
 
-                      <script>
-                      $( function() {
-                        $( "#maplegend" ).draggable({
-                                        start: function (event, ui) {
-                                            $(this).css({
-                                                right: "auto",
-                                                top: "auto",
-                                                bottom: "auto"
-                                            });
-                                        }
-                                    });
-                    });
+                          <script>
+                          $( function() {
+                            $( "#maplegend" ).draggable({
+                                            start: function (event, ui) {
+                                                $(this).css({
+                                                    right: "auto",
+                                                    top: "auto",
+                                                    bottom: "auto"
+                                                });
+                                            }
+                                        });
+                        });
 
-                      </script>
-                    </head>
-                    <body>
+                          </script>
+                        </head>
+                        <body>
 
 
-                    <div id='maplegend' class='maplegend'
-                        style='position: absolute; z-index:9999; border:2px solid grey; background-color:rgba(255, 255, 255, 1);
-                         border-radius:6px; padding: 10px; font-size:14px; right: 95px; top: 10px;'>
+                        <div id='maplegend' class='maplegend'
+                            style='position: absolute; z-index:9999; border:2px solid grey; background-color:rgba(255, 255, 255, 1);
+                             border-radius:6px; padding: 10px; font-size:14px; right: 95px; top: 10px;'>
 
-                    <!-- The next line is a comment -->
-                    <!-- <div class='legend-title'>Legend (draggable!)</div> -->
-                    <div class='legend-scale'>
-                      <ul class='legend-labels'>
-                        <li><span style='background:black;'></span>Speeding ≥ 40% </li>
-                        <li><span style='background:red;'></span>30% ≤ Speeding < 40%</li>
-                        <li><span style='background:orange;'></span>20% ≤ Speeding < 30%</li>
-                        <li><span style='background:yellow;'></span>10% ≤ Speeding < 20%</li>
-                        <li><span style='background:green;'></span>0 < Speeding < 10%</li>
-                        <li><span style='background:blue;'></span>No speeding</li>
-                        <li><span style='background:purple;'  ></span>Speed limit unavailable</li>
-                      </ul>
-                    </div>
-                    </div>
+                        <!-- The next line is a comment -->
+                        <!-- <div class='legend-title'>Legend (draggable!)</div> -->
+                        <div class='legend-scale'>
+                          <ul class='legend-labels'>
+                            <li><span style='background:black;'></span>Speeding ≥ 40% </li>
+                            <li><span style='background:red;'></span>30% ≤ Speeding < 40%</li>
+                            <li><span style='background:orange;'></span>20% ≤ Speeding < 30%</li>
+                            <li><span style='background:yellow;'></span>10% ≤ Speeding < 20%</li>
+                            <li><span style='background:green;'></span>0 < Speeding < 10%</li>
+                            <li><span style='background:blue;'></span>No speeding</li>
+                            <li><span style='background:purple;'  ></span>Speed limit unavailable</li>
+                          </ul>
+                        </div>
+                        </div>
 
-                    </body>
-                    </html>
+                        </body>
+                        </html>
 
-                    <style type='text/css'>
-                      .maplegend .legend-title {
-                        text-align: left;
-                        margin-bottom: 0;
-                        font-weight: bold;
-                        font-size: 90%;
-                        }
-                      .maplegend .legend-scale ul {
-                        margin: 0;
-                        margin-bottom: 0;
-                        padding: 0;
-                        float: left;
-                        list-style: none;
-                        }
-                      .maplegend .legend-scale ul li {
-                        font-size: 80%;
-                        list-style: none;
-                        margin-left: 0;
-                        line-height: 18px;
-                        margin-bottom: 1px;
-                        }
-                      .maplegend ul.legend-labels li span {
-                        display: block;
-                        float: left;
-                        height: 16px;
-                        width: 30px;
-                        margin-right: 5px;
-                        margin-left: 0;
-                        border: 1px solid #999;
-                        }
-                      .maplegend .legend-source {
-                        font-size: 80%;
-                        color: #777;
-                        clear: both;
-                        }
-                      .maplegend a {
-                        color: #777;
-                        }
-                    </style>
-                    {% endmacro %}"""
+                        <style type='text/css'>
+                          .maplegend .legend-title {
+                            text-align: left;
+                            margin-bottom: 0;
+                            font-weight: bold;
+                            font-size: 90%;
+                            }
+                          .maplegend .legend-scale ul {
+                            margin: 0;
+                            margin-bottom: 0;
+                            padding: 0;
+                            float: left;
+                            list-style: none;
+                            }
+                          .maplegend .legend-scale ul li {
+                            font-size: 80%;
+                            list-style: none;
+                            margin-left: 0;
+                            line-height: 18px;
+                            margin-bottom: 1px;
+                            }
+                          .maplegend ul.legend-labels li span {
+                            display: block;
+                            float: left;
+                            height: 16px;
+                            width: 30px;
+                            margin-right: 5px;
+                            margin-left: 0;
+                            border: 1px solid #999;
+                            }
+                          .maplegend .legend-source {
+                            font-size: 80%;
+                            color: #777;
+                            clear: both;
+                            }
+                          .maplegend a {
+                            color: #777;
+                            }
+                        </style>
+                        {% endmacro %}"""
 
-                    macro = MacroElement()
-                    macro._template = Template(template)
-                    karta.get_root().add_child(macro)
+                        macro = MacroElement()
+                        macro._template = Template(template)
+                        karta.get_root().add_child(macro)
 
-                group_point.add_to(karta)
+                    group_point.add_to(karta)
 
                 # Add clustering, heatmap, line connections, and buffer/ring visualizations as specified
 
@@ -826,9 +835,11 @@ class Karta:
                 if heatmap:
                     group_heatmap = folium.FeatureGroup(name=f"{i}- Heatmap")
                     if not isinstance(gdf, gpd.GeoDataFrame):
-                        group_heatmap.add_child(plugins.HeatMap(list(zip(lats, lons)), radius=10))
+                        group_heatmap.add_child(plugins.HeatMap(list(zip(lats, lons)), radius=heatmap_radius))
                     else:
-                        group_heatmap.add_child(plugins.HeatMap(list(zip(gdf.geometry.y, gdf.geometry.x)), radius=10))
+                        group_heatmap.add_child(
+                            plugins.HeatMap(list(zip(gdf.geometry.y, gdf.geometry.x)), radius=heatmap_radius)
+                        )
                     group_heatmap.add_to(karta)
 
                 # Create a line connection layer if `line=True`
