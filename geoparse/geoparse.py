@@ -422,6 +422,7 @@ class Karta:
         cluster: bool = False,
         heatmap: bool = False,
         heatmap_only: bool = True,
+        heatmap_radius: int = 12,
         line: bool = False,
         antpath: bool = False,
         point_color: str = "blue",
@@ -481,6 +482,9 @@ class Karta:
 
         heatmap_only : bool, default True
             If True, displays only the heatmap layer without the individual points.
+
+        heatmap_radius : int, default 12
+            Radius of each point of the heatmap
 
         line : bool, default False
             If True, connects points using Folium's `PolyLine` to form lines.
@@ -831,9 +835,11 @@ class Karta:
                 if heatmap:
                     group_heatmap = folium.FeatureGroup(name=f"{i}- Heatmap")
                     if not isinstance(gdf, gpd.GeoDataFrame):
-                        group_heatmap.add_child(plugins.HeatMap(list(zip(lats, lons)), radius=10))
+                        group_heatmap.add_child(plugins.HeatMap(list(zip(lats, lons)), radius=heatmap_radius))
                     else:
-                        group_heatmap.add_child(plugins.HeatMap(list(zip(gdf.geometry.y, gdf.geometry.x)), radius=10))
+                        group_heatmap.add_child(
+                            plugins.HeatMap(list(zip(gdf.geometry.y, gdf.geometry.x)), radius=heatmap_radius)
+                        )
                     group_heatmap.add_to(karta)
 
                 # Create a line connection layer if `line=True`
