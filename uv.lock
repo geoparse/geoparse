@@ -844,15 +844,6 @@ wheels = [
 ]
 
 [[package]]
-name = "geohash"
-version = "1.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "docutils" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/74/84/fa80c5e92854c7456b591f6e797c5be18315994afd3ef16a58694e1b5eb1/Geohash-1.0.tar.gz", hash = "sha256:2dd849ebaa0bc7ee565444df4fc57ae33daa89afa24b43617556560a04b71900", size = 15407 }
-
-[[package]]
 name = "geopandas"
 version = "1.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -903,7 +894,6 @@ dependencies = [
     { name = "aiohttp" },
     { name = "folium" },
     { name = "fsspec" },
-    { name = "geohash" },
     { name = "geopandas", version = "1.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "geopandas", version = "1.1.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "h3" },
@@ -931,7 +921,6 @@ requires-dist = [
     { name = "aiohttp" },
     { name = "folium", specifier = ">=0.14.0" },
     { name = "fsspec" },
-    { name = "geohash", specifier = ">=1.0.0" },
     { name = "geopandas", specifier = ">=1.0.1" },
     { name = "h3", specifier = ">=4.0.0" },
     { name = "jupyterlab", specifier = ">=4.0.5" },
