@@ -3,11 +3,12 @@ import json
 import math
 import os
 import re
+from collections import deque
 from datetime import datetime
 from math import atan2, cos, radians, sin, sqrt
 from multiprocessing import Pool, cpu_count
 from time import time
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Set, Tuple, Union
 
 import folium  # Folium is a Python library used for visualising geospatial data. Actually, it's a Python wrapper for Leaflet which is a leading open-source JavaScript library for plotting interactive maps.
 import geopandas as gpd
@@ -19,11 +20,11 @@ import pyproj
 import requests
 from branca.element import MacroElement, Template
 from folium import plugins
-from polygon_geohasher.polygon_geohasher import geohash_to_polygon, polygon_to_geohashes
 from s2 import s2
-from shapely.geometry import LineString, MultiPolygon, Point, Polygon
+from shapely.geometry import LineString, MultiPolygon, Point, Polygon, box
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import transform
+from shapely.prepared import prep
 
 
 class Karta:
@@ -1946,6 +1947,199 @@ class SpatialIndex:
     """
 
     @staticmethod
+    def geohash_to_poly(geohash: str) -> Polygon:
+        """
+        Convert a geohash string into a Shapely polygon representing its bounding box.
+
+        Parameters
+        ----------
+        geohash : str
+            A valid geohash string to decode.
+
+        Returns
+        -------
+        polygon : shapely.geometry.Polygon
+            A Shapely Polygon representing the bounding box of the geohash.
+            The polygon is defined as a rectangle covering the geohash area.
+
+        Examples
+        --------
+        >>> from shapely.geometry import Polygon
+        >>> poly = SpatialIndex.geohash_to_poly("9q8yyzd")
+        >>> isinstance(poly, Polygon)
+        True
+        >>> list(poly.exterior.coords)[0]
+        (-122.421875, 37.7734375)
+        """
+        lat, lon, lat_err, lon_err = pygeohash.decode_exactly(geohash)
+        return box(lon - lon_err, lat - lat_err, lon + lon_err, lat + lat_err)
+
+    @staticmethod
+    def geohash_adjacent(geohash: str, direction: str) -> str:
+        """
+        Compute the adjacent geohash in a specified cardinal direction.
+
+        This function calculates the neighboring geohash for a given geohash string
+        in one of the four cardinal directions: north (`'n'`), south (`'s'`), east (`'e'`), or west (`'w'`).
+        It handles edge cases where the geohash is on the border of a cell.
+
+        Parameters
+        ----------
+        geohash : str
+            A valid geohash string. Case-insensitive.
+        direction : str
+            The direction in which to find the adjacent geohash. Must be one of:
+            `'n'` (north), `'s'` (south), `'e'` (east), `'w'` (west).
+
+        Returns
+        -------
+        adjacent : str
+            The geohash string representing the adjacent cell in the specified direction.
+
+        Raises
+        ------
+        ValueError
+            If the direction is not one of `'n'`, `'s'`, `'e'`, or `'w'`.
+
+        Examples
+        --------
+        >>> SpatialIndex.geohash_adjacent("u4pruydqqvj", "n")
+        'u4pruydqqvm'
+
+        >>> SpatialIndex.geohash_adjacent("ezs42", "e")
+        'ezs48'
+
+        >>> SpatialIndex.geohash_adjacent("dr5r", "s")
+        'dr5n'
+        """
+        _base32 = "0123456789bcdefghjkmnpqrstuvwxyz"
+        _neighbor = {
+            "n": ["p0r21436x8zb9dcf5h7kjnmqesgutwvy", "bc01fg45238967deuvhjyznpkmstqrwx"],
+            "s": ["14365h7k9dcfesgujnmqp0r2twvyx8zb", "238967debc01fg45kmstqrwxuvhjyznp"],
+            "e": ["bc01fg45238967deuvhjyznpkmstqrwx", "p0r21436x8zb9dcf5h7kjnmqesgutwvy"],
+            "w": ["238967debc01fg45kmstqrwxuvhjyznp", "14365h7k9dcfesgujnmqp0r2twvyx8zb"],
+        }
+        _border = {
+            "n": ["prxz", "bcfguvyz"],
+            "s": ["028b", "0145hjnp"],
+            "e": ["bcfguvyz", "prxz"],
+            "w": ["0145hjnp", "028b"],
+        }
+
+        if direction not in _neighbor:
+            raise ValueError("Direction must be one of: 'n', 's', 'e', 'w'.")
+
+        geohash = geohash.lower()
+        last = geohash[-1]
+        parent = geohash[:-1]
+        type_ = len(geohash) % 2
+
+        if last in _border[direction][type_] and parent:
+            parent = SpatialIndex.geohash_adjacent(parent, direction)
+
+        neighbor_index = _neighbor[direction][type_].index(last)
+        return parent + _base32[neighbor_index]
+
+    @staticmethod
+    def geohash_neighbors(geohash: str) -> list[str]:
+        """
+        Return the 8 neighboring geohashes surrounding a given geohash.
+
+        The neighbors are ordered as follows:
+        [northwest, north, northeast, west, center, east, southwest, south, southeast]
+
+        Parameters
+        ----------
+        geohash : str
+            A valid geohash string.
+
+        Returns
+        -------
+        neighbors : list of str
+            A list of 9 geohash strings, including the input geohash and its 8 neighbors.
+
+        Examples
+        --------
+        >>> SpatialIndex.geohash_neighbors("u4pruydqqvj")
+        ['u4pruydqqvh', 'u4pruydqqvm', 'u4pruydqqvn',
+         'u4pruydqqvf', 'u4pruydqqvj', 'u4pruydqqvk',
+         'u4pruydqqve', 'u4pruydqqvg', 'u4pruydqqvl']
+
+        Notes
+        -----
+        This function assumes `geohash_adjacent` is implemented as a static method
+        of the `SpatialIndex` class.
+        """
+        n = SpatialIndex.geohash_adjacent(geohash, "n")
+        s = SpatialIndex.geohash_adjacent(geohash, "s")
+        e = SpatialIndex.geohash_adjacent(geohash, "e")
+        w = SpatialIndex.geohash_adjacent(geohash, "w")
+        return [
+            SpatialIndex.geohash_adjacent(n, "w"),  # NW
+            n,  # N
+            SpatialIndex.geohash_adjacent(n, "e"),  # NE
+            w,  # W
+            geohash,  # Center
+            e,  # E
+            SpatialIndex.geohash_adjacent(s, "w"),  # SW
+            s,  # S
+            SpatialIndex.geohash_adjacent(s, "e"),  # SE
+        ]
+
+    @staticmethod
+    def poly_to_geohashes(poly: Polygon, precision: int, inner: bool = False) -> Set[str]:
+        """
+        Cover a polygon with geohashes using pygeohash.
+
+        Parameters
+        ----------
+        poly : shapely.geometry.Polygon
+            Input polygon.
+        precision : int
+            Geohash precision (length), higher = finer.
+        inner : bool
+            If True, only keep geohashes fully inside the polygon.
+
+        Returns
+        -------
+        Set[str]
+            Set of geohash strings covering the polygon.
+        """
+        visited = set()
+        result = set()
+        q = deque()
+
+        start = pygeohash.encode(poly.centroid.y, poly.centroid.x, precision)
+        q.append(start)
+
+        prepared = prep(poly)
+
+        while q:
+            gh = q.popleft()
+            if gh in visited:
+                continue
+            visited.add(gh)
+
+            cell = SpatialIndex.geohash_to_poly(gh)
+
+            if inner:
+                if prepared.contains(cell):
+                    result.add(gh)
+                else:
+                    continue
+            else:
+                if prepared.intersects(cell):
+                    result.add(gh)
+                else:
+                    continue
+
+            for ngh in SpatialIndex.geohash_neighbors(gh):
+                if ngh not in visited:
+                    q.append(ngh)
+
+        return result
+
+    @staticmethod
     def point_cell(lats: list[float], lons: list[float], cell_type: str, res: int) -> list:
         """
         Convert latitude and longitude coordinates into spatial index representations using various cell encoding types.
@@ -2050,7 +2244,9 @@ class SpatialIndex:
                 polys += [g.__geo_interface__ for g in geom.geoms]
 
         if cell_type == "geohash":
-            cells = list({geohash for geom in geoms for geohash in polygon_to_geohashes(geom, precision=res, inner=False)})
+            cells = list(
+                {geohash for geom in geoms for geohash in SpatialIndex.poly_to_geohashes(geom, precision=res, inner=False)}
+            )
         elif cell_type == "s2":
             cells = list(
                 {item["id"] for poly in polys for item in s2.polyfill(poly, res, geo_json_conformant=True, with_id=True)}
@@ -2433,7 +2629,7 @@ class SpatialIndex:
 
         # Create geometry objects based on cell type
         geoms = [
-            geohash_to_polygon(cell)
+            SpatialIndex.geohash_to_poly(cell)
             if cell_type == "geohash"
             else Polygon(s2.s2_to_geo_boundary(cell, geo_json_conformant=True))
             if cell_type == "s2"
