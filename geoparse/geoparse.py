@@ -1947,43 +1947,32 @@ class SpatialIndex:
     """
 
     @staticmethod
-    def geohash_to_poly(gh: str) -> Polygon:
-        """Convert a geohash to a bounding box Polygon using pygeohash."""
-        lat, lon, lat_err, lon_err = pygeohash.decode_exactly(gh)
-        return box(lon - lon_err, lat - lat_err, lon + lon_err, lat + lat_err)
+    def geohash_to_poly(geohash: str) -> Polygon:
+        """
+        Convert a geohash string into a Shapely polygon representing its bounding box.
 
-    #    def geohash_to_poly(geohash: str) -> Union[Polygon, MultiPolygon]:
-    #        """
-    #        Convert a geohash string to a Shapely polygon representing its bounding box.
-    #
-    #        Parameters
-    #        ----------
-    #        geohash : str
-    #            A valid geohash string to be decoded into a polygon.
-    #
-    #        Returns
-    #        -------
-    #        polygon : shapely.geometry.Polygon
-    #            A polygon object representing the bounding box of the input geohash.
-    #            The polygon is defined in the following order:
-    #            northwest -> northeast -> southeast -> southwest -> northwest.
-    #
-    #        Examples
-    #        --------
-    #        >>> from shapely.geometry import Polygon
-    #        >>> polygon = geohash_to_poly("u4pruydqqvj")
-    #        >>> isinstance(polygon, Polygon)
-    #        True
-    #        >>> list(polygon.exterior.coords)[0]
-    #        (-73.9990234375, 40.989990234375)
-    #        """
-    #        lat_centroid, lon_centroid, lat_offset, lon_offset = geoh.decode_exactly(geohash)
-    #
-    #        sw = (lon_centroid - lon_offset, lat_centroid - lat_offset)  # Southwest corner
-    #        se = (lon_centroid + lon_offset, lat_centroid - lat_offset)  # Southeast corner
-    #        ne = (lon_centroid + lon_offset, lat_centroid + lat_offset)  # Northeast corner
-    #        nw = (lon_centroid - lon_offset, lat_centroid + lat_offset)  # Northwest corner
-    #        return geometry.Polygon([nw, ne, se, sw, nw])
+        Parameters
+        ----------
+        geohash : str
+            A valid geohash string to decode.
+
+        Returns
+        -------
+        polygon : shapely.geometry.Polygon
+            A Shapely Polygon representing the bounding box of the geohash.
+            The polygon is defined as a rectangle covering the geohash area.
+
+        Examples
+        --------
+        >>> from shapely.geometry import Polygon
+        >>> poly = SpatialIndex.geohash_to_poly("9q8yyzd")
+        >>> isinstance(poly, Polygon)
+        True
+        >>> list(poly.exterior.coords)[0]
+        (-122.421875, 37.7734375)
+        """
+        lat, lon, lat_err, lon_err = pygeohash.decode_exactly(geohash)
+        return box(lon - lon_err, lat - lat_err, lon + lon_err, lat + lat_err)
 
     @staticmethod
     def geohash_adjacent(geohash: str, direction: str) -> str:
