@@ -2060,7 +2060,7 @@ class SpatialIndex:
         ]
 
     @staticmethod
-    def poly_to_geohashes(poly: Polygon, precision: int = 7, inner: bool = True) -> Set[str]:
+    def poly_to_geohashes(poly: Polygon, precision: int, inner: bool = False) -> Set[str]:
         """
         Cover a polygon with geohashes using pygeohash.
 
@@ -2217,7 +2217,9 @@ class SpatialIndex:
                 polys += [g.__geo_interface__ for g in geom.geoms]
 
         if cell_type == "geohash":
-            cells = list({geohash for geom in geoms for geohash in SpatialIndex.poly_to_geohashes(geom, res=res, inner=False)})
+            cells = list(
+                {geohash for geom in geoms for geohash in SpatialIndex.poly_to_geohashes(geom, precision=res, inner=False)}
+            )
         elif cell_type == "s2":
             cells = list(
                 {item["id"] for poly in polys for item in s2.polyfill(poly, res, geo_json_conformant=True, with_id=True)}
