@@ -23,11 +23,10 @@ dependencies = [
     "pygeohash>=1.2.0",
     "s2>=0.1.9",
     "h3>=4.0.0",
-    "polygon_geohasher>=0.0.1",
     "jupyterlab>=4.0.5",
 ]
 [tool.uv]
-exclude-newer = "2025-02-11T00:00:00Z"
+exclude-newer = "2025-07-18T00:00:00Z"
 dev-dependencies = [
     "ruff>=0.6.9",
     "pytest>=8.3.3",
