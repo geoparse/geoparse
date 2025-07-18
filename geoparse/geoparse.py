@@ -11,7 +11,7 @@ from time import time
 from typing import List, Optional, Set, Tuple, Union
 
 import folium  # Folium is a Python library used for visualising geospatial data. Actually, it's a Python wrapper for Leaflet which is a leading open-source JavaScript library for plotting interactive maps.
-import geohash
+import geohash as geoh
 import geopandas as gpd
 import h3
 import numpy as np
@@ -1974,7 +1974,7 @@ class SpatialIndex:
         >>> list(polygon.exterior.coords)[0]
         (-73.9990234375, 40.989990234375)
         """
-        lat_centroid, lon_centroid, lat_offset, lon_offset = geohash.decode_exactly(geohash)
+        lat_centroid, lon_centroid, lat_offset, lon_offset = geoh.decode_exactly(geohash)
 
         sw = (lon_centroid - lon_offset, lat_centroid - lat_offset)  # Southwest corner
         se = (lon_centroid + lon_offset, lat_centroid - lat_offset)  # Southeast corner
@@ -2051,7 +2051,7 @@ class SpatialIndex:
         prepared_poly = prep(poly)
         prepared_env = prep(envelope)
 
-        start_geohash = geohash.encode(poly.centroid.y, poly.centroid.x, res)
+        start_geohash = geoh.encode(poly.centroid.y, poly.centroid.x, res)
         queue.append(start_geohash)
 
         while queue:
@@ -2061,7 +2061,7 @@ class SpatialIndex:
                 continue
             visited.add(current)
 
-            current_poly = SpatialIndex.geohash_to_polygon(current)
+            current_poly = SpatialIndex.geohash_to_poly(current)
 
             if not prepared_env.intersects(current_poly):
                 continue
@@ -2077,7 +2077,7 @@ class SpatialIndex:
                 else:
                     continue
 
-            for neighbor in geohash.neighbors(current):
+            for neighbor in geoh.neighbors(current):
                 if neighbor not in visited:
                     queue.append(neighbor)
 
@@ -2188,9 +2188,7 @@ class SpatialIndex:
                 polys += [g.__geo_interface__ for g in geom.geoms]
 
         if cell_type == "geohash":
-            cells = list(
-                {geohash for geom in geoms for geohash in SpatialIndex.poly_to_geohashes(geom, precision=res, inner=False)}
-            )
+            cells = list({geohash for geom in geoms for geohash in SpatialIndex.poly_to_geohashes(geom, res=res, inner=False)})
         elif cell_type == "s2":
             cells = list(
                 {item["id"] for poly in polys for item in s2.polyfill(poly, res, geo_json_conformant=True, with_id=True)}
