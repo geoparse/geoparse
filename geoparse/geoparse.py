@@ -11,7 +11,6 @@ from time import time
 from typing import List, Optional, Set, Tuple, Union
 
 import folium  # Folium is a Python library used for visualising geospatial data. Actually, it's a Python wrapper for Leaflet which is a leading open-source JavaScript library for plotting interactive maps.
-import geohash as geoh
 import geopandas as gpd
 import h3
 import numpy as np
@@ -22,8 +21,7 @@ import requests
 from branca.element import MacroElement, Template
 from folium import plugins
 from s2 import s2
-from shapely import geometry
-from shapely.geometry import LineString, MultiPolygon, Point, Polygon
+from shapely.geometry import LineString, MultiPolygon, Point, Polygon, box
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import transform, unary_union
 from shapely.prepared import prep
@@ -1949,38 +1947,43 @@ class SpatialIndex:
     """
 
     @staticmethod
-    def geohash_to_poly(geohash: str) -> Union[Polygon, MultiPolygon]:
-        """
-        Convert a geohash string to a Shapely polygon representing its bounding box.
+    def geohash_to_poly(gh: str) -> Polygon:
+        """Convert a geohash to a bounding box Polygon using pygeohash."""
+        lat, lon, lat_err, lon_err = pygeohash.decode_exactly(gh)
+        return box(lon - lon_err, lat - lat_err, lon + lon_err, lat + lat_err)
 
-        Parameters
-        ----------
-        geohash : str
-            A valid geohash string to be decoded into a polygon.
-
-        Returns
-        -------
-        polygon : shapely.geometry.Polygon
-            A polygon object representing the bounding box of the input geohash.
-            The polygon is defined in the following order:
-            northwest -> northeast -> southeast -> southwest -> northwest.
-
-        Examples
-        --------
-        >>> from shapely.geometry import Polygon
-        >>> polygon = geohash_to_poly("u4pruydqqvj")
-        >>> isinstance(polygon, Polygon)
-        True
-        >>> list(polygon.exterior.coords)[0]
-        (-73.9990234375, 40.989990234375)
-        """
-        lat_centroid, lon_centroid, lat_offset, lon_offset = geoh.decode_exactly(geohash)
-
-        sw = (lon_centroid - lon_offset, lat_centroid - lat_offset)  # Southwest corner
-        se = (lon_centroid + lon_offset, lat_centroid - lat_offset)  # Southeast corner
-        ne = (lon_centroid + lon_offset, lat_centroid + lat_offset)  # Northeast corner
-        nw = (lon_centroid - lon_offset, lat_centroid + lat_offset)  # Northwest corner
-        return geometry.Polygon([nw, ne, se, sw, nw])
+    #    def geohash_to_poly(geohash: str) -> Union[Polygon, MultiPolygon]:
+    #        """
+    #        Convert a geohash string to a Shapely polygon representing its bounding box.
+    #
+    #        Parameters
+    #        ----------
+    #        geohash : str
+    #            A valid geohash string to be decoded into a polygon.
+    #
+    #        Returns
+    #        -------
+    #        polygon : shapely.geometry.Polygon
+    #            A polygon object representing the bounding box of the input geohash.
+    #            The polygon is defined in the following order:
+    #            northwest -> northeast -> southeast -> southwest -> northwest.
+    #
+    #        Examples
+    #        --------
+    #        >>> from shapely.geometry import Polygon
+    #        >>> polygon = geohash_to_poly("u4pruydqqvj")
+    #        >>> isinstance(polygon, Polygon)
+    #        True
+    #        >>> list(polygon.exterior.coords)[0]
+    #        (-73.9990234375, 40.989990234375)
+    #        """
+    #        lat_centroid, lon_centroid, lat_offset, lon_offset = geoh.decode_exactly(geohash)
+    #
+    #        sw = (lon_centroid - lon_offset, lat_centroid - lat_offset)  # Southwest corner
+    #        se = (lon_centroid + lon_offset, lat_centroid - lat_offset)  # Southeast corner
+    #        ne = (lon_centroid + lon_offset, lat_centroid + lat_offset)  # Northeast corner
+    #        nw = (lon_centroid - lon_offset, lat_centroid + lat_offset)  # Northwest corner
+    #        return geometry.Polygon([nw, ne, se, sw, nw])
 
     @staticmethod
     def geohashes_to_poly(geohashes: list[str]) -> Union[Polygon, MultiPolygon]:
@@ -2010,78 +2013,104 @@ class SpatialIndex:
         return unary_union([SpatialIndex.geohash_to_poly(geohash) for geohash in geohashes])
 
     @staticmethod
-    def poly_to_geohashes(poly: BaseGeometry, res: int, inner: bool = True) -> Set[str]:
+    def geohash_adjacent(geohash: str, direction: str) -> str:
+        """Compute adjacent geohash in given direction."""
+        _base32 = "0123456789bcdefghjkmnpqrstuvwxyz"
+        _neighbor = {
+            "n": ["p0r21436x8zb9dcf5h7kjnmqesgutwvy", "bc01fg45238967deuvhjyznpkmstqrwx"],
+            "s": ["14365h7k9dcfesgujnmqp0r2twvyx8zb", "238967debc01fg45kmstqrwxuvhjyznp"],
+            "e": ["bc01fg45238967deuvhjyznpkmstqrwx", "p0r21436x8zb9dcf5h7kjnmqesgutwvy"],
+            "w": ["238967debc01fg45kmstqrwxuvhjyznp", "14365h7k9dcfesgujnmqp0r2twvyx8zb"],
+        }
+        _border = {
+            "n": ["prxz", "bcfguvyz"],
+            "s": ["028b", "0145hjnp"],
+            "e": ["bcfguvyz", "prxz"],
+            "w": ["0145hjnp", "028b"],
+        }
+
+        geohash = geohash.lower()
+        last = geohash[-1]
+        parent = geohash[:-1]
+        type_ = len(geohash) % 2
+
+        if last in _border[direction][type_] and parent:
+            parent = SpatialIndex.geohash_adjacent(parent, direction)
+
+        neighbor_index = _neighbor[direction][type_].index(last)
+        return parent + _base32[neighbor_index]
+
+    @staticmethod
+    def geohash_neighbors(gh: str) -> list[str]:
+        """Return 8 neighbors around a geohash."""
+        n = SpatialIndex.geohash_adjacent(gh, "n")
+        s = SpatialIndex.geohash_adjacent(gh, "s")
+        e = SpatialIndex.geohash_adjacent(gh, "e")
+        w = SpatialIndex.geohash_adjacent(gh, "w")
+        return [
+            SpatialIndex.geohash_adjacent(n, "w"),
+            n,
+            SpatialIndex.geohash_adjacent(n, "e"),
+            w,
+            gh,
+            e,
+            SpatialIndex.geohash_adjacent(s, "w"),
+            s,
+            SpatialIndex.geohash_adjacent(s, "e"),
+        ]
+
+    @staticmethod
+    def poly_to_geohashes(poly: Polygon, precision: int = 7, inner: bool = True) -> Set[str]:
         """
-        Generate a set of geohashes that cover the input polygon.
+        Cover a polygon with geohashes using pygeohash.
 
         Parameters
         ----------
-        poly : shapely.geometry.Polygon or MultiPolygon
-            The input polygon to be covered.
-        res : int
-            Geohash resolution (precision) to use.
-        inner : bool, default True
-            If True, only include geohashes fully contained in the polygon.
-            If False, include geohashes that intersect the polygon.
+        poly : shapely.geometry.Polygon
+            Input polygon.
+        precision : int
+            Geohash precision (length), higher = finer.
+        inner : bool
+            If True, only keep geohashes fully inside the polygon.
 
         Returns
         -------
         Set[str]
-            A set of geohash strings representing the polygon coverage.
-
-        Examples
-        --------
-        >>> from shapely.geometry import Polygon
-        >>> # Define a simple square polygon
-        >>> poly = Polygon([(-73.9866, 40.7484), (-73.9846, 40.7484),
-        >>>                 (-73.9846, 40.7504), (-73.9866, 40.7504)])
-        >>> geohashes = poly_to_geohashes(poly, res=7)
-        >>> geohashes
-        {'dr5ruw', 'dr5rux', 'dr5ruy', 'dr5rvt'}
-        >>> geohashes = poly_to_geohashes(poly, res=7, inner=False)
-        >>> geohashes
-        {'dr5ruw', 'dr5rux', 'dr5ruy', 'dr5rvt', 'dr5ruv'}
+            Set of geohash strings covering the polygon.
         """
-
-        inner_geohashes = set()
         visited = set()
-        queue = deque()
+        result = set()
+        q = deque()
 
-        envelope = poly.envelope
-        prepared_poly = prep(poly)
-        prepared_env = prep(envelope)
+        start = pygeohash.encode(poly.centroid.y, poly.centroid.x, precision)
+        q.append(start)
 
-        start_geohash = geoh.encode(poly.centroid.y, poly.centroid.x, res)
-        queue.append(start_geohash)
+        prepared = prep(poly)
 
-        while queue:
-            current = queue.popleft()
-
-            if current in visited:
+        while q:
+            gh = q.popleft()
+            if gh in visited:
                 continue
-            visited.add(current)
+            visited.add(gh)
 
-            current_poly = SpatialIndex.geohash_to_poly(current)
-
-            if not prepared_env.intersects(current_poly):
-                continue
+            cell = SpatialIndex.geohash_to_poly(gh)
 
             if inner:
-                if prepared_poly.contains(current_poly):
-                    inner_geohashes.add(current)
+                if prepared.contains(cell):
+                    result.add(gh)
                 else:
                     continue
             else:
-                if prepared_poly.intersects(current_poly):
-                    inner_geohashes.add(current)
+                if prepared.intersects(cell):
+                    result.add(gh)
                 else:
                     continue
 
-            for neighbor in geoh.neighbors(current):
-                if neighbor not in visited:
-                    queue.append(neighbor)
+            for ngh in SpatialIndex.geohash_neighbors(gh):
+                if ngh not in visited:
+                    q.append(ngh)
 
-        return inner_geohashes
+        return result
 
     @staticmethod
     def point_cell(lats: list[float], lons: list[float], cell_type: str, res: int) -> list:
