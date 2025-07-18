@@ -20,6 +20,7 @@ dependencies = [
     "fsspec",
     "aiohttp",
     "folium>=0.14.0",
+    "geohash>=1.0.0",
     "pygeohash>=1.2.0",
     "s2>=0.1.9",
     "h3>=4.0.0",
