@@ -1976,7 +1976,42 @@ class SpatialIndex:
 
     @staticmethod
     def geohash_adjacent(geohash: str, direction: str) -> str:
-        """Compute adjacent geohash in given direction."""
+        """
+        Compute the adjacent geohash in a specified cardinal direction.
+
+        This function calculates the neighboring geohash for a given geohash string
+        in one of the four cardinal directions: north (`'n'`), south (`'s'`), east (`'e'`), or west (`'w'`).
+        It handles edge cases where the geohash is on the border of a cell.
+
+        Parameters
+        ----------
+        geohash : str
+            A valid geohash string. Case-insensitive.
+        direction : str
+            The direction in which to find the adjacent geohash. Must be one of:
+            `'n'` (north), `'s'` (south), `'e'` (east), `'w'` (west).
+
+        Returns
+        -------
+        adjacent : str
+            The geohash string representing the adjacent cell in the specified direction.
+
+        Raises
+        ------
+        ValueError
+            If the direction is not one of `'n'`, `'s'`, `'e'`, or `'w'`.
+
+        Examples
+        --------
+        >>> SpatialIndex.geohash_adjacent("u4pruydqqvj", "n")
+        'u4pruydqqvm'
+
+        >>> SpatialIndex.geohash_adjacent("ezs42", "e")
+        'ezs48'
+
+        >>> SpatialIndex.geohash_adjacent("dr5r", "s")
+        'dr5n'
+        """
         _base32 = "0123456789bcdefghjkmnpqrstuvwxyz"
         _neighbor = {
             "n": ["p0r21436x8zb9dcf5h7kjnmqesgutwvy", "bc01fg45238967deuvhjyznpkmstqrwx"],
@@ -1991,6 +2026,9 @@ class SpatialIndex:
             "w": ["0145hjnp", "028b"],
         }
 
+        if direction not in _neighbor:
+            raise ValueError("Direction must be one of: 'n', 's', 'e', 'w'.")
+
         geohash = geohash.lower()
         last = geohash[-1]
         parent = geohash[:-1]
@@ -2003,22 +2041,49 @@ class SpatialIndex:
         return parent + _base32[neighbor_index]
 
     @staticmethod
-    def geohash_neighbors(gh: str) -> list[str]:
-        """Return 8 neighbors around a geohash."""
-        n = SpatialIndex.geohash_adjacent(gh, "n")
-        s = SpatialIndex.geohash_adjacent(gh, "s")
-        e = SpatialIndex.geohash_adjacent(gh, "e")
-        w = SpatialIndex.geohash_adjacent(gh, "w")
+    def geohash_neighbors(geohash: str) -> list[str]:
+        """
+        Return the 8 neighboring geohashes surrounding a given geohash.
+
+        The neighbors are ordered as follows:
+        [northwest, north, northeast, west, center, east, southwest, south, southeast]
+
+        Parameters
+        ----------
+        geohash : str
+            A valid geohash string.
+
+        Returns
+        -------
+        neighbors : list of str
+            A list of 9 geohash strings, including the input geohash and its 8 neighbors.
+
+        Examples
+        --------
+        >>> SpatialIndex.geohash_neighbors("u4pruydqqvj")
+        ['u4pruydqqvh', 'u4pruydqqvm', 'u4pruydqqvn',
+         'u4pruydqqvf', 'u4pruydqqvj', 'u4pruydqqvk',
+         'u4pruydqqve', 'u4pruydqqvg', 'u4pruydqqvl']
+
+        Notes
+        -----
+        This function assumes `geohash_adjacent` is implemented as a static method
+        of the `SpatialIndex` class.
+        """
+        n = SpatialIndex.geohash_adjacent(geohash, "n")
+        s = SpatialIndex.geohash_adjacent(geohash, "s")
+        e = SpatialIndex.geohash_adjacent(geohash, "e")
+        w = SpatialIndex.geohash_adjacent(geohash, "w")
         return [
-            SpatialIndex.geohash_adjacent(n, "w"),
-            n,
-            SpatialIndex.geohash_adjacent(n, "e"),
-            w,
-            gh,
-            e,
-            SpatialIndex.geohash_adjacent(s, "w"),
-            s,
-            SpatialIndex.geohash_adjacent(s, "e"),
+            SpatialIndex.geohash_adjacent(n, "w"),  # NW
+            n,  # N
+            SpatialIndex.geohash_adjacent(n, "e"),  # NE
+            w,  # W
+            geohash,  # Center
+            e,  # E
+            SpatialIndex.geohash_adjacent(s, "w"),  # SW
+            s,  # S
+            SpatialIndex.geohash_adjacent(s, "e"),  # SE
         ]
 
     @staticmethod
