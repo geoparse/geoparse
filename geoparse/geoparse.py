@@ -23,7 +23,7 @@ from folium import plugins
 from s2 import s2
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon, box
 from shapely.geometry.base import BaseGeometry
-from shapely.ops import transform, unary_union
+from shapely.ops import transform
 from shapely.prepared import prep
 
 
@@ -1984,33 +1984,6 @@ class SpatialIndex:
     #        ne = (lon_centroid + lon_offset, lat_centroid + lat_offset)  # Northeast corner
     #        nw = (lon_centroid - lon_offset, lat_centroid + lat_offset)  # Northwest corner
     #        return geometry.Polygon([nw, ne, se, sw, nw])
-
-    @staticmethod
-    def geohashes_to_poly(geohashes: list[str]) -> Union[Polygon, MultiPolygon]:
-        """
-        Convert a list of geohash strings into a single merged polygon.
-
-        This method decodes each geohash into its corresponding bounding box
-        polygon and returns the union of all resulting polygons as a single geometry.
-
-        Parameters
-        ----------
-        geohashes : list[str]
-            A list of geohash strings to be converted and merged.
-
-        Returns
-        -------
-        shapely.geometry.Polygon or shapely.geometry.MultiPolygon
-            A Shapely geometry representing the merged area of all geohash polygons.
-
-        Examples
-        --------
-        >>> geohashes = ["u4pruydqqvj", "u4pruydqqvm"]
-        >>> polygon = SpatialIndex.geohashes_to_poly(geohashes)
-        >>> polygon.geom_type
-        'Polygon' or 'MultiPolygon'
-        """
-        return unary_union([SpatialIndex.geohash_to_poly(geohash) for geohash in geohashes])
 
     @staticmethod
     def geohash_adjacent(geohash: str, direction: str) -> str:
