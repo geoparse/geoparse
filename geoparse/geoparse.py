@@ -2725,11 +2725,8 @@ class SpatialOps:
     line_to_points(row: gpd.GeoSeries) -> gpd.GeoDataFrame
         Splits a LineString geometry into individual Point geometries while preserving attributes.
 
-    intersection(gdf1: gpd.GeoDataFrame, gdf2: gpd.GeoDataFrame, poly_id: Optional[str] = None) -> gpd.GeoDataFrame
+    geom_in_poly(gdf: gpd.GeoDataFrame, mdf: gpd.GeoDataFrame, mdf_col: Optional[str] = None) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray, np.ndarray]]
         Performs a spatial intersection between two GeoDataFrames and returns the intersecting subset.
-
-    quick_intersection(gdf1: gpd.GeoDataFrame, gdf2: gpd.GeoDataFrame, poly_id: Optional[str] = None) -> gpd.GeoDataFrame
-        Performs an optimized spatial intersection using bounding box filtering and spatial indexing.
 
     poverlay(gdf1: gpd.GeoDataFrame, gdf2: gpd.GeoDataFrame, how: str = "intersection", keep_geom_type: bool = False) -> gpd.GeoDataFrame
         Executes a parallelized spatial overlay operation between two GeoDataFrames.
@@ -2741,153 +2738,99 @@ class SpatialOps:
 
     Examples
     --------
-    >>> spatial_ops = SpatialOps()
-
     >>> # Example for flatten_3d
-    >>> gdf_2d = spatial_ops.flatten_3d(gdf.geometry)
+    >>> gdf_2d = SpatialOps.flatten_3d(gdf.geometry)
     >>> print(gdf_2d)
 
     >>> # Example for line_to_points
-    >>> point_gdf = spatial_ops.line_to_points(line_gdf.iloc[0])
+    >>> point_gdf = SpatialOps.line_to_points(line_gdf.iloc[0])
     >>> print(point_gdf)
 
-    >>> # Example for intersection
-    >>> result_gdf = spatial_ops.intersection(gdf1, gdf2, poly_id="region_id")
-    >>> print(result_gdf)
-
-    >>> # Example for quick_intersection
-    >>> result_gdf = spatial_ops.quick_intersection(gdf1, gdf2, poly_id="region_id")
-    >>> print(result_gdf)
+    >>> # Example for geom_in_poly
+    >>> gdf_mask, geom_counts, poly_ids = SpatialOps.geom_in_poly(gdf, mdf, mdf_col="region_id")
+    >>>
 
     >>> # Example for poverlay
-    >>> result_gdf = spatial_ops.poverlay(gdf1, gdf2, how="intersection")
+    >>> result_gdf = SpatialOps.poverlay(gdf1, gdf2, how="intersection")
     >>> print(result_gdf)
     """
 
     @staticmethod
-    def intersection(gdf1: gpd.GeoDataFrame, gdf2: gpd.GeoDataFrame, poly_id: Optional[str] = None) -> gpd.GeoDataFrame:
+    def geom_in_poly(
+        gdf: gpd.GeoDataFrame, mdf: gpd.GeoDataFrame, mdf_col: Optional[str] = None
+    ) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray, np.ndarray]]:
         """
-        Performs a spatial intersection between two GeoDataFrames and return the intersecting subset of the first GeoDataFrame.
+        Compute spatial intersections between two GeoDataFrames.
 
-        This function identifies geometries in `gdf1` that intersect with any geometries in `gdf2`. It adds a new column, `counts`,
-        to `gdf2` representing the number of intersecting geometries for each feature in `gdf2`. If a `poly_id` column is specified,
-        it also adds the geometry ID from `gdf2` to the intersected subset of `gdf1`.
+        For each geometry in `gdf`, determine if it intersects with any polygon in `mdf` (which must
+        contain MultiPolygons or Polygons). Optionally track which `mdf` polygon contains each
+        intersecting `gdf` geometry.
 
         Parameters
         ----------
-        gdf1 : geopandas.GeoDataFrame
-            The first GeoDataFrame whose geometries are tested for intersection with `gdf2`.
-        gdf2 : geopandas.GeoDataFrame
-            The second GeoDataFrame containing geometries to intersect with `gdf1`.
-        poly_id : str, optional
-            The column name in `gdf2` containing unique geometry identifiers. If provided, the intersected subset of `gdf1`
-            will include a new column `geom_id` indicating the geometry ID from `gdf2` that each feature intersects with.
+        gdf : gpd.GeoDataFrame
+            GeoDataFrame containing geometries to test for intersection with `mdf`.
+            Can be any geometry type (Points, LineStrings, Polygons, etc.).
+        mdf : gpd.GeoDataFrame
+            GeoDataFrame containing MultiPolygon/Polygon geometries to use as spatial filter.
+            All geometries must be polygonal (will raise error if lines/points are found).
+        mdf_col : str, optional
+            Column name in `mdf` containing unique polygon identifiers.
+            Required if you need to track which polygon contains each intersecting geometry.
 
         Returns
         -------
-        geopandas.GeoDataFrame
-            A new GeoDataFrame containing only the intersecting geometries from `gdf1` with respect to `gdf2`.
-            If `poly_id` is provided, the intersected GeoDataFrame will also include a `geom_id` column.
-
-        Examples
-        --------
-        >>> gdf1 = geopandas.read_file("data1.shp")
-        >>> gdf2 = geopandas.read_file("data2.shp")
-        >>> result_gdf = intersection(gdf1, gdf2, poly_id="region_id")
-
-        Notes
-        -----
-        The function modifies `gdf2` in place by adding a `counts` column, which reflects the number of geometries
-        in `gdf1` that intersect with each geometry in `gdf2`.
-
-        """
-        int_gdf = pd.DataFrame()  # Initialize an empty DataFrame to store intersecting geometries from gdf1
-        counts = []  # List to store counts of intersecting geometries for each feature in gdf2
-
-        for geom in gdf2.geometry:
-            # Filter `gdf1` to retain only geometries that intersect with the current geometry in `gdf2`
-            gdf = gdf1[gdf1.intersects(geom)]
-
-            if poly_id is not None and len(gdf) > 0:
-                # If `poly_id` is provided, retrieve the geometry ID from `gdf2` and assign it to `geom_id` column in `gdf`
-                gid = gdf2[gdf2.geometry == geom][poly_id].iloc[0]
-                gdf["geom_id"] = gid
-
-            # Concatenate the intersecting geometries to the final DataFrame
-            int_gdf = pd.concat([int_gdf, gdf])
-            counts.append(len(gdf))  # Store the number of intersecting geometries for the current feature in gdf2
-
-        gdf2["counts"] = counts  # Add the counts of intersecting geometries as a new column in gdf2
-        return int_gdf  # Return the intersected subset of gdf1
-
-    @staticmethod
-    def quick_intersection(gdf1: gpd.GeoDataFrame, gdf2: gpd.GeoDataFrame, poly_id: Optional[str] = None) -> gpd.GeoDataFrame:
-        """
-        Performs a quick spatial intersection between two GeoDataFrames using bounding box optimization.
-
-        This function identifies geometries in `gdf1` that intersect with any geometries in `gdf2`. It uses
-        a spatial index to quickly filter `gdf1` geometries that are likely to intersect with the bounding
-        box of each geometry in `gdf2`. It then performs a precise intersection check on this subset, improving
-        the performance of the intersection operation.
-
-        If a `poly_id` column is provided, the function adds a new `geom_id` column to the resulting intersected
-        GeoDataFrame, storing the geometry ID from `gdf2` that each feature in `gdf1` intersects with. It also
-        modifies `gdf2` by adding a `counts` column to indicate the number of intersecting geometries.
-
-        Parameters
-        ----------
-        gdf1 : geopandas.GeoDataFrame
-            The first GeoDataFrame whose geometries are tested for intersection with `gdf2`.
-        gdf2 : geopandas.GeoDataFrame
-            The second GeoDataFrame containing geometries to intersect with `gdf1`.
-        poly_id : str, optional
-            The column name in `gdf2` containing unique geometry identifiers. If provided, the intersected subset of `gdf1`
-            will include a new column `geom_id` indicating the geometry ID from `gdf2` that each feature intersects with.
-
-        Returns
-        -------
-        geopandas.GeoDataFrame
-            A new GeoDataFrame containing only the intersecting geometries from `gdf1` with respect to `gdf2`.
-            If `poly_id` is provided, the intersected GeoDataFrame will also include a `geom_id` column.
-
-        Examples
-        --------
-        >>> gdf1 = geopandas.read_file("data1.shp")
-        >>> gdf2 = geopandas.read_file("data2.shp")
-        >>> result_gdf = quick_intersection(gdf1, gdf2, poly_id="region_id")
+        gdf_mask : np.ndarray[bool]
+            Boolean array where True indicates the corresponding `gdf` geometry
+            intersects at least one polygon in `mdf`.
+            Shape: (len(gdf),). Use as: `filtered_gdf = gdf[gdf_mask]`
+        geom_counts : np.ndarray[int]
+            Array counting how many `gdf` geometries intersect each `mdf` polygon.
+            Shape: (len(mdf),). Use as: `mdf['count'] = geom_counts`
+        poly_ids : np.ndarray[object], optional
+            Only returned when `mdf_col` is specified.
+            Contains the `mdf_col` value of the containing polygon for each intersecting
+            `gdf` geometry (None where no intersection exists).
+            Shape: (len(gdf),). Use as: `gdf['poly_id'] = poly_ids`
 
         Notes
         -----
-        - This function modifies `gdf2` in place by adding a `counts` column, which reflects the number of geometries
-          in `gdf1` that intersect with each geometry in `gdf2`.
-        - It leverages spatial indexing using the `sindex` attribute of `gdf1` to quickly identify candidates for
-          intersection, which significantly improves performance for large datasets.
+        1. This function is faster than `gpd.sjoin` only for small datasets (typically fewer than 2,000 features).
+           For larger datasets, `gpd.sjoin` is generally more efficient and scalable.
+        2. For `gdf` geometries intersecting multiple `mdf` polygons, only the last
+           encountered polygon ID (from iteration order) is kept in `poly_ids`.
 
+        Examples
+        --------
+        >>> import geopandas as gpd
+
+        # Basic intersection check
+        >>> points = gpd.read_file("points.shp")
+        >>> zones = gpd.read_file("zones.shp")
+        >>> gdf_mask, geom_counts = geom_in_poly(points, zones)
+
+        # With polygon ID tracking
+        >>> gdf_mask, geom_counts, poly_ids = geom_in_poly(points, zones, mdf_col="zone_id")
+        >>> # Get only points within zones
+        >>> points_in_zones = points[gdf_mask]
+        >>> # Add zone IDs to the points
+        >>> points["zone_id"] = poly_ids
         """
-        int_gdf = pd.DataFrame()  # Initialize an empty DataFrame to store intersecting geometries from gdf1
-        counts = []  # List to store counts of intersecting geometries for each feature in gdf2
+        gdf_mask = np.zeros(len(gdf), dtype=bool)
+        geom_counts = np.zeros(len(mdf), dtype=int)
 
-        for geom in gdf2.geometry:
-            # Get the indices of geometries in `gdf1` that are likely to intersect the bounding box of `geom` in `gdf2`
-            pos_idx = list(gdf1.sindex.intersection(geom.bounds))
+        if mdf_col is not None:
+            poly_ids = np.full(len(gdf), None, dtype=object)
 
-            # Select the subset of `gdf1` based on these indices
-            pos_gdf = gdf1.iloc[pos_idx]
+        for idx, geom in enumerate(mdf.geometry):
+            mask = gdf.intersects(geom)
+            gdf_mask |= mask
+            geom_counts[idx] = mask.sum()
 
-            # Filter the subset to retain only geometries that precisely intersect with `geom`
-            pre_gdf = pos_gdf[pos_gdf.intersects(geom)]
+            if mdf_col is not None and mask.any():
+                poly_ids[mask] = mdf.at[idx, mdf_col]
 
-            if poly_id is not None and len(pre_gdf) > 0:
-                # If `poly_id` is provided, assign the geometry ID from `gdf2` to the `geom_id` column in `pre_gdf`
-                gid = gdf2[gdf2.geometry == geom][poly_id].iloc[0]
-                pre_gdf["geom_id"] = gid
-
-            # Concatenate the precise intersecting geometries to the final intersected DataFrame
-            int_gdf = pd.concat([int_gdf, pre_gdf])
-            counts.append(len(pre_gdf))  # Store the number of intersecting geometries for the current feature in gdf2
-
-        gdf2["counts"] = counts  # Add the counts of intersecting geometries as a new column in gdf2
-        return int_gdf  # Return the intersected subset of gdf1
+        return (gdf_mask, geom_counts, poly_ids) if mdf_col is not None else (gdf_mask, geom_counts)
 
     @staticmethod
     def poverlay(
