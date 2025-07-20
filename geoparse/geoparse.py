@@ -2584,10 +2584,10 @@ class SpatialIndex:
         -------
         tuple
             A tuple containing:
-            - `res` : list of int
-                A list of resolution levels corresponding to each cell in the input.
             - `geoms` : list of shapely.geometry.Polygon
                 A list of Polygon geometries representing the spatial boundaries of the input cells.
+            - `res` : list of int
+                A list of resolution levels corresponding to each cell in the input.
 
         Raises
         ------
@@ -2599,7 +2599,7 @@ class SpatialIndex:
         >>> from shapely.geometry import Polygon
         >>> cells = ["ezs42", "ezs43"]  # Geohash cells
         >>> cell_type = "geohash"
-        >>> res, geoms = cell_poly(cells, cell_type)
+        >>> geoms, res = cell_poly(cells, cell_type)
         >>> print(res)
         [5, 5]  # Resolution levels of the input cells
         >>> print(geoms)
@@ -2687,10 +2687,10 @@ class SpatialIndex:
         -------
         tuple
             A tuple containing:
-            - `res` : list of int
-                Resolution levels for each cell in the input.
             - `geoms` : list of shapely.geometry.Polygon
                 Polygon geometries representing the boundaries of input cells.
+            - `res` : list of int
+                Resolution levels for each cell in the input.
         """
         n_cores = cpu_count()
 
