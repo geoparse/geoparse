@@ -606,7 +606,7 @@ class Karta:
 
         # Handle `cells` input by converting cell IDs to geometries
         if cells:
-            res, geoms = SpatialIndex.cell_poly(cells, cell_type=cell_type)
+            geoms, res = SpatialIndex.cell_poly(cells, cell_type=cell_type)
             gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
             karta = Karta.plp(gdf, poly_popup={"ID": "id", "Resolution": "res"})
             return karta
@@ -931,7 +931,7 @@ class Karta:
 
             # Convert geometries to geohash cells and their geometries
             cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type="geohash", res=geohash_res, compact=compact)
-            res, geoms = SpatialIndex.cell_poly(cells, cell_type="geohash")
+            geoms, res = SpatialIndex.cell_poly(cells, cell_type="geohash")
             cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
 
             # Add geohash cells to the map as a polygon layer
@@ -958,7 +958,7 @@ class Karta:
 
             # Convert geometries to S2 cells and their geometries
             cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type="s2", res=s2_res, compact=compact)
-            res, geoms = SpatialIndex.cell_poly(cells, cell_type="s2")
+            geoms, res = SpatialIndex.cell_poly(cells, cell_type="s2")
             cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
 
             # Add S2 cells to the map as a polygon layer
@@ -984,7 +984,7 @@ class Karta:
 
             # Convert geometries to H3 cells and their geometries
             cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type="h3", res=h3_res, compact=compact)
-            res, geoms = SpatialIndex.cell_poly(cells, cell_type="h3")
+            geoms, res = SpatialIndex.cell_poly(cells, cell_type="h3")
             cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
 
             # Add H3 cells to the map as a polygon layer
@@ -2638,7 +2638,7 @@ class SpatialIndex:
             for cell in cells
         ]
 
-        return res, geoms
+        return geoms, res
 
     @staticmethod
     def pcell_point(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float, float]]:
@@ -2703,10 +2703,10 @@ class SpatialIndex:
             results = pool.starmap(SpatialIndex.cell_poly, args)
 
         # Unpack `res` and `geoms` from the result tuples
-        res = [r for result in results for r in result[0]]
-        geoms = [g for result in results for g in result[1]]
+        geoms = [g for result in results for g in result[0]]
+        res = [r for result in results for r in result[1]]
 
-        return res, geoms
+        return geoms, res
 
 
 class SpatialOps:
