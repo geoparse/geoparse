@@ -2238,10 +2238,11 @@ class SpatialIndex:
 
         polys = []
         for geom in geoms:
-            if geom.geom_type == "Polygon":
-                polys += [geom.__geo_interface__]
-            elif geom.geom_type == "MultiPolygon":  # If MultiPolygon, extract each Polygon separately
-                polys += [g.__geo_interface__ for g in geom.geoms]
+            # Appends GeoJSON-like representations of Shapely geometries (Polygon or MultiPolygon)
+            # getattr(geom, 'geoms', [geom]) checks if the geometry has a .geoms attribute (MultiPolygon case)
+            # If yes: returns geom.geoms (iterable of Polygons)
+            # If no: wraps single Polygon in a list [geom]
+            polys += [g.__geo_interface__ for g in (getattr(geom, "geoms", [geom]))]
 
         if cell_type == "geohash":
             cells = list(
