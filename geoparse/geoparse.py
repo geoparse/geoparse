@@ -1924,13 +1924,13 @@ class SpatialIndex:
     point_cell(lats, lons, cell_type, res):
         Converts latitude and longitude coordinates into spatial index representations.
 
-    poly_cell(geoms, cell_type, res, dump):
+    poly_cell(geoms, cell_type, res, dump_path):
         Converts a list of geometries into a set of unique spatial cells.
 
     ppoint_cell(lats, lons, cell_type, res):
         Converts latitude and longitude coordinates into spatial index representations in parallel.
 
-    ppoly_cell(mdf, cell_type, res, compact, dump, verbose):
+    ppoly_cell(mdf, cell_type, res, compact, dump_path, verbose):
         Performs parallelized conversion of geometries in a GeoDataFrame to cell identifiers.
 
     cell_point(cells, cell_type):
@@ -2192,14 +2192,14 @@ class SpatialIndex:
 
     @staticmethod
     def poly_cell(
-        geoms: List[Union[Polygon, MultiPolygon]], cell_type: str, res: int, dump: str = None
+        geoms: List[Union[Polygon, MultiPolygon]], cell_type: str, res: int, dump_path: str = None
     ) -> Union[List[str], None]:
         """
         Converts a list of geometries into a set of unique spatial cells based on the specified cell type and resolution.
 
         This function takes a list of Shapely geometries (e.g., Polygon, MultiPolygon) and converts them into spatial cells
         using one of the supported cell systems: Geohash, S2, or H3. The resulting cells are returned as a list of unique
-        cell IDs. If `dump` is set to a valid directory path, the cells are saved to a file in that directory, instead of being returned.
+        cell IDs. If `dump_path` is set to a valid directory path, the cells are saved to a file in that directory, instead of being returned.
 
         Parameters
         ----------
@@ -2209,16 +2209,16 @@ class SpatialIndex:
             The type of spatial cell system to use. Supported values are "geohash", "s2", or "h3".
         res : int
             The resolution level for the spatial cells. The resolution parameter determines the granularity of the cells.
-        dump : str, optional
+        dump_path : str, optional
             If set to a valid directory path (string), the cells are saved to a file in the specified folder.
             The file will be saved in a subdirectory structure following the pattern: `/path/to/dir/cell_type/res/`.
-            If `dump` is None, the function returns the list of cell IDs. Default is None.
+            If `dump_path` is None, the function returns the list of cell IDs. Default is None.
 
         Returns
         -------
         list of str or None
-            If `dump` is None, a list of unique cell IDs is returned.
-            If `dump` is provided, None is returned after saving the cells to a file.
+            If `dump_path` is None, a list of unique cell IDs is returned.
+            If `dump_path` is provided, None is returned after saving the cells to a file.
 
         Raises
         ------
@@ -2233,7 +2233,7 @@ class SpatialIndex:
         >>> h3_cells = poly_cell(geometries, cell_type="h3", res=9)
 
         >>> # Convert geometries to S2 cells and save to a directory
-        >>> poly_cell(geometries, cell_type="s2", res=10, dump="~/Desktop/spatial_cells")
+        >>> poly_cell(geometries, cell_type="s2", res=10, dump_path="~/Desktop/s2")
         """
         # Append GeoJSON-like representations of Shapely geometries (Polygon or MultiPolygon),
         # as required by S2 and H3 libraries (but not by geohash).
@@ -2259,11 +2259,11 @@ class SpatialIndex:
         else:
             raise ValueError(f"Unsupported cell type: {cell_type}. Choose 'geohash', 's2', or 'h3'.")
 
-        if not dump:
+        if not dump_path:
             return cells
         else:
             # Create the directories if they don't exist
-            cells_path = os.path.expanduser(f"{dump}/{cell_type}/{res}")
+            cells_path = os.path.expanduser(f"{dump_path}/{cell_type}/{res}")
             os.makedirs(cells_path, exist_ok=True)
             with open(f"{cells_path}/{datetime.now()}.txt", "w") as json_file:
                 json.dump(cells, json_file)
@@ -2335,7 +2335,7 @@ class SpatialIndex:
 
     @staticmethod
     def ppoly_cell(
-        mdf: gpd.GeoDataFrame, cell_type: str, res: int, compact: bool = False, dump: str = None, verbose: bool = False
+        mdf: gpd.GeoDataFrame, cell_type: str, res: int, compact: bool = False, dump_path: str = None, verbose: bool = False
     ) -> Tuple[List[str], int]:
         """
         Performs a parallelised conversion of geometries in a GeoDataFrame to cell identifiers of a specified type
@@ -2344,7 +2344,7 @@ class SpatialIndex:
         This function first divides the bounding box of the input GeoDataFrame into smaller grid cells, then calculates
         the intersection between these grid cells and the input geometries. The resulting geometries are processed in
         parallel to generate cell identifiers according to the specified `cell_type` and `res` (resolution). The result
-        can be compacted to reduce the number of cells. Optionally, if `dump` is provided, the results are saved in multiple
+        can be compacted to reduce the number of cells. Optionally, if `dump_path` is provided, the results are saved in multiple
         files, where the number of files is 4 times the number of CPU cores available in the system.
 
         Parameters
@@ -2364,7 +2364,7 @@ class SpatialIndex:
         compact : bool, optional, default=False
             If True, compact the resulting cells to reduce their number. This is typically applicable for S2 and H3 cells.
 
-        dump : str, optional
+        dump_path : str, optional
             A string representing a valid directory path. If provided, the cells are saved in multiple files
             within the directory `/path/to/dir/cell_type/res/`. The number of output files will be 4 times the number
             of CPU cores available in the system. If not provided, the function returns the list of cell identifiers
@@ -2387,15 +2387,15 @@ class SpatialIndex:
         Example
         -------
         >>> # Assuming `mdf` is a GeoDataFrame with geometries:
-        >>> cells, count = ppoly_cell(mdf, cell_type="s2", res=10, compact=True, dump="~/Desktop/cells", verbose=True)
+        >>> cells, count = ppoly_cell(mdf, cell_type="h3", res=10, compact=True, dump_path="~/Desktop/h3", verbose=True)
         >>> print(f"Generated {count} cells: {cells}")
         """
         # Determine the number of slices and grid cells based on CPU cores
         n_cores = cpu_count()
         slices = 128 * n_cores
 
-        if dump and not verbose:
-            cells_path = os.path.abspath(os.path.expanduser(f"{dump}/{cell_type}/{res}"))
+        if dump_path and not verbose:
+            cells_path = os.path.abspath(os.path.expanduser(f"{dump_path}/{cell_type}/{res}"))
             print(f"Writing cell IDs in parallel to {4 * n_cores} files in {cells_path} directory ...")
 
         if verbose:
@@ -2443,8 +2443,8 @@ class SpatialIndex:
             print(f"    {len(gmdf):,} intersected slices")
             print(f"    {elapsed_time} seconds")
 
-            if dump:
-                cells_path = os.path.abspath(os.path.expanduser(f"{dump}/{cell_type}/{res}"))
+            if dump_path:
+                cells_path = os.path.abspath(os.path.expanduser(f"{dump_path}/{cell_type}/{res}"))
                 print(f"Writing cell IDs in parallel to {4 * n_cores} files in {cells_path} directory ...")
             else:
                 print("Calculating cell IDs in parallel ...")
@@ -2453,10 +2453,10 @@ class SpatialIndex:
         # Shuffle geometries for even load distribution across chunks
         gmdf = gmdf.sample(frac=1)
         geom_chunks = np.array_split(list(gmdf.geometry), 4 * n_cores)
-        args = zip(geom_chunks, [cell_type] * 4 * n_cores, [res] * 4 * n_cores, [dump] * 4 * n_cores)
+        args = zip(geom_chunks, [cell_type] * 4 * n_cores, [res] * 4 * n_cores, [dump_path] * 4 * n_cores)
 
         # Parallel processing to generate cells
-        if dump:
+        if dump_path:
             with Pool(n_cores) as pool:
                 pool.starmap(SpatialIndex.poly_cell, args)
             if verbose:
