@@ -2235,14 +2235,12 @@ class SpatialIndex:
         >>> # Convert geometries to S2 cells and save to a directory
         >>> poly_cell(geometries, cell_type="s2", res=10, dump="~/Desktop/spatial_cells")
         """
-
-        polys = []
-        for geom in geoms:
-            # Appends GeoJSON-like representations of Shapely geometries (Polygon or MultiPolygon)
-            # getattr(geom, 'geoms', [geom]) checks if the geometry has a .geoms attribute (MultiPolygon case)
-            # If yes: returns geom.geoms (iterable of Polygons)
-            # If no: wraps single Polygon in a list [geom]
-            polys += [g.__geo_interface__ for g in (getattr(geom, "geoms", [geom]))]
+        # Append GeoJSON-like representations of Shapely geometries (Polygon or MultiPolygon),
+        # as required by S2 and H3 libraries (but not by geohash).
+        # getattr(geom, 'geoms', [geom]) checks if the geometry has a .geoms attribute (MultiPolygon case)
+        # If yes: returns geom.geoms (iterable of Polygons)
+        # If no: wraps single Polygon in a list [geom]
+        geojson_polys = [g.__geo_interface__ for geom in geoms for g in getattr(geom, "geoms", [geom])]
 
         if cell_type == "geohash":
             cells = list(
@@ -2250,10 +2248,14 @@ class SpatialIndex:
             )
         elif cell_type == "s2":
             cells = list(
-                {item["id"] for poly in polys for item in s2.polyfill(poly, res, geo_json_conformant=True, with_id=True)}
+                {
+                    cell["id"]
+                    for geojson_poly in geojson_polys
+                    for cell in s2.polyfill(geojson_poly, res, geo_json_conformant=True, with_id=True)
+                }
             )
         elif cell_type == "h3":
-            cells = [cell for poly in polys for cell in h3.geo_to_cells(poly, res)]
+            cells = [cell for geojson_poly in geojson_polys for cell in h3.geo_to_cells(geojson_poly, res)]
         else:
             raise ValueError(f"Unsupported cell type: {cell_type}. Choose 'geohash', 's2', or 'h3'.")
 
