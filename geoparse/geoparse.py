@@ -2275,13 +2275,13 @@ class SpatialIndex:
             else:  # use the buffered bbox of geom instead.
                 mpoly = unary_union(geoms)
                 geojson_polys = []
+                # edge_length = 1290 * 0.376**resolution  Approximate H3 edge length (in km) using exponential decay model
+                # diameter_km = 2 * edge_length           Diameter of a regular hexagon is approximately twice the edge length
+                # diameter_deg = diameter_km / 100        Convert diameter from kilometers to degrees (approx. 1 degree ≈ 100 km)
+                # Use diameter_deg to buffer the geometry (roughly the width of an H3 hexagon at this resolution)
+                buffer_radius = 26 * 0.376**res
                 for geom in geoms:
                     minx, miny, maxx, maxy = geom.bounds
-                    # edge_length = 1290 * 0.376**resolution  Approximate H3 edge length (in km) using exponential decay model
-                    # diameter_km = 2 * edge_length           Diameter of a regular hexagon is approximately twice the edge length
-                    # diameter_deg = diameter_km / 100        Convert diameter from kilometers to degrees (approx. 1 degree ≈ 100 km)
-                    # Use diameter_deg to buffer the geometry (roughly the width of an H3 hexagon at this resolution)
-                    buffer_radius = 26 * 0.376**res
                     geom = box(minx, miny, maxx, maxy).buffer(buffer_radius)
                     geojson_polys += [
                         g.__geo_interface__ for g in (getattr(geom, "geoms", [geom]))
