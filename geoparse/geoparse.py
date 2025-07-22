@@ -23,7 +23,7 @@ from folium import plugins
 from s2 import s2
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon, box
 from shapely.geometry.base import BaseGeometry
-from shapely.ops import transform
+from shapely.ops import transform, unary_union
 from shapely.prepared import prep
 
 
@@ -456,6 +456,7 @@ class Karta:
         geohash_res: int = 0,
         s2_res: int = -1,
         h3_res: int = -1,
+        force_full_cover: bool = True,
         geohash_inner: bool = False,
         compact: bool = False,
         # Cells and OSM objects
@@ -606,6 +607,7 @@ class Karta:
 
         # Handle `cells` input by converting cell IDs to geometries
         if cells:
+            # cell_poly is faster than the parallelized pcell_poly because, for small datasets, the overhead of parallelization increases the total runtime.
             geoms, res = SpatialIndex.cell_poly(cells, cell_type=cell_type)
             gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
             karta = Karta.plp(gdf, poly_popup={"ID": "id", "Resolution": "res"})
@@ -982,8 +984,10 @@ class Karta:
                 bb = Polygon([[minlon, minlat], [maxlon, minlat], [maxlon, maxlat], [minlon, maxlat], [minlon, minlat]])
                 cdf = gpd.GeoDataFrame({"geometry": [bb]}, crs="EPSG:4326")  # cell df
 
-            # Convert geometries to H3 cells and their geometries
-            cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type="h3", res=h3_res, compact=compact)
+            # Convert geometries to H3 cells and their Shapely hexagons
+            cells, _ = SpatialIndex.ppoly_cell(
+                cdf, cell_type="h3", res=h3_res, force_full_cover=force_full_cover, compact=compact
+            )
             geoms, res = SpatialIndex.cell_poly(cells, cell_type="h3")
             cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
 
@@ -1924,13 +1928,13 @@ class SpatialIndex:
     point_cell(lats, lons, cell_type, res):
         Converts latitude and longitude coordinates into spatial index representations.
 
-    poly_cell(geoms, cell_type, res, dump):
+    poly_cell(geoms, cell_type, res, dump_path):
         Converts a list of geometries into a set of unique spatial cells.
 
     ppoint_cell(lats, lons, cell_type, res):
         Converts latitude and longitude coordinates into spatial index representations in parallel.
 
-    ppoly_cell(mdf, cell_type, res, compact, dump, verbose):
+    ppoly_cell(mdf, cell_type, res, compact, dump_path, verbose):
         Performs parallelized conversion of geometries in a GeoDataFrame to cell identifiers.
 
     cell_point(cells, cell_type):
@@ -2192,33 +2196,43 @@ class SpatialIndex:
 
     @staticmethod
     def poly_cell(
-        geoms: List[Union[Polygon, MultiPolygon]], cell_type: str, res: int, dump: str = None
+        geoms: List[Union[Polygon, MultiPolygon]],
+        cell_type: str,
+        res: int,
+        force_full_cover: bool = True,
+        dump_path: str = None,
     ) -> Union[List[str], None]:
         """
         Converts a list of geometries into a set of unique spatial cells based on the specified cell type and resolution.
 
         This function takes a list of Shapely geometries (e.g., Polygon, MultiPolygon) and converts them into spatial cells
         using one of the supported cell systems: Geohash, S2, or H3. The resulting cells are returned as a list of unique
-        cell IDs. If `dump` is set to a valid directory path, the cells are saved to a file in that directory, instead of being returned.
+        cell IDs. If `dump_path` is set to a valid directory path, the cells are saved to a file in that directory, instead of being returned.
 
         Parameters
         ----------
         geoms : list of shapely.geometry.Polygon or shapely.geometry.MultiPolygon
             A list of Shapely geometry objects (Polygon or MultiPolygon).
+
         cell_type : str
             The type of spatial cell system to use. Supported values are "geohash", "s2", or "h3".
+
         res : int
             The resolution level for the spatial cells. The resolution parameter determines the granularity of the cells.
-        dump : str, optional
+
+        force_full_cover : bool, default=True
+            If True, ensures that the entire polygon is fully covered by H3 cells, possibly including cells that extend beyond the polygon boundary.
+
+        dump_path : str, optional
             If set to a valid directory path (string), the cells are saved to a file in the specified folder.
             The file will be saved in a subdirectory structure following the pattern: `/path/to/dir/cell_type/res/`.
-            If `dump` is None, the function returns the list of cell IDs. Default is None.
+            If `dump_path` is None, the function returns the list of cell IDs. Default is None.
 
         Returns
         -------
         list of str or None
-            If `dump` is None, a list of unique cell IDs is returned.
-            If `dump` is provided, None is returned after saving the cells to a file.
+            If `dump_path` is None, a list of unique cell IDs is returned.
+            If `dump_path` is provided, None is returned after saving the cells to a file.
 
         Raises
         ------
@@ -2233,37 +2247,66 @@ class SpatialIndex:
         >>> h3_cells = poly_cell(geometries, cell_type="h3", res=9)
 
         >>> # Convert geometries to S2 cells and save to a directory
-        >>> poly_cell(geometries, cell_type="s2", res=10, dump="~/Desktop/spatial_cells")
+        >>> poly_cell(geometries, cell_type="s2", res=10, dump_path="~/Desktop/s2")
         """
-
-        polys = []
-        for geom in geoms:
-            if geom.geom_type == "Polygon":
-                polys += [geom.__geo_interface__]
-            elif geom.geom_type == "MultiPolygon":  # If MultiPolygon, extract each Polygon separately
-                polys += [g.__geo_interface__ for g in geom.geoms]
-
         if cell_type == "geohash":
-            cells = list(
+            cell_ids = list(
                 {geohash for geom in geoms for geohash in SpatialIndex.poly_to_geohashes(geom, precision=res, inner=False)}
             )
         elif cell_type == "s2":
-            cells = list(
-                {item["id"] for poly in polys for item in s2.polyfill(poly, res, geo_json_conformant=True, with_id=True)}
+            # Append GeoJSON-like representations of Shapely geometries (Polygon or MultiPolygon).
+            # getattr(geom, 'geoms', [geom]) checks if the geometry has a .geoms attribute (MultiPolygon case)
+            # If yes: returns geom.geoms (iterable of Polygons)
+            # If no: wraps single Polygon in a list [geom]
+            geojson_polys = [g.__geo_interface__ for geom in geoms for g in getattr(geom, "geoms", [geom])]
+            cell_ids = list(
+                {
+                    cell["id"]
+                    for geojson_poly in geojson_polys
+                    for cell in s2.polyfill(geojson_poly, res, geo_json_conformant=True, with_id=True)
+                }
             )
         elif cell_type == "h3":
-            cells = [cell for poly in polys for cell in h3.geo_to_cells(poly, res)]
+            if not force_full_cover:
+                geojson_polys = [g.__geo_interface__ for geom in geoms for g in getattr(geom, "geoms", [geom])]
+                cell_ids = [
+                    cell_id for geojson_poly in geojson_polys for cell_id in h3.geo_to_cells(geojson_poly, res)
+                ]  # array of h3 IDs covering geoms
+            else:  # use the buffered bbox of geom instead.
+                mpoly = unary_union(geoms)
+                geojson_polys = []
+                # edge_length = 1290 * 0.376**resolution  Approximate H3 edge length (in km) using exponential decay model
+                # diameter_km = 2 * edge_length           Diameter of a regular hexagon is approximately twice the edge length
+                # diameter_deg = diameter_km / 100        Convert diameter from kilometers to degrees (approx. 1 degree ≈ 100 km)
+                # Use diameter_deg to buffer the geometry (roughly the width of an H3 hexagon at this resolution)
+                buffer_radius = 26 * 0.376**res
+                for geom in geoms:
+                    minx, miny, maxx, maxy = geom.bounds
+                    geom = box(minx, miny, maxx, maxy).buffer(buffer_radius)
+                    geojson_polys += [
+                        g.__geo_interface__ for g in (getattr(geom, "geoms", [geom]))
+                    ]  # array of GeoJson representation of geoms
+                cell_ids = [cell_id for geojson_poly in geojson_polys for cell_id in h3.geo_to_cells(geojson_poly, res)]
+                cell_ids = list(set(cell_ids))
+
+                hex_polys, _ = SpatialIndex.cell_poly(
+                    cell_ids, cell_type="h3"
+                )  # Convert H3 cell IDs to Shapely Polygons for Intersection Checks
+                inter_hex_polys = [
+                    hex_poly for hex_poly in hex_polys if hex_poly.intersects(mpoly)
+                ]  # Find the hexagons which intersects with mpoly
+                cell_ids = [h3.latlng_to_cell(hex_poly.centroid.y, hex_poly.centroid.x, res) for hex_poly in inter_hex_polys]
         else:
             raise ValueError(f"Unsupported cell type: {cell_type}. Choose 'geohash', 's2', or 'h3'.")
 
-        if not dump:
-            return cells
+        if not dump_path:
+            return cell_ids
         else:
             # Create the directories if they don't exist
-            cells_path = os.path.expanduser(f"{dump}/{cell_type}/{res}")
+            cells_path = os.path.expanduser(f"{dump_path}/{cell_type}/{res}")
             os.makedirs(cells_path, exist_ok=True)
             with open(f"{cells_path}/{datetime.now()}.txt", "w") as json_file:
-                json.dump(cells, json_file)
+                json.dump(cell_ids, json_file)
             return None
 
     @staticmethod
@@ -2332,7 +2375,13 @@ class SpatialIndex:
 
     @staticmethod
     def ppoly_cell(
-        mdf: gpd.GeoDataFrame, cell_type: str, res: int, compact: bool = False, dump: str = None, verbose: bool = False
+        mdf: gpd.GeoDataFrame,
+        cell_type: str,
+        res: int,
+        force_full_cover: bool = True,
+        compact: bool = False,
+        dump_path: str = None,
+        verbose: bool = False,
     ) -> Tuple[List[str], int]:
         """
         Performs a parallelised conversion of geometries in a GeoDataFrame to cell identifiers of a specified type
@@ -2341,7 +2390,7 @@ class SpatialIndex:
         This function first divides the bounding box of the input GeoDataFrame into smaller grid cells, then calculates
         the intersection between these grid cells and the input geometries. The resulting geometries are processed in
         parallel to generate cell identifiers according to the specified `cell_type` and `res` (resolution). The result
-        can be compacted to reduce the number of cells. Optionally, if `dump` is provided, the results are saved in multiple
+        can be compacted to reduce the number of cells. Optionally, if `dump_path` is provided, the results are saved in multiple
         files, where the number of files is 4 times the number of CPU cores available in the system.
 
         Parameters
@@ -2358,10 +2407,13 @@ class SpatialIndex:
         res : int
             The resolution or precision level of the cell identifiers. Higher values indicate finer precision.
 
+        force_full_cover : bool, default=True
+            If True, ensures that the entire polygon is fully covered by H3 cells, possibly including cells that extend beyond the polygon boundary.
+
         compact : bool, optional, default=False
             If True, compact the resulting cells to reduce their number. This is typically applicable for S2 and H3 cells.
 
-        dump : str, optional
+        dump_path : str, optional
             A string representing a valid directory path. If provided, the cells are saved in multiple files
             within the directory `/path/to/dir/cell_type/res/`. The number of output files will be 4 times the number
             of CPU cores available in the system. If not provided, the function returns the list of cell identifiers
@@ -2384,15 +2436,15 @@ class SpatialIndex:
         Example
         -------
         >>> # Assuming `mdf` is a GeoDataFrame with geometries:
-        >>> cells, count = ppoly_cell(mdf, cell_type="s2", res=10, compact=True, dump="~/Desktop/cells", verbose=True)
+        >>> cells, count = ppoly_cell(mdf, cell_type="h3", res=10, compact=True, dump_path="~/Desktop/h3", verbose=True)
         >>> print(f"Generated {count} cells: {cells}")
         """
         # Determine the number of slices and grid cells based on CPU cores
         n_cores = cpu_count()
         slices = 128 * n_cores
 
-        if dump and not verbose:
-            cells_path = os.path.abspath(os.path.expanduser(f"{dump}/{cell_type}/{res}"))
+        if dump_path and not verbose:
+            cells_path = os.path.abspath(os.path.expanduser(f"{dump_path}/{cell_type}/{res}"))
             print(f"Writing cell IDs in parallel to {4 * n_cores} files in {cells_path} directory ...")
 
         if verbose:
@@ -2440,8 +2492,8 @@ class SpatialIndex:
             print(f"    {len(gmdf):,} intersected slices")
             print(f"    {elapsed_time} seconds")
 
-            if dump:
-                cells_path = os.path.abspath(os.path.expanduser(f"{dump}/{cell_type}/{res}"))
+            if dump_path:
+                cells_path = os.path.abspath(os.path.expanduser(f"{dump_path}/{cell_type}/{res}"))
                 print(f"Writing cell IDs in parallel to {4 * n_cores} files in {cells_path} directory ...")
             else:
                 print("Calculating cell IDs in parallel ...")
@@ -2450,10 +2502,16 @@ class SpatialIndex:
         # Shuffle geometries for even load distribution across chunks
         gmdf = gmdf.sample(frac=1)
         geom_chunks = np.array_split(list(gmdf.geometry), 4 * n_cores)
-        args = zip(geom_chunks, [cell_type] * 4 * n_cores, [res] * 4 * n_cores, [dump] * 4 * n_cores)
+        args = zip(
+            geom_chunks,
+            [cell_type] * 4 * n_cores,
+            [res] * 4 * n_cores,
+            [force_full_cover] * 4 * n_cores,
+            [dump_path] * 4 * n_cores,
+        )
 
         # Parallel processing to generate cells
-        if dump:
+        if dump_path:
             with Pool(n_cores) as pool:
                 pool.starmap(SpatialIndex.poly_cell, args)
             if verbose:
@@ -2471,15 +2529,14 @@ class SpatialIndex:
                 print(f"    {elapsed_time} seconds")
 
             # Remove duplicates based on cell type
-            if cell_type in {"geohash", "s2"}:
-                if verbose:
-                    print("Removing duplicate cells ...")
-                    start_time = time()
-                cells = list(set(cells))  # Remove duplicate cells
-                if verbose:
-                    elapsed_time = round(time() - start_time)
-                    print(f"    {len(cells):,} cells")
-                    print(f"    {elapsed_time} seconds")
+            if verbose:
+                print("Removing duplicate cells ...")
+                start_time = time()
+            cells = list(set(cells))  # Remove duplicate cells
+            if verbose:
+                elapsed_time = round(time() - start_time)
+                print(f"    {len(cells):,} cells")
+                print(f"    {elapsed_time} seconds")
 
             cell_counts = len(cells)  # Total unique cell count
 
