@@ -368,14 +368,14 @@ To replicate the original H3 behavior, you should set `force_full_cover=False`.
 | Geohash                                      | S2                                                | H3                                                              |
 | -------------------------------------------- | --------------------------------------------------|---------------------------------------------------------------- | 
 | `plp(border_gdf, geohash_res=5)`             | `plp(border_gdf, s2_res=11)`                      | `plp(border_gdf, h3_res=7)`                                     |
-|![](https://geoparse.io/graphics/luxembourg_geohash.png?)         | ![](https://geoparse.io/graphics/luxembourg_s2.png?)                 | ![](https://geoparse.io/graphics/luxembourg_h3.png?)                                |
+|![](https://geoparse.io/graphics/luxembourg_geohash.png?)         | ![](https://geoparse.io/graphics/luxembourg_s2.png?)                 | ![](https://geoparse.io/graphics/luxembourg_h3_full_cover.png?)                                |
  
 If the `compact` parameter is set to True, `plp` calculates the parent cell IDs to create a compact representation of the cells.
 
 | Geohash                                      | S2                                                | H3                                                              |
 | -------------------------------------------- | --------------------------------------------------|---------------------------------------------------------------- | 
 | `plp(border_gdf, geohash_res=7, compact=True)`             | `plp(border_gdf, s2_res=15, compact=True)`                      | `plp(border_gdf, h3_res=10, compact=True)`                                     |
-|![](https://geoparse.io/graphics/luxembourg_geohash_compact.png?)         | ![](https://geoparse.io/graphics/luxembourg_s2_compact.png?)                 | ![](https://geoparse.io/graphics/luxembourg_h3_compact.png?)                                |
+|![](https://geoparse.io/graphics/luxembourg_geohash_compact.png?)         | ![](https://geoparse.io/graphics/luxembourg_s2_compact.png?)                 | ![](https://geoparse.io/graphics/luxembourg_h3_compact_full_cover.png?)                                |
 
 ### Geospatial Indices
 `plp` takes a list of geospatial indices (such as Geohash, S2, or H3) instead of `DataFrame` or `GeoDataFrame` objects and visualize them as Polygon geometries. 
