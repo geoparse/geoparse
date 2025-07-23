@@ -358,11 +358,16 @@ Using `GeoPandas`, we can read a geospatial file and display its contents using 
 
 
 Using the `plp` function, we can also add spatial index polygonal layers such as GeoHash, S2, and H3. 
+It's worth noting that Geoparse computes all H3 cells that fully cover the polygon, 
+whereas the original H3 package approximates the polygon using only cells whose centroids lie within the shape. 
+The `force_full_cover` parameter (default `True`) in the `plp` function controls this behavior 
+and is only applicable to H3 cells since Geohash and S2 inherently fully cover the polygon. 
+To replicate the original H3 behavior, you should set `force_full_cover=False`.
 
 
 | Geohash                                      | S2                                                | H3                                                              |
 | -------------------------------------------- | --------------------------------------------------|---------------------------------------------------------------- | 
-| `plp(border_gdf, geohash_res=5)`             | `plp(border_gdf, s2_res=11)`                      | `plp(border_gdf, h3_res=6)`                                     |
+| `plp(border_gdf, geohash_res=5)`             | `plp(border_gdf, s2_res=11)`                      | `plp(border_gdf, h3_res=7)`                                     |
 |![](https://geoparse.io/graphics/luxembourg_geohash.png?)         | ![](https://geoparse.io/graphics/luxembourg_s2.png?)                 | ![](https://geoparse.io/graphics/luxembourg_h3.png?)                                |
  
 If the `compact` parameter is set to True, `plp` calculates the parent cell IDs to create a compact representation of the cells.
