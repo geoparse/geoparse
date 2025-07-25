@@ -421,6 +421,9 @@ The `plp` function can also accept `OpenStreetMap (OSM)` Way IDs and visualize t
 | `plp(osm_ways=[893074361, 666201240])`  | `plp(osm_ways=[335265936, 53820456, 1117218957], s2_res=22, compact=True)` | 
 |![](https://geoparse.io/graphics/osm_way_line.png?) | ![](https://geoparse.io/graphics/osm_way_polygon.gif?)          | 
 
+### Choropleth Map
+
+A choropleth map provides a quick visual comparison of data distribution across geographic areas. It uses color intensity or patterns to represent statistical data over predefined regions (e.g., countries, postcode sectors), where darker or more intense colors indicate higher values of the measured variable (e.g., population density, insurance risk levels).
 
 
 We recommend starting your GeoParse journey with the HTML versions of the tutorial notebooks, available [here](https://geoparse.io/tutorials/karta.html).
