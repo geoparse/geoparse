@@ -10,7 +10,7 @@ from multiprocessing import Pool, cpu_count
 from time import time
 from typing import List, Optional, Set, Tuple, Union
 
-import folium  # Folium is a Python library used for visualising geospatial data. Actually, it's a Python wrapper for Leaflet which is a leading open-source JavaScript library for plotting interactive maps.
+import folium  # Folium is a Python library used for visualizing geospatial data. Actually, it's a Python wrapper for Leaflet which is a leading open-source JavaScript library for plotting interactive maps.
 import geopandas as gpd
 import h3
 import numpy as np
@@ -140,7 +140,7 @@ class Karta:
         '#e12348'  # Bright Red from the palette
         """
         # Predefined color palette
-        palettet = [
+        palette = [
             "#e6194b",  # red
             "#4363d8",  # blue
             "#3cb44b",  # green
@@ -172,13 +172,13 @@ class Karta:
             return "#000000"
 
         if isinstance(col, (int, float)):  # Check for both int and float
-            idx = int(col) % len(palettet)  # Get color index using modulo arithmetic
+            idx = int(col) % len(palette)  # Get color index using modulo arithmetic
         else:
             col = str(col)  # Convert to string
             col = re.sub(r"[\W_]+", "", col)  # Remove non-alphanumeric characters
-            idx = int(col[head:tail], 36) % len(palettet)  # Convert substring to a number base 36 (36 = 10 digits + 26 letters)
+            idx = int(col[head:tail], 36) % len(palette)  # Convert substring to a number base 36 (36 = 10 digits + 26 letters)
 
-        return palettet[idx]
+        return palette[idx]
 
     @staticmethod
     def _add_point(
