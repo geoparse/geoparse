@@ -1017,16 +1017,18 @@ class Karta:
         ----------
         mdf : geopandas.GeoDataFrame
             The GeoDataFrame containing multipolygon geometries and data attributes to be visualized.
-        columns : list
+        columns : list of str
             A list of two elements:
                 - columns[0] : str
                     The column name in `mdf` that contains unique identifiers for each region.
                 - columns[1] : str
                     The column name in `mdf` containing the data values to be visualized.
-        bins : list
-            A list of numerical values defining the value intervals for the choropleth color categories.
         legend : str
             The title for the legend, which describes what is represented on the map.
+
+        bins : list of float, optional
+            A list of numerical values that define the value intervals for the choropleth color categories.
+            By default, the bins correspond to quantiles at [0, 0.25, 0.5, 0.75, 0.98, 1.0].
         palette : str, optional
             The color palette to be used for the choropleth (default is "YlOrRd").
 
@@ -1090,47 +1092,48 @@ class Karta:
         res: int = None,
     ) -> folium.Map:
         """
-        Creates a choropleth map using the given GeoDataFrame and specified parameters.
+        Creates a joint choropleth map by counting point features (gdf) within polygons (mdf).
 
-        This function generates a Folium choropleth map layer by visualizing the data from a GeoDataFrame using color gradients
-        to represent different data values across geographic areas.
+        This function generates a Folium choropleth map showing the count of point features
+        from gdf that fall within each polygon of mdf. Optionally converts mdf to spatial
+        cells (geohash, S2, or H3) before counting.
 
         Parameters
         ----------
-        mdf : geopandas.GeoDataFrame
-            The GeoDataFrame containing multipolygon geometries and data attributes to be visualized.
-        columns : list
-            A list of two elements:
-                - columns[0] : str
-                    The column name in `mdf` that contains unique identifiers for each region.
-                - columns[1] : str
-                    The column name in `mdf` containing the data values to be visualized.
-        bins : list
-            A list of numerical values defining the value intervals for the choropleth color categories.
+        mdf : gpd.GeoDataFrame
+            GeoDataFrame containing polygon geometries to aggregate points into.
+        gdf : gpd.GeoDataFrame
+            GeoDataFrame containing geometry features to count within polygons.
+        poly_id : str
+            Column name in mdf containing unique polygon identifiers.
         legend : str
-            The title for the legend, which describes what is represented on the map.
+            Title for the choropleth legend.
+        bins : list, optional
+            Value intervals for choropleth color categories.
+            By default, the bins correspond to quantiles at [0, 0.25, 0.5, 0.75, 0.98, 1.0].
         palette : str, optional
-            The color palette to be used for the choropleth (default is "YlOrRd").
-        highlight : bool, optional
-            A flag indicating whether regions should be highlighted when hovered over (default is True).
+            Color palette name (default: "YlOrRd").
+        cell_type : str, optional
+            Spatial index type ("geohash", "s2", or "h3") to convert mdf polygons into.
+        res : int, optional
+            Resolution level for spatial indexing if cell_type is specified.
 
         Returns
         -------
         folium.Map
-            The Folium map object containing the choropleth layer.
+            Folium map object with choropleth layer.
 
         Examples
         --------
-        >>> choropleth(
-                mdf,
-                ['region_id', 'population'],
-                bins=[0, 100, 500, 1000, 5000],
-                legend="Population by Region",
-                palette="YlOrRd",
-                highlight=True
-            )
+        >>> joint_choropleth(
+               neighborhoods,  # Polygon GeoDataFrame
+               restaurants,    # Point GeoDataFrame
+               poly_id="neighborhood_id",
+               legend="Restaurant Count",
+               cell_type="h3",
+               res=8
+           )
         """
-
         if cell_type is not None:
             cell_list, _ = SpatialIndex.ppoly_cell(mdf, cell_type=cell_type, res=res)
             cells, _ = SpatialIndex.pcell_poly(cell_list, cell_type=cell_type)
