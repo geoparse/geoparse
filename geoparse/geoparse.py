@@ -28,28 +28,25 @@ from shapely.prepared import prep
 
 class Karta:
     @staticmethod
-    def _configure_map_provider():
-        """Configure the map provider with API key if needed"""
-        # For Mapbox (recommended for best results)
-        mapbox_api_key = os.getenv("MAPBOX_API_KEY")
-        if mapbox_api_key:
-            pdk.settings.custom_libraries = [
-                {
-                    "libraryName": "MapboxGlJsLibrary",
-                    "resourceUri": "https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.js",
-                    "stylesheetUri": "https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.css",
-                }
-            ]
-            pdk.settings.mapbox_key = mapbox_api_key
-            return "mapbox://styles/mapbox/light-v10"
-
-        # Fallback to Carto if no Mapbox key
-        return "light"  # Carto light style
-
-    @staticmethod
     def _base_map(sw: list or tuple, ne: list or tuple, zoom: int = None, pitch: int = 0) -> pdk.Deck:
         """
-        Creates a base map with initial view state based on the specified bounding box.
+        Creates a base map with Carto's light base map and initial view state.
+
+        Parameters
+        ----------
+        sw : list or tuple
+            Southwest coordinate [latitude, longitude] of bounding box
+        ne : list or tuple
+            Northeast coordinate [latitude, longitude] of bounding box
+        zoom : int, optional
+            Initial zoom level. If None, will be calculated from bounds.
+        pitch : int, optional
+            Camera pitch in degrees (0-90)
+
+        Returns
+        -------
+        pdk.Deck
+            A Pydeck Deck object with configured view state
         """
         # Calculate center and zoom if not provided
         center_lat = (sw[0] + ne[0]) / 2
@@ -61,18 +58,12 @@ class Karta:
 
         view_state = pdk.ViewState(longitude=center_lon, latitude=center_lat, zoom=zoom, pitch=pitch, bearing=0)
 
-        # Get configured map style
-        map_style = Karta._configure_map_provider()
-
+        # Use Carto's light base map
         return pdk.Deck(
             initial_view_state=view_state,
             layers=[],
-            map_style=map_style,
-            # Configuration for JupyterLab
-            configuration={
-                "mapboxApiAccessToken": os.getenv("MAPBOX_API_KEY") or "",
-                "mapProvider": "mapbox" if os.getenv("MAPBOX_API_KEY") else "carto",
-            },
+            map_style="light",  # Carto light style
+            map_provider="carto",  # Explicitly use Carto
         )
 
     @staticmethod
@@ -80,22 +71,7 @@ class Karta:
         """
         Generates a consistent color based on input value.
         Returns as [R, G, B, A] list for Pydeck compatibility.
-
-        Parameters
-        ----------
-        col : int, float or str
-            Value to map to color
-        head : int, optional
-            Start index for string slicing
-        tail : int, optional
-            End index for string slicing
-
-        Returns
-        -------
-        list
-            RGBA color as [R, G, B, A] with values 0-255
         """
-        # Predefined color palette (same as original but converted to RGB tuples)
         palette = [
             [230, 25, 75, 200],  # red
             [67, 99, 216, 200],  # blue
@@ -123,7 +99,6 @@ class Karta:
             [173, 134, 52, 200],  # Burnt Orange
         ]
 
-        # Handle NaN (return black)
         if col is None or (isinstance(col, float) and math.isnan(col)):
             return [0, 0, 0, 255]
 
@@ -150,30 +125,11 @@ class Karta:
         pickable: bool = True,
         auto_highlight: bool = True,
     ) -> pdk.Layer:
-        """
-        Creates a Pydeck point layer from a GeoDataFrame.
-
-        Parameters
-        ----------
-        gdf : gpd.GeoDataFrame
-            GeoDataFrame containing point geometries
-        color : str or list
-            Color specification (column name or fixed color)
-        get_radius : str, optional
-            Column name to use for dynamic radius calculation
-        Other parameters same as original _add_point
-
-        Returns
-        -------
-        pdk.Layer
-            Configured Pydeck ScatterplotLayer
-        """
-        # Convert to DataFrame with coordinates
+        """Creates a Pydeck point layer from a GeoDataFrame."""
         df = pd.DataFrame(gdf.drop(columns="geometry"))
         df["lon"] = gdf.geometry.x
         df["lat"] = gdf.geometry.y
 
-        # Handle color specification
         if color == speed_field:
 
             def speed_color(row):
@@ -198,12 +154,10 @@ class Karta:
             df["color"] = df[color].apply(lambda x: Karta._select_color(x, color_head, color_tail))
             get_fill_color = "color"
         else:
-            # Default color
             default_color = Karta._select_color(color, color_head, color_tail)
             get_fill_color = default_color
 
-        # Handle radius
-        radius_scale = radius * 10  # Scale up for better visibility
+        radius_scale = radius * 10
         if get_radius:
             radius_scale = f"{get_radius} * 10"
 
@@ -227,25 +181,10 @@ class Karta:
         get_width: str = None,
         pickable: bool = True,
     ) -> pdk.Layer:
-        """
-        Creates a Pydeck line layer from a GeoDataFrame.
-
-        Parameters
-        ----------
-        gdf : gpd.GeoDataFrame
-            GeoDataFrame containing LineString geometries
-        Other parameters same as original _add_line
-
-        Returns
-        -------
-        pdk.Layer
-            Configured Pydeck PathLayer
-        """
-        # Convert LineString geometries to coordinate lists
+        """Creates a Pydeck line layer from a GeoDataFrame."""
         df = pd.DataFrame(gdf.drop(columns="geometry"))
         df["path"] = gdf.geometry.apply(lambda geom: list(geom.coords))
 
-        # Handle color
         if color in df.columns:
             df["color"] = df[color].apply(lambda x: Karta._select_color(x))
             get_color = "color"
@@ -253,7 +192,6 @@ class Karta:
             default_color = Karta._select_color(color)
             get_color = default_color
 
-        # Handle width
         width_scale = width
         if get_width:
             width_scale = get_width
@@ -278,37 +216,16 @@ class Karta:
         pickable: bool = True,
         extruded: bool = False,
     ) -> pdk.Layer:
-        """
-        Creates a Pydeck polygon layer from a GeoDataFrame.
-
-        Parameters
-        ----------
-        gdf : gpd.GeoDataFrame
-            GeoDataFrame containing Polygon geometries
-        Other parameters same as original _add_poly
-
-        Returns
-        -------
-        pdk.Layer
-            Configured Pydeck PolygonLayer
-        """
-        # Convert to WKB format for better compatibility
+        """Creates a Pydeck polygon layer from a GeoDataFrame."""
         df = pd.DataFrame(gdf.drop(columns="geometry"))
         df["wkb"] = gdf.geometry.apply(lambda geom: geom.wkb_hex)
 
-        # Handle fill color
         if fill_color in df.columns:
             df["fill_color"] = df[fill_color].apply(lambda x: Karta._select_color(x))
             get_fill_color = "fill_color"
         else:
             default_color = Karta._select_color(fill_color)
             get_fill_color = default_color
-
-        # Handle highlight color
-        if highlight_color in df.columns:
-            df["highlight_color"] = df[highlight_color].apply(lambda x: Karta._select_color(x))
-        else:
-            Karta._select_color(highlight_color)
 
         return pdk.Layer(
             "PolygonLayer",
@@ -364,16 +281,10 @@ class Karta:
         poly_popup: Optional[dict] = None,
         # Other parameters
         pitch: int = 0,
-        map_style: str = "light",
         tooltip: bool = True,
         **kwargs,
     ) -> pdk.Deck:
-        """
-        Creates a Pydeck visualization of points, lines, and polygons.
-
-        Parameters are similar to the original plp method but adapted for Pydeck.
-        """
-        # Handle input data
+        """Creates a Pydeck visualization of points, lines, and polygons using Carto base maps."""
         if isinstance(gdf_list, (pd.DataFrame, gpd.GeoDataFrame)):
             gdf_list = [gdf_list]
 
@@ -385,7 +296,6 @@ class Karta:
                 minlon, minlat = min(minlon, bounds[0]), min(minlat, bounds[1])
                 maxlon, maxlat = max(maxlon, bounds[2]), max(maxlat, bounds[3])
             else:
-                # For regular DataFrames, assume x/y columns
                 if not x:
                     x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
                 if not y:
@@ -398,28 +308,22 @@ class Karta:
         sw = [minlat, minlon]
         ne = [maxlat, maxlon]
 
-        # Create base map
+        # Create base map with Carto light style
         deck = Karta._base_map(sw, ne, pitch=pitch)
-        deck.map_style = map_style
-
         layers = []
 
         # Process each GeoDataFrame
         for _i, gdf in enumerate(gdf_list, 1):
             if not isinstance(gdf, gpd.GeoDataFrame):
-                # Convert DataFrame to GeoDataFrame if needed
                 if x and y:
                     gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[x], gdf[y]), crs="EPSG:4326")
                 else:
                     warnings.warn("Could not convert DataFrame to GeoDataFrame - missing x/y columns", stacklevel=2)
                     continue
 
-            # Get first geometry type
             geom = gdf.geometry.iloc[0] if len(gdf) > 0 else None
 
-            # Handle different geometry types
             if isinstance(geom, (Polygon, MultiPolygon)):
-                # Polygon layer
                 poly_layer = Karta._create_polygon_layer(
                     gdf,
                     fill_color=fill_color,
@@ -430,7 +334,6 @@ class Karta:
                 layers.append(poly_layer)
 
                 if centroid:
-                    # Create centroids
                     centroid_gdf = gpd.GeoDataFrame(geometry=gdf.centroid, crs="EPSG:4326")
                     centroid_layer = Karta._create_point_layer(
                         centroid_gdf, color=point_color, radius=point_radius, opacity=point_opacity
@@ -438,12 +341,10 @@ class Karta:
                     layers.append(centroid_layer)
 
             elif isinstance(geom, LineString):
-                # Line layer
                 line_layer = Karta._create_line_layer(gdf, color=line_color, opacity=line_opacity, width=line_weight)
                 layers.append(line_layer)
 
             else:
-                # Assume Point geometry
                 if not heatmap or not heatmap_only:
                     point_layer = Karta._create_point_layer(
                         gdf,
@@ -458,7 +359,6 @@ class Karta:
                     layers.append(point_layer)
 
                 if heatmap:
-                    # Create heatmap layer
                     heatmap_df = pd.DataFrame({"lat": gdf.geometry.y, "lon": gdf.geometry.x})
                     heatmap_layer = pdk.Layer(
                         "HeatmapLayer",
@@ -472,7 +372,6 @@ class Karta:
                     layers.append(heatmap_layer)
 
                 if line:
-                    # Create line connection layer
                     line_df = pd.DataFrame({"path": [list(zip(gdf.geometry.y, gdf.geometry.x))]})
                     line_layer = pdk.Layer(
                         "PathLayer",
@@ -489,7 +388,8 @@ class Karta:
 
         # Update deck with layers
         deck.layers = layers
-        deck.deck_widget.tooltip = tooltip_config
+        if hasattr(deck, "deck_widget") and tooltip_config:
+            deck.deck_widget.tooltip = tooltip_config
 
         return deck
 
@@ -503,64 +403,29 @@ class Karta:
         opacity: float = 0.5,
         line_width: float = 0.3,
         pitch: int = 0,
-        map_style: str = "light",
     ) -> pdk.Deck:
-        """
-        Creates a choropleth map using Pydeck.
-
-        Parameters
-        ----------
-        mdf : gpd.GeoDataFrame
-            GeoDataFrame containing polygon geometries
-        columns : list
-            [id_column, value_column] pair
-        legend : str
-            Legend title
-        bins : list, optional
-            Value bins for color scale
-        palette : str, optional
-            Color palette name
-        opacity : float, optional
-            Fill opacity
-        line_width : float, optional
-            Border width
-        pitch : int, optional
-            Map pitch angle
-        map_style : str, optional
-            Base map style
-
-        Returns
-        -------
-        pdk.Deck
-            Configured Pydeck choropleth map
-        """
-        # Calculate bounds
+        """Creates a choropleth map using Carto base maps."""
         minlon, minlat, maxlon, maxlat = mdf.total_bounds
         sw = [minlat, minlon]
         ne = [maxlat, maxlon]
 
-        # Create base map
         deck = Karta._base_map(sw, ne, pitch=pitch)
-        deck.map_style = map_style
 
-        # Prepare data
         id_col, value_col = columns
         df = pd.DataFrame(mdf.drop(columns="geometry"))
         df["wkb"] = mdf.geometry.apply(lambda geom: geom.wkb_hex)
 
-        # Create color scale
         if bins is None:
             bins = np.quantile(df[value_col].dropna(), [0, 0.25, 0.5, 0.75, 0.98, 1])
 
-        # Map palette to color range
         palette_ranges = {
             "YlOrRd": [[255, 255, 178], [254, 204, 92], [253, 141, 60], [240, 59, 32], [189, 0, 38]],
-            # Add more palettes as needed
+            "Blues": [[239, 243, 255], [189, 215, 231], [107, 174, 214], [49, 130, 189], [8, 81, 156]],
+            "Greens": [[237, 248, 233], [186, 228, 188], [116, 196, 118], [49, 163, 84], [0, 109, 44]],
         }
 
         color_range = palette_ranges.get(palette, palette_ranges["YlOrRd"])
 
-        # Create choropleth layer
         choropleth_layer = pdk.Layer(
             "PolygonLayer",
             data=df,
@@ -578,7 +443,6 @@ class Karta:
         )
 
         deck.layers = [choropleth_layer]
-
         return deck
 
     @staticmethod
@@ -593,26 +457,17 @@ class Karta:
         res: int = None,
         **kwargs,
     ) -> pdk.Deck:
-        """
-        Creates a joint choropleth map counting points in polygons.
-
-        Parameters same as original method but adapted for Pydeck.
-        """
-        # Convert to spatial cells if specified
+        """Creates a joint choropleth map counting points in polygons using Carto base maps."""
         if cell_type is not None:
-            # This would need SpatialIndex implementation
             warnings.warn("Cell type conversion not implemented in this version", stacklevel=2)
 
-        # Spatial join to count points in polygons
         joined = gpd.sjoin(gdf[["geometry"]], mdf[[poly_id, "geometry"]], predicate="within")
         counts = joined[poly_id].value_counts().reset_index()
         counts.columns = [poly_id, "count"]
 
-        # Merge counts back to polygons
         mdf = pd.merge(mdf, counts, on=poly_id, how="left")
         mdf["count"] = mdf["count"].fillna(0)
 
-        # Create choropleth
         return Karta.choropleth(mdf, columns=[poly_id, "count"], legend=legend, bins=bins, palette=palette, **kwargs)
 
 
