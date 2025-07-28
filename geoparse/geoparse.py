@@ -1137,7 +1137,6 @@ class Karta:
         if cell_type is not None:
             cell_list, _ = SpatialIndex.ppoly_cell(mdf, cell_type=cell_type, res=res)
             cells, _ = SpatialIndex.pcell_poly(cell_list, cell_type=cell_type)
-
             mdf = gpd.GeoDataFrame({poly_id: cell_list}, geometry=cells, crs="EPSG:4326")
 
         gdf = gpd.sjoin(gdf[["geometry"]], mdf[[poly_id, "geometry"]], predicate="within")
