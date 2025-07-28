@@ -28,43 +28,51 @@ from shapely.prepared import prep
 
 class Karta:
     @staticmethod
+    def _configure_map_provider():
+        """Configure the map provider with API key if needed"""
+        # For Mapbox (recommended for best results)
+        mapbox_api_key = os.getenv("MAPBOX_API_KEY")
+        if mapbox_api_key:
+            pdk.settings.custom_libraries = [
+                {
+                    "libraryName": "MapboxGlJsLibrary",
+                    "resourceUri": "https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.js",
+                    "stylesheetUri": "https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.css",
+                }
+            ]
+            pdk.settings.mapbox_key = mapbox_api_key
+            return "mapbox://styles/mapbox/light-v10"
+
+        # Fallback to Carto if no Mapbox key
+        return "light"  # Carto light style
+
+    @staticmethod
     def _base_map(sw: list or tuple, ne: list or tuple, zoom: int = None, pitch: int = 0) -> pdk.Deck:
         """
         Creates a base map with initial view state based on the specified bounding box.
-
-        Parameters
-        ----------
-        sw : list or tuple
-            Southwest coordinate [latitude, longitude] of bounding box
-        ne : list or tuple
-            Northeast coordinate [latitude, longitude] of bounding box
-        zoom : int, optional
-            Initial zoom level. If None, will be calculated from bounds.
-        pitch : int, optional
-            Camera pitch in degrees (0-90)
-
-        Returns
-        -------
-        pdk.Deck
-            A Pydeck Deck object with configured view state
         """
         # Calculate center and zoom if not provided
         center_lat = (sw[0] + ne[0]) / 2
         center_lon = (sw[1] + ne[1]) / 2
 
         if zoom is None:
-            # Simple zoom calculation based on latitude difference
             lat_diff = ne[0] - sw[0]
             zoom = max(0, min(20, round(14 - math.log(lat_diff * 2, 1.5))))
 
         view_state = pdk.ViewState(longitude=center_lon, latitude=center_lat, zoom=zoom, pitch=pitch, bearing=0)
 
-        # Create base map with multiple tile providers
+        # Get configured map style
+        map_style = Karta._configure_map_provider()
+
         return pdk.Deck(
             initial_view_state=view_state,
             layers=[],
-            map_style="light",  # Default to light mode
-            map_provider="carto",  # Use Carto as base provider
+            map_style=map_style,
+            # Configuration for JupyterLab
+            configuration={
+                "mapboxApiAccessToken": os.getenv("MAPBOX_API_KEY") or "",
+                "mapProvider": "mapbox" if os.getenv("MAPBOX_API_KEY") else "carto",
+            },
         )
 
     @staticmethod
