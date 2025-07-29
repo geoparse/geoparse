@@ -124,8 +124,9 @@ class Karta:
         speed_limit_field: str = "speedlimit",
         pickable: bool = True,
         auto_highlight: bool = True,
+        fixed_radius: bool = True,  # New parameter to control this behavior
     ) -> pdk.Layer:
-        """Creates a Pydeck point layer from a GeoDataFrame."""
+        """Creates a Pydeck point layer from a GeoDataFrame with fixed radius option."""
         df = pd.DataFrame(gdf.drop(columns="geometry"))
         df["lon"] = gdf.geometry.x
         df["lat"] = gdf.geometry.y
@@ -157,10 +158,11 @@ class Karta:
             default_color = Karta._select_color(color, color_head, color_tail)
             get_fill_color = default_color
 
-        radius_scale = radius * 10
+        radius_scale = radius * 10  # Scaling factor for visibility
         if get_radius:
             radius_scale = f"{get_radius} * 10"
 
+        # Create layer with radiusUnits configuration
         return pdk.Layer(
             "ScatterplotLayer",
             data=df,
@@ -170,6 +172,9 @@ class Karta:
             pickable=pickable,
             auto_highlight=auto_highlight,
             opacity=opacity,
+            radius_units="pixels" if fixed_radius else "meters",
+            radius_min_pixels=radius if fixed_radius else 0,
+            radius_max_pixels=radius * 2 if fixed_radius else None,
         )
 
     @staticmethod
