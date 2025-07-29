@@ -221,10 +221,24 @@ class Karta:
         pickable: bool = True,
         extruded: bool = False,
     ) -> pdk.Layer:
-        """Creates a Pydeck polygon layer from a GeoDataFrame."""
+        """Creates a Pydeck polygon layer from a GeoDataFrame that properly displays polygons."""
+        # Convert geometries to the correct format
         df = pd.DataFrame(gdf.drop(columns="geometry"))
-        df["wkb"] = gdf.geometry.apply(lambda geom: geom.wkb_hex)
 
+        # Handle both Polygon and MultiPolygon geometries
+        def convert_geom(geom):
+            if geom.geom_type == "Polygon":
+                return [list(geom.exterior.coords)]
+            elif geom.geom_type == "MultiPolygon":
+                return [list(poly.exterior.coords) for poly in geom.geoms]
+            return None
+
+        df["coordinates"] = gdf.geometry.apply(convert_geom)
+
+        # Filter out any null geometries
+        df = df[df["coordinates"].notnull()]
+
+        # Color handling
         if fill_color in df.columns:
             df["fill_color"] = df[fill_color].apply(lambda x: Karta._select_color(x))
             get_fill_color = "fill_color"
@@ -235,13 +249,13 @@ class Karta:
         return pdk.Layer(
             "PolygonLayer",
             data=df,
-            get_polygon="wkb",
+            get_polygon="coordinates",  # Use the converted coordinates
             stroked=True,
             filled=True,
             extruded=extruded,
             wireframe=True,
             get_fill_color=get_fill_color,
-            get_line_color=[0, 0, 0, 255],
+            get_line_color=[0, 0, 0, 255],  # Black borders
             get_line_width=line_width,
             pickable=pickable,
             opacity=fill_opacity,
