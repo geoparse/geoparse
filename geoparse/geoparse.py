@@ -155,7 +155,7 @@ class Karta:
             df["color"] = df[color].apply(lambda x: Karta._select_color(x, color_head, color_tail))
             get_fill_color = "color"
         else:
-            default_color = Karta._select_color(color, color_head, color_tail)
+            default_color = color  # Karta._select_color(color, color_head, color_tail)
             get_fill_color = default_color
 
         radius_scale = radius * 10  # Scaling factor for visibility
