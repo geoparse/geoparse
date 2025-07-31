@@ -13,6 +13,7 @@ from typing import List, Optional, Set, Tuple, Union
 
 import geopandas as gpd
 import h3
+import matplotlib
 import numpy as np
 import pandas as pd
 import pydeck as pdk
@@ -152,10 +153,10 @@ class Karta:
             df["color"] = df.apply(speed_color, axis=1)
             get_fill_color = "color"
         elif color in df.columns:
-            df["color"] = df[color].apply(lambda x: Karta._select_color(x, color_head, color_tail))
+            df["color"] = [Karta._select_color(x, color_head, color_tail) for x in df[color]]
             get_fill_color = "color"
         else:
-            default_color = color  # Karta._select_color(color, color_head, color_tail)
+            default_color = [int(255 * c) for c in matplotlib.colors.to_rgb(color)]
             get_fill_color = default_color
 
         radius_scale = radius * 10  # Scaling factor for visibility
@@ -214,8 +215,8 @@ class Karta:
     @staticmethod
     def _create_polygon_layer(
         gdf: gpd.GeoDataFrame,
-        fill_color: str = "red",
-        highlight_color: str = "green",
+        fill_color: str = [128, 0, 0],
+        highlight_color: str = [0, 128, 0],
         fill_opacity: float = 0.25,
         line_width: float = 0.3,
         pickable: bool = True,
@@ -243,7 +244,7 @@ class Karta:
             df["fill_color"] = df[fill_color].apply(lambda x: Karta._select_color(x))
             get_fill_color = "fill_color"
         else:
-            default_color = Karta._select_color(fill_color)
+            default_color = fill_color
             get_fill_color = default_color
 
         return pdk.Layer(
@@ -286,14 +287,14 @@ class Karta:
         x: Optional[str] = None,
         y: Optional[str] = None,
         # Line parameters
-        line_color: str = "blue",
+        line_color: str = "[0, 0, 255]",
         line_opacity: float = 0.5,
         line_weight: int = 6,
         line_popup: Optional[dict] = None,
         # Polygon parameters
         centroid: bool = False,
-        fill_color: str = "red",
-        highlight_color: str = "green",
+        fill_color: str = "[255, 0, 0]",
+        highlight_color: str = "[0, 255, 0]",
         fill_opacity: float = 0.25,
         highlight_opacity: float = 0.5,
         line_width: float = 0.3,
@@ -363,7 +364,7 @@ class Karta:
                 line_layer = Karta._create_line_layer(gdf, color=line_color, opacity=line_opacity, width=line_weight)
                 layers.append(line_layer)
 
-            else:
+            else:  # Point
                 if not heatmap or not heatmap_only:
                     point_layer = Karta._create_point_layer(
                         gdf,
