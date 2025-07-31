@@ -12,10 +12,11 @@ keywords = [
     "Visualization",
 ]
 
-requires-python = ">=3.9,<4.0"
+requires-python = ">=3.10,<4.0"
 
 dependencies = [
     "geopandas>=1.0.1",
+    "matplotlib>=3.10.0",
     "pyarrow>=18.0.0",
     "fsspec",
     "aiohttp",
