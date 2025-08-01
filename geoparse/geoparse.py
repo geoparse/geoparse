@@ -260,7 +260,22 @@ class Karta:
             get_line_width=line_width,
             pickable=pickable,
             opacity=fill_opacity,
+            auto_higlight=True,
         )
+
+    #    df,
+    #    id="geojson",
+    #    opacity=0.8,
+    #    stroked=False,
+    #    get_polygon="coordinates",
+    #    filled=True,
+    #    extruded=True,
+    #    wireframe=True,
+    #    get_elevation="elevation",
+    #    get_fill_color="fill_color",
+    #    get_line_color=[255, 255, 255],
+    #    auto_highlight=True,
+    #    pickable=True,
 
     @staticmethod
     def plp(
