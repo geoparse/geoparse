@@ -3,6 +3,7 @@ import json
 import math
 import os
 import re
+import warnings
 from collections import deque
 from datetime import datetime
 from math import atan2, cos, radians, sin, sqrt
@@ -13,8 +14,10 @@ from typing import List, Optional, Set, Tuple, Union
 import folium  # Folium is a Python library used for visualizing geospatial data. Actually, it's a Python wrapper for Leaflet which is a leading open-source JavaScript library for plotting interactive maps.
 import geopandas as gpd
 import h3
+import matplotlib
 import numpy as np
 import pandas as pd
+import pydeck as pdk
 import pygeohash
 import pyproj
 import requests
@@ -1153,6 +1156,485 @@ class Karta:
             legend=legend,
             palette=palette,
         )
+
+
+class SnabbKarta:
+    @staticmethod
+    def _base_map(sw: list or tuple, ne: list or tuple, zoom: int = None, pitch: int = 0) -> pdk.Deck:
+        """
+        Creates a base map with Carto's light base map and initial view state.
+
+        Parameters
+        ----------
+        sw : list or tuple
+            Southwest coordinate [latitude, longitude] of bounding box
+        ne : list or tuple
+            Northeast coordinate [latitude, longitude] of bounding box
+        zoom : int, optional
+            Initial zoom level. If None, will be calculated from bounds.
+        pitch : int, optional
+            Camera pitch in degrees (0-90)
+
+        Returns
+        -------
+        pdk.Deck
+            A Pydeck Deck object with configured view state
+        """
+        # Calculate center and zoom if not provided
+        center_lat = (sw[0] + ne[0]) / 2
+        center_lon = (sw[1] + ne[1]) / 2
+
+        if zoom is None:
+            lat_diff = ne[0] - sw[0]
+            zoom = max(0, min(20, round(14 - math.log(lat_diff * 2, 1.5))))
+
+        view_state = pdk.ViewState(longitude=center_lon, latitude=center_lat, zoom=zoom, pitch=pitch, bearing=0)
+
+        # Use Carto's light base map
+        return pdk.Deck(
+            initial_view_state=view_state,
+            layers=[],
+            map_style="light",  # Carto light style
+            map_provider="carto",  # Explicitly use Carto
+        )
+
+    @staticmethod
+    def _select_color(col: Union[int, float, str], head: int = None, tail: int = None) -> list:
+        """
+        Generates a consistent color based on input value.
+        Returns as [R, G, B, A] list for Pydeck compatibility.
+        """
+        palette = [
+            [230, 25, 75, 200],  # red
+            [67, 99, 216, 200],  # blue
+            [60, 180, 75, 200],  # green
+            [128, 0, 0, 200],  # maroon
+            [0, 128, 128, 200],  # teal
+            [0, 0, 128, 200],  # navy
+            [245, 130, 49, 200],  # orange
+            [145, 30, 180, 200],  # purple
+            [128, 128, 0, 200],  # olive
+            [154, 99, 36, 200],  # brown
+            [240, 50, 230, 200],  # magenta
+            [223, 177, 25, 200],  # dark yellow
+            [66, 212, 244, 200],  # cyan
+            [128, 128, 128, 200],  # grey
+            [225, 35, 72, 200],  # Bright Red
+            [220, 44, 70, 200],  # Strong Red
+            [215, 54, 68, 200],  # Vivid Red
+            [205, 74, 64, 200],  # Deep Red
+            [200, 84, 62, 200],  # Intense Red
+            [194, 94, 60, 200],  # Fire Red
+            [189, 104, 58, 200],  # Scarlet
+            [183, 114, 56, 200],  # Fiery Orange
+            [178, 124, 54, 200],  # Tangerine
+            [173, 134, 52, 200],  # Burnt Orange
+        ]
+
+        if col is None or (isinstance(col, float) and math.isnan(col)):
+            return [0, 0, 0, 255]
+
+        if isinstance(col, (int, float)):
+            idx = int(col) % len(palette)
+        else:
+            col = str(col)
+            col = re.sub(r"[\W_]+", "", col)
+            idx = int(col[head:tail], 36) % len(palette)
+
+        return palette[idx]
+
+    @staticmethod
+    def _create_point_layer(
+        gdf: gpd.GeoDataFrame,
+        color: str = "blue",
+        color_head: int = None,
+        color_tail: int = None,
+        opacity: float = 0.5,
+        radius: int = 3,
+        get_radius: str = None,
+        speed_field: str = "speed",
+        speed_limit_field: str = "speedlimit",
+        pickable: bool = True,
+        auto_highlight: bool = True,
+        fixed_radius: bool = True,  # New parameter to control this behavior
+    ) -> pdk.Layer:
+        """Creates a Pydeck point layer from a GeoDataFrame with fixed radius option."""
+        df = pd.DataFrame(gdf.drop(columns="geometry"))
+        df["lon"] = gdf.geometry.x
+        df["lat"] = gdf.geometry.y
+
+        if color == speed_field:
+
+            def speed_color(row):
+                if pd.isna(row[speed_limit_field]) or row[speed_limit_field] <= 0:
+                    return [128, 0, 128, 255]  # purple
+                elif row[speed_field] <= row[speed_limit_field]:
+                    return [0, 0, 255, 255]  # blue
+                elif row[speed_field] < 1.1 * row[speed_limit_field]:
+                    return [0, 255, 0, 255]  # green
+                elif row[speed_field] < 1.2 * row[speed_limit_field]:
+                    return [255, 255, 0, 255]  # yellow
+                elif row[speed_field] < 1.3 * row[speed_limit_field]:
+                    return [255, 165, 0, 255]  # orange
+                elif row[speed_field] < 1.4 * row[speed_limit_field]:
+                    return [255, 0, 0, 255]  # red
+                else:
+                    return [0, 0, 0, 255]  # black
+
+            df["color"] = df.apply(speed_color, axis=1)
+            get_fill_color = "color"
+        elif color in df.columns:
+            df["color"] = [SnabbKarta._select_color(x, color_head, color_tail) for x in df[color]]
+            get_fill_color = "color"
+        else:
+            default_color = [int(255 * c) for c in matplotlib.colors.to_rgb(color)]
+            get_fill_color = default_color
+
+        radius_scale = radius * 10  # Scaling factor for visibility
+        if get_radius:
+            radius_scale = f"{get_radius} * 10"
+
+        # Create layer with radiusUnits configuration
+        return pdk.Layer(
+            "ScatterplotLayer",
+            data=df,
+            get_position=["lon", "lat"],
+            get_radius=radius_scale,
+            get_fill_color=get_fill_color,
+            pickable=pickable,
+            auto_highlight=auto_highlight,
+            opacity=opacity,
+            radius_units="pixels" if fixed_radius else "meters",
+            radius_min_pixels=radius if fixed_radius else 0,
+            radius_max_pixels=radius * 2 if fixed_radius else None,
+        )
+
+    @staticmethod
+    def _create_line_layer(
+        gdf: gpd.GeoDataFrame,
+        color: str = "blue",
+        opacity: float = 0.5,
+        width: int = 6,
+        get_width: str = None,
+        pickable: bool = True,
+    ) -> pdk.Layer:
+        """Creates a Pydeck line layer from a GeoDataFrame."""
+        df = pd.DataFrame(gdf.drop(columns="geometry"))
+        df["path"] = gdf.geometry.apply(lambda geom: list(geom.coords))
+
+        if color in df.columns:
+            df["color"] = df[color].apply(lambda x: SnabbKarta._select_color(x))
+            get_color = "color"
+        else:
+            default_color = SnabbKarta._select_color(color)
+            get_color = default_color
+
+        width_scale = width
+        if get_width:
+            width_scale = get_width
+
+        return pdk.Layer(
+            "PathLayer",
+            data=df,
+            get_path="path",
+            get_color=get_color,
+            get_width=width_scale,
+            pickable=pickable,
+            opacity=opacity,
+        )
+
+    @staticmethod
+    def _create_polygon_layer(
+        gdf: gpd.GeoDataFrame,
+        fill_color: str = [128, 0, 0],
+        highlight_color: str = [0, 128, 0],
+        fill_opacity: float = 0.25,
+        line_width: float = 0.3,
+        pickable: bool = True,
+        extruded: bool = False,
+    ) -> pdk.Layer:
+        """Creates a Pydeck polygon layer from a GeoDataFrame that properly displays polygons."""
+        # Convert geometries to the correct format
+        df = pd.DataFrame(gdf.drop(columns="geometry"))
+
+        # Handle both Polygon and MultiPolygon geometries
+        def convert_geom(geom):
+            if geom.geom_type == "Polygon":
+                return [list(geom.exterior.coords)]
+            elif geom.geom_type == "MultiPolygon":
+                return [list(poly.exterior.coords) for poly in geom.geoms]
+            return None
+
+        df["coordinates"] = gdf.geometry.apply(convert_geom)
+
+        # Filter out any null geometries
+        df = df[df["coordinates"].notnull()]
+
+        # Color handling
+        if fill_color in df.columns:
+            df["fill_color"] = df[fill_color].apply(lambda x: SnabbKarta._select_color(x))
+            get_fill_color = "fill_color"
+        else:
+            default_color = fill_color
+            get_fill_color = default_color
+
+        return pdk.Layer(
+            "PolygonLayer",
+            data=df,
+            get_polygon="coordinates",  # Use the converted coordinates
+            stroked=True,
+            filled=True,
+            extruded=extruded,
+            wireframe=True,
+            get_fill_color=get_fill_color,
+            get_line_color=[0, 0, 0, 255],  # Black borders
+            get_line_width=line_width,
+            pickable=pickable,
+            opacity=fill_opacity,
+            auto_higlight=True,
+        )
+
+    #    df,
+    #    id="geojson",
+    #    opacity=0.8,
+    #    stroked=False,
+    #    get_polygon="coordinates",
+    #    filled=True,
+    #    extruded=True,
+    #    wireframe=True,
+    #    get_elevation="elevation",
+    #    get_fill_color="fill_color",
+    #    get_line_color=[255, 255, 255],
+    #    auto_highlight=True,
+    #    pickable=True,
+
+    @staticmethod
+    def plp(
+        gdf_list: Union[pd.DataFrame, gpd.GeoDataFrame, List[Union[pd.DataFrame, gpd.GeoDataFrame]]],
+        # Point parameters
+        cluster: bool = False,
+        heatmap: bool = False,
+        heatmap_only: bool = True,
+        heatmap_radius: int = 12,
+        line: bool = False,
+        antpath: bool = False,
+        point_color: str = "blue",
+        color_head: Optional[str] = None,
+        color_tail: Optional[str] = None,
+        speed_field: str = "speed",
+        speed_limit_field: str = "speedlimit",
+        point_opacity: float = 0.5,
+        point_radius: int = 3,
+        point_weight: int = 6,
+        point_popup: Optional[dict] = None,
+        buffer_radius: int = 0,
+        ring_inner_radius: int = 0,
+        ring_outer_radius: int = 0,
+        x: Optional[str] = None,
+        y: Optional[str] = None,
+        # Line parameters
+        line_color: str = "[0, 0, 255]",
+        line_opacity: float = 0.5,
+        line_weight: int = 6,
+        line_popup: Optional[dict] = None,
+        # Polygon parameters
+        centroid: bool = False,
+        fill_color: str = "[255, 0, 0]",
+        highlight_color: str = "[0, 255, 0]",
+        fill_opacity: float = 0.25,
+        highlight_opacity: float = 0.5,
+        line_width: float = 0.3,
+        poly_popup: Optional[dict] = None,
+        # Other parameters
+        pitch: int = 0,
+        tooltip: bool = True,
+        **kwargs,
+    ) -> pdk.Deck:
+        """Creates a Pydeck visualization of points, lines, and polygons using Carto base maps."""
+        if isinstance(gdf_list, (pd.DataFrame, gpd.GeoDataFrame)):
+            gdf_list = [gdf_list]
+
+        # Calculate bounds
+        minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
+        for gdf in gdf_list:
+            if isinstance(gdf, gpd.GeoDataFrame):
+                bounds = gdf.total_bounds
+                minlon, minlat = min(minlon, bounds[0]), min(minlat, bounds[1])
+                maxlon, maxlat = max(maxlon, bounds[2]), max(maxlat, bounds[3])
+            else:
+                if not x:
+                    x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
+                if not y:
+                    y = [col for col in gdf.columns if "lat" in col.lower()][0]
+                lons = gdf[x]
+                lats = gdf[y]
+                minlat, minlon = min(minlat, min(lats)), min(minlon, min(lons))
+                maxlat, maxlon = max(maxlat, max(lats)), max(maxlon, max(lons))
+
+        sw = [minlat, minlon]
+        ne = [maxlat, maxlon]
+
+        # Create base map with Carto light style
+        deck = SnabbKarta._base_map(sw, ne, pitch=pitch)
+        layers = []
+
+        # Process each GeoDataFrame
+        for _i, gdf in enumerate(gdf_list, 1):
+            if not isinstance(gdf, gpd.GeoDataFrame):
+                if x and y:
+                    gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[x], gdf[y]), crs="EPSG:4326")
+                else:
+                    warnings.warn("Could not convert DataFrame to GeoDataFrame - missing x/y columns", stacklevel=2)
+                    continue
+
+            geom = gdf.geometry.iloc[0] if len(gdf) > 0 else None
+
+            if isinstance(geom, (Polygon, MultiPolygon)):
+                poly_layer = SnabbKarta._create_polygon_layer(
+                    gdf,
+                    fill_color=fill_color,
+                    highlight_color=highlight_color,
+                    fill_opacity=fill_opacity,
+                    line_width=line_width,
+                )
+                layers.append(poly_layer)
+
+                if centroid:
+                    centroid_gdf = gpd.GeoDataFrame(geometry=gdf.centroid, crs="EPSG:4326")
+                    centroid_layer = SnabbKarta._create_point_layer(
+                        centroid_gdf, color=point_color, radius=point_radius, opacity=point_opacity
+                    )
+                    layers.append(centroid_layer)
+
+            elif isinstance(geom, LineString):
+                line_layer = SnabbKarta._create_line_layer(gdf, color=line_color, opacity=line_opacity, width=line_weight)
+                layers.append(line_layer)
+
+            else:  # Point
+                if not heatmap or not heatmap_only:
+                    point_layer = SnabbKarta._create_point_layer(
+                        gdf,
+                        color=point_color,
+                        color_head=color_head,
+                        color_tail=color_tail,
+                        opacity=point_opacity,
+                        radius=point_radius,
+                        speed_field=speed_field,
+                        speed_limit_field=speed_limit_field,
+                    )
+                    layers.append(point_layer)
+
+                if heatmap:
+                    heatmap_df = pd.DataFrame({"lat": gdf.geometry.y, "lon": gdf.geometry.x})
+                    heatmap_layer = pdk.Layer(
+                        "HeatmapLayer",
+                        data=heatmap_df,
+                        get_position=["lon", "lat"],
+                        radius_pixels=heatmap_radius,
+                        intensity=1,
+                        threshold=0.1,
+                        pickable=True,
+                    )
+                    layers.append(heatmap_layer)
+
+                if line:
+                    line_df = pd.DataFrame({"path": [list(zip(gdf.geometry.y, gdf.geometry.x))]})
+                    line_layer = pdk.Layer(
+                        "PathLayer",
+                        data=line_df,
+                        get_path="path",
+                        get_color=SnabbKarta._select_color(line_color),
+                        get_width=line_weight,
+                        opacity=line_opacity,
+                    )
+                    layers.append(line_layer)
+
+        # Configure tooltip
+        tooltip_config = {"html": "{name}", "style": {"backgroundColor": "white", "color": "black"}} if tooltip else None
+
+        # Update deck with layers
+        deck.layers = layers
+        if hasattr(deck, "deck_widget") and tooltip_config:
+            deck.deck_widget.tooltip = tooltip_config
+
+        return deck
+
+    @staticmethod
+    def choropleth(
+        mdf: gpd.GeoDataFrame,
+        columns: list,
+        legend: str,
+        bins: list = None,
+        palette: str = "YlOrRd",
+        opacity: float = 0.5,
+        line_width: float = 0.3,
+        pitch: int = 0,
+    ) -> pdk.Deck:
+        """Creates a choropleth map using Carto base maps."""
+        minlon, minlat, maxlon, maxlat = mdf.total_bounds
+        sw = [minlat, minlon]
+        ne = [maxlat, maxlon]
+
+        deck = SnabbKarta._base_map(sw, ne, pitch=pitch)
+
+        id_col, value_col = columns
+        df = pd.DataFrame(mdf.drop(columns="geometry"))
+        df["wkb"] = mdf.geometry.apply(lambda geom: geom.wkb_hex)
+
+        if bins is None:
+            bins = np.quantile(df[value_col].dropna(), [0, 0.25, 0.5, 0.75, 0.98, 1])
+
+        palette_ranges = {
+            "YlOrRd": [[255, 255, 178], [254, 204, 92], [253, 141, 60], [240, 59, 32], [189, 0, 38]],
+            "Blues": [[239, 243, 255], [189, 215, 231], [107, 174, 214], [49, 130, 189], [8, 81, 156]],
+            "Greens": [[237, 248, 233], [186, 228, 188], [116, 196, 118], [49, 163, 84], [0, 109, 44]],
+        }
+
+        color_range = palette_ranges.get(palette, palette_ranges["YlOrRd"])
+
+        choropleth_layer = pdk.Layer(
+            "PolygonLayer",
+            data=df,
+            get_polygon="wkb",
+            stroked=True,
+            filled=True,
+            extruded=False,
+            wireframe=True,
+            get_fill_color=f"[{value_col}, {bins[0]}, {bins[-1]}]",
+            get_line_color=[0, 0, 0, 255],
+            get_line_width=line_width,
+            pickable=True,
+            opacity=opacity,
+            color_range=color_range,
+        )
+
+        deck.layers = [choropleth_layer]
+        return deck
+
+    @staticmethod
+    def joint_choropleth(
+        mdf: gpd.GeoDataFrame,
+        gdf: gpd.GeoDataFrame,
+        poly_id: str,
+        legend: str,
+        bins: list = None,
+        palette: str = "YlOrRd",
+        cell_type: str = None,
+        res: int = None,
+        **kwargs,
+    ) -> pdk.Deck:
+        """Creates a joint choropleth map counting points in polygons using Carto base maps."""
+        if cell_type is not None:
+            warnings.warn("Cell type conversion not implemented in this version", stacklevel=2)
+
+        joined = gpd.sjoin(gdf[["geometry"]], mdf[[poly_id, "geometry"]], predicate="within")
+        counts = joined[poly_id].value_counts().reset_index()
+        counts.columns = [poly_id, "count"]
+
+        mdf = pd.merge(mdf, counts, on=poly_id, how="left")
+        mdf["count"] = mdf["count"].fillna(0)
+
+        return SnabbKarta.choropleth(mdf, columns=[poly_id, "count"], legend=legend, bins=bins, palette=palette, **kwargs)
 
 
 class GeomUtils:
