@@ -1284,7 +1284,7 @@ class SnabbKarta:
             df["color"] = df.apply(speed_color, axis=1)
             get_fill_color = "color"
         elif color in df.columns:
-            df["color"] = [Karta._select_color(x, color_head, color_tail) for x in df[color]]
+            df["color"] = [SnabbKarta._select_color(x, color_head, color_tail) for x in df[color]]
             get_fill_color = "color"
         else:
             default_color = [int(255 * c) for c in matplotlib.colors.to_rgb(color)]
@@ -1323,10 +1323,10 @@ class SnabbKarta:
         df["path"] = gdf.geometry.apply(lambda geom: list(geom.coords))
 
         if color in df.columns:
-            df["color"] = df[color].apply(lambda x: Karta._select_color(x))
+            df["color"] = df[color].apply(lambda x: SnabbKarta._select_color(x))
             get_color = "color"
         else:
-            default_color = Karta._select_color(color)
+            default_color = SnabbKarta._select_color(color)
             get_color = default_color
 
         width_scale = width
@@ -1372,7 +1372,7 @@ class SnabbKarta:
 
         # Color handling
         if fill_color in df.columns:
-            df["fill_color"] = df[fill_color].apply(lambda x: Karta._select_color(x))
+            df["fill_color"] = df[fill_color].apply(lambda x: SnabbKarta._select_color(x))
             get_fill_color = "fill_color"
         else:
             default_color = fill_color
@@ -1475,7 +1475,7 @@ class SnabbKarta:
         ne = [maxlat, maxlon]
 
         # Create base map with Carto light style
-        deck = Karta._base_map(sw, ne, pitch=pitch)
+        deck = SnabbKarta._base_map(sw, ne, pitch=pitch)
         layers = []
 
         # Process each GeoDataFrame
@@ -1490,7 +1490,7 @@ class SnabbKarta:
             geom = gdf.geometry.iloc[0] if len(gdf) > 0 else None
 
             if isinstance(geom, (Polygon, MultiPolygon)):
-                poly_layer = Karta._create_polygon_layer(
+                poly_layer = SnabbKarta._create_polygon_layer(
                     gdf,
                     fill_color=fill_color,
                     highlight_color=highlight_color,
@@ -1501,18 +1501,18 @@ class SnabbKarta:
 
                 if centroid:
                     centroid_gdf = gpd.GeoDataFrame(geometry=gdf.centroid, crs="EPSG:4326")
-                    centroid_layer = Karta._create_point_layer(
+                    centroid_layer = SnabbKarta._create_point_layer(
                         centroid_gdf, color=point_color, radius=point_radius, opacity=point_opacity
                     )
                     layers.append(centroid_layer)
 
             elif isinstance(geom, LineString):
-                line_layer = Karta._create_line_layer(gdf, color=line_color, opacity=line_opacity, width=line_weight)
+                line_layer = SnabbKarta._create_line_layer(gdf, color=line_color, opacity=line_opacity, width=line_weight)
                 layers.append(line_layer)
 
             else:  # Point
                 if not heatmap or not heatmap_only:
-                    point_layer = Karta._create_point_layer(
+                    point_layer = SnabbKarta._create_point_layer(
                         gdf,
                         color=point_color,
                         color_head=color_head,
@@ -1543,7 +1543,7 @@ class SnabbKarta:
                         "PathLayer",
                         data=line_df,
                         get_path="path",
-                        get_color=Karta._select_color(line_color),
+                        get_color=SnabbKarta._select_color(line_color),
                         get_width=line_weight,
                         opacity=line_opacity,
                     )
@@ -1575,7 +1575,7 @@ class SnabbKarta:
         sw = [minlat, minlon]
         ne = [maxlat, maxlon]
 
-        deck = Karta._base_map(sw, ne, pitch=pitch)
+        deck = SnabbKarta._base_map(sw, ne, pitch=pitch)
 
         id_col, value_col = columns
         df = pd.DataFrame(mdf.drop(columns="geometry"))
@@ -1634,7 +1634,7 @@ class SnabbKarta:
         mdf = pd.merge(mdf, counts, on=poly_id, how="left")
         mdf["count"] = mdf["count"].fillna(0)
 
-        return Karta.choropleth(mdf, columns=[poly_id, "count"], legend=legend, bins=bins, palette=palette, **kwargs)
+        return SnabbKarta.choropleth(mdf, columns=[poly_id, "count"], legend=legend, bins=bins, palette=palette, **kwargs)
 
 
 class GeomUtils:
