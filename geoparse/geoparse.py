@@ -1243,6 +1243,17 @@ class SnabbKarta:
 
         return palette[idx]
 
+    # gdf (GeoDataFrame): Input geographic data containing point geometries
+    # color (str/column): Either a color name ("blue") or a column name from gdf to color points by values
+    # color_head (int): Used with color column - number of head colors in colormap
+    # color_tail (int): Used with color column - number of tail colors in colormap
+    # opacity (float): Transparency of points (0-1)
+    # radius (int): Base point radius (3 pixels by default)
+    # get_radius (str): Column name to scale point radii by data values
+    # pickable (bool): Whether points are interactive/selectable
+    # auto_highlight (bool): Whether points highlight on hover
+    # fixed_radius (bool): If True, uses pixel units for consistent size; if False, uses meters for geographic scaling
+
     @staticmethod
     def _create_point_layer(
         gdf: gpd.GeoDataFrame,
@@ -1251,7 +1262,7 @@ class SnabbKarta:
         color_tail: int = None,
         opacity: float = 0.5,
         radius: int = 3,
-        get_radius: str = None,
+        get_radius: str = None,  # Column name to scale point radii by data values
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
         pickable: bool = True,
@@ -1290,23 +1301,34 @@ class SnabbKarta:
             default_color = [int(255 * c) for c in matplotlib.colors.to_rgb(color)]
             get_fill_color = default_color
 
-        radius_scale = radius * 10  # Scaling factor for visibility
+        radius * 10  # Scaling factor for visibility
         if get_radius:
-            radius_scale = f"{get_radius} * 10"
+            pass
 
         # Create layer with radiusUnits configuration
         return pdk.Layer(
             "ScatterplotLayer",
             data=df,
             get_position=["lon", "lat"],
-            get_radius=radius_scale,
+            pickable=True,
+            opacity=0.8,
+            stroked=True,
+            filled=True,
+            radius_scale=1,
+            radius_min_pixels=1,
+            radius_max_pixels=10,
+            line_width_min_pixels=1,
+            get_radius=500,  # "exits_radius",
             get_fill_color=get_fill_color,
-            pickable=pickable,
-            auto_highlight=auto_highlight,
-            opacity=opacity,
-            radius_units="pixels" if fixed_radius else "meters",
-            radius_min_pixels=radius if fixed_radius else 0,
-            radius_max_pixels=radius * 2 if fixed_radius else None,
+            get_line_color=get_fill_color,
+            #        get_radius=radius_scale,
+            #        get_fill_color=get_fill_color,
+            #        pickable=pickable,
+            #        auto_highlight=auto_highlight,
+            #        opacity=opacity,
+            #        radius_units="pixels" if fixed_radius else "meters",
+            #        radius_min_pixels=radius if fixed_radius else 0,
+            #        radius_max_pixels=radius * 2 if fixed_radius else None,
         )
 
     @staticmethod
