@@ -1261,13 +1261,13 @@ class SnabbKarta:
         color_head: int = None,
         color_tail: int = None,
         opacity: float = 0.5,
-        radius: int = 3,
+        # radius: int = 3,
         get_radius: str = None,  # Column name to scale point radii by data values
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
         pickable: bool = True,
         auto_highlight: bool = True,
-        fixed_radius: bool = True,  # New parameter to control this behavior
+        # fixed_radius: bool = True,  # New parameter to control this behavior
     ) -> pdk.Layer:
         """Creates a Pydeck point layer from a GeoDataFrame with fixed radius option."""
         df = pd.DataFrame(gdf.drop(columns="geometry"))
@@ -1298,12 +1298,11 @@ class SnabbKarta:
             df["color"] = [SnabbKarta._select_color(x, color_head, color_tail) for x in df[color]]
             get_fill_color = "color"
         else:
-            default_color = [int(255 * c) for c in matplotlib.colors.to_rgb(color)]
-            get_fill_color = default_color
+            get_fill_color = [int(255 * c) for c in matplotlib.colors.to_rgb(color)]
 
-        radius * 10  # Scaling factor for visibility
-        if get_radius:
-            pass
+        # radius * 10  # Scaling factor for visibility
+        # if get_radius:
+        #    pass
 
         # Create layer with radiusUnits configuration
         return pdk.Layer(
@@ -1316,19 +1315,19 @@ class SnabbKarta:
             filled=True,
             radius_scale=1,
             radius_min_pixels=1,
-            radius_max_pixels=10,
+            radius_max_pixels=8,
             line_width_min_pixels=1,
-            get_radius=500,  # "exits_radius",
+            get_radius=get_radius,
             get_fill_color=get_fill_color,
             get_line_color=get_fill_color,
-            #        get_radius=radius_scale,
-            #        get_fill_color=get_fill_color,
-            #        pickable=pickable,
-            #        auto_highlight=auto_highlight,
-            #        opacity=opacity,
-            #        radius_units="pixels" if fixed_radius else "meters",
-            #        radius_min_pixels=radius if fixed_radius else 0,
-            #        radius_max_pixels=radius * 2 if fixed_radius else None,
+            # get_radius=radius_scale,
+            # get_fill_color=get_fill_color,
+            # pickable=pickable,
+            # auto_highlight=auto_highlight,
+            # opacity=opacity,
+            # radius_units="pixels" if fixed_radius else "meters",
+            # radius_min_pixels=radius if fixed_radius else 0,
+            # radius_max_pixels=radius * 2 if fixed_radius else None,
         )
 
     @staticmethod
@@ -1446,8 +1445,8 @@ class SnabbKarta:
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
         point_opacity: float = 0.5,
-        point_radius: int = 3,
-        point_weight: int = 6,
+        get_radius: int = 3,
+        # point_weight: int = 6,
         point_popup: Optional[dict] = None,
         buffer_radius: int = 0,
         ring_inner_radius: int = 0,
@@ -1524,7 +1523,7 @@ class SnabbKarta:
                 if centroid:
                     centroid_gdf = gpd.GeoDataFrame(geometry=gdf.centroid, crs="EPSG:4326")
                     centroid_layer = SnabbKarta._create_point_layer(
-                        centroid_gdf, color=point_color, radius=point_radius, opacity=point_opacity
+                        centroid_gdf, color=point_color, get_radius=get_radius, opacity=point_opacity
                     )
                     layers.append(centroid_layer)
 
@@ -1540,7 +1539,7 @@ class SnabbKarta:
                         color_head=color_head,
                         color_tail=color_tail,
                         opacity=point_opacity,
-                        radius=point_radius,
+                        get_radius=get_radius,
                         speed_field=speed_field,
                         speed_limit_field=speed_limit_field,
                     )
