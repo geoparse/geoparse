@@ -1548,10 +1548,12 @@ class SnabbKarta:
                         "HeatmapLayer",
                         data=heatmap_df,
                         get_position=["lon", "lat"],
-                        radius_pixels=heatmap_radius,
+                        opacity=0.5,
+                        radius_pixels=40,  # heatmap_radius,
                         intensity=1,
-                        threshold=0.1,
+                        threshold=0.05,
                         pickable=True,
+                        get_weight=5,
                     )
                     layers.append(heatmap_layer)
 
