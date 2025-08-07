@@ -1160,7 +1160,7 @@ class Karta:
 
 class SnabbKarta:
     @staticmethod
-    def _base_map(sw: list or tuple, ne: list or tuple, zoom: int = None, pitch: int = 0) -> pdk.Deck:
+    def _base_map(sw: list or tuple, ne: list or tuple, pitch: int = 30) -> pdk.Deck:
         """
         Creates a base map with Carto's light base map and initial view state.
 
@@ -1181,14 +1181,11 @@ class SnabbKarta:
             A Pydeck Deck object with configured view state
         """
         # Calculate center and zoom if not provided
-        center_lat = (sw[0] + ne[0]) / 2
-        center_lon = (sw[1] + ne[1]) / 2
+        lat_center, lon_center = (sw[0] + ne[0]) / 2, (sw[1] + ne[1]) / 2
+        max_length = max(ne[0] - sw[0], ne[1] - sw[1])  # max(lat_diff, lon_diff)
+        zoom = 11 - math.log(max_length * 2, 1.5)
 
-        if zoom is None:
-            lat_diff = ne[0] - sw[0]
-            zoom = max(0, min(20, round(14 - math.log(lat_diff * 2, 1.5))))
-
-        view_state = pdk.ViewState(longitude=center_lon, latitude=center_lat, zoom=zoom, pitch=pitch, bearing=0)
+        view_state = pdk.ViewState(longitude=lon_center, latitude=lat_center, zoom=zoom, pitch=pitch)
 
         # Use Carto's light base map
         return pdk.Deck(
@@ -1467,7 +1464,7 @@ class SnabbKarta:
         line_width: float = 0.3,
         poly_popup: Optional[dict] = None,
         # Other parameters
-        pitch: int = 0,
+        pitch: int = 30,
         tooltip: bool = True,
         **kwargs,
     ) -> pdk.Deck:
@@ -1551,10 +1548,12 @@ class SnabbKarta:
                         "HeatmapLayer",
                         data=heatmap_df,
                         get_position=["lon", "lat"],
-                        radius_pixels=heatmap_radius,
+                        opacity=0.5,
+                        radius_pixels=40,  # heatmap_radius,
                         intensity=1,
-                        threshold=0.1,
+                        threshold=0.05,
                         pickable=True,
+                        get_weight=5,
                     )
                     layers.append(heatmap_layer)
 
