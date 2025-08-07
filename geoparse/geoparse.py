@@ -1467,7 +1467,7 @@ class SnabbKarta:
         line_width: float = 0.3,
         poly_popup: Optional[dict] = None,
         # Other parameters
-        pitch: int = 0,
+        pitch: int = 30,
         tooltip: bool = True,
         **kwargs,
     ) -> pdk.Deck:
