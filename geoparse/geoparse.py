@@ -1185,7 +1185,7 @@ class SnabbKarta:
         max_length = max(ne[0] - sw[0], ne[1] - sw[1])  # max(lat_diff, lon_diff)
         zoom = 11 - math.log(max_length * 2, 1.5)
 
-        view_state = pdk.ViewState(longitude=lon_center, latitude=lat_center, zoom=zoom, pitch=pitch, bearing=0)
+        view_state = pdk.ViewState(longitude=lon_center, latitude=lat_center, zoom=zoom, pitch=pitch)
 
         # Use Carto's light base map
         return pdk.Deck(
