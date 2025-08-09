@@ -642,15 +642,14 @@ class Karta:
         # Initialize bounding box coordinates for the map
         minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
 
-        easting, northing = x, y
         # Iterate through the list of GeoDataFrames to update bounding box
         for gdf in gdf_list:
             if not isinstance(gdf, gpd.GeoDataFrame):  # if pd.DataFrame
                 if not x:  # if x is not specified, determine longitude and latitude columns
-                    easting = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
-                    northing = [col for col in gdf.columns if "lat" in col.lower()][0]
-                lons = gdf[easting]
-                lats = gdf[northing]
+                    x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
+                    y = [col for col in gdf.columns if "lat" in col.lower()][0]
+                lons = gdf[x]
+                lats = gdf[y]
                 minlatg, minlong, maxlatg, maxlong = min(lats), min(lons), max(lats), max(lons)  # minlatg: minlat in gdf
             else:  # If input is a GeoDataFrame, use total_bounds to get the bounding box
                 minlong, minlatg, maxlong, maxlatg = gdf.total_bounds
@@ -717,8 +716,8 @@ class Karta:
                         radius=point_radius,
                         weight=point_weight,
                         popup_dict=point_popup,
-                        x=easting,
-                        y=northing,
+                        x=x,
+                        y=y,
                         axis=1,
                     )
                     if point_color == speed_field:
@@ -1185,7 +1184,7 @@ class SnabbKarta:
         max_length = max(ne[0] - sw[0], ne[1] - sw[1])  # max(lat_diff, lon_diff)
         zoom = 11 - math.log(max_length * 2, 1.5)
 
-        view_state = pdk.ViewState(longitude=lon_center, latitude=lat_center, zoom=zoom, pitch=pitch)
+        view_state = pdk.ViewState(latitude=lat_center, longitude=lon_center, zoom=zoom, pitch=pitch)
 
         # Use Carto's light base map
         return pdk.Deck(
