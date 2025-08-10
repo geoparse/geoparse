@@ -1189,7 +1189,6 @@ class SnabbKarta:
         # Use Carto's light base map
         return pdk.Deck(
             initial_view_state=view_state,
-            layers=[],
             map_style="light",  # Carto light style
             map_provider="carto",  # Explicitly use Carto
         )
