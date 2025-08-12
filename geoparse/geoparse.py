@@ -15,6 +15,7 @@ import folium  # Folium is a Python library used for visualizing geospatial data
 import geopandas as gpd
 import h3
 import matplotlib
+import matplotlib.colors
 import numpy as np
 import pandas as pd
 import pydeck as pdk
@@ -23,6 +24,8 @@ import pyproj
 import requests
 from branca.element import MacroElement, Template
 from folium import plugins
+from lonboard import Map, ScatterplotLayer
+from lonboard._geoarrow.geopandas_interop import geopandas_to_geoarrow
 from s2 import s2
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon, box
 from shapely.geometry.base import BaseGeometry
@@ -1653,6 +1656,73 @@ class SnabbKarta:
         mdf["count"] = mdf["count"].fillna(0)
 
         return SnabbKarta.choropleth(mdf, columns=[poly_id, "count"], legend=legend, bins=bins, palette=palette, **kwargs)
+
+
+class SnabbKarta2:
+    @staticmethod
+    def _create_point_layer(
+        gdf: gpd.GeoDataFrame,
+        color: str = "blue",
+        color_head: int = None,
+        color_tail: int = None,
+        opacity: float = 0.5,
+        get_radius: str = None,
+        speed_field: str = "speed",
+        speed_limit_field: str = "speedlimit",
+        pickable: bool = True,
+    ) -> ScatterplotLayer:
+        """Creates a Lonboard ScatterplotLayer from a GeoDataFrame."""
+        table = geopandas_to_geoarrow(gdf)
+
+        # Convert opacity to 0-255 range
+        opacity_uint8 = int(opacity * 255)
+
+        # Handle color assignment
+        if color == speed_field:
+
+            def speed_color(row):
+                if pd.isna(row[speed_limit_field]) or row[speed_limit_field] <= 0:
+                    return [128, 0, 128, opacity_uint8]  # purple
+                elif row[speed_field] <= row[speed_limit_field]:
+                    return [0, 0, 255, opacity_uint8]  # blue
+                elif row[speed_field] < 1.1 * row[speed_limit_field]:
+                    return [0, 255, 0, opacity_uint8]  # green
+                elif row[speed_field] < 1.2 * row[speed_limit_field]:
+                    return [255, 255, 0, opacity_uint8]  # yellow
+                elif row[speed_field] < 1.3 * row[speed_limit_field]:
+                    return [255, 165, 0, opacity_uint8]  # orange
+                elif row[speed_field] < 1.4 * row[speed_limit_field]:
+                    return [255, 0, 0, opacity_uint8]  # red
+                else:
+                    return [0, 0, 0, opacity_uint8]  # black
+
+            fill_color = np.array([speed_color(row) for _, row in gdf.iterrows()], dtype=np.uint8)
+        elif color in gdf.columns:
+            fill_color = np.array(
+                [[*SnabbKarta._select_color(x, color_head, color_tail), opacity_uint8] for x in gdf[color]], dtype=np.uint8
+            )
+        else:
+            rgb_color = [int(c * 255) for c in matplotlib.colors.to_rgb(color)]
+            fill_color = np.array([[*rgb_color, opacity_uint8]] * len(gdf), dtype=np.uint8)
+
+        # Handle radius
+        radius = (
+            gdf[get_radius].values.astype(float) if get_radius and get_radius in gdf.columns else np.array([1.0] * len(gdf))
+        )
+
+        layer = ScatterplotLayer(
+            table=table,
+            get_fill_color=fill_color,
+            get_radius=radius,
+            get_line_color=fill_color,
+            filled=True,
+            stroked=True,
+            line_width_min_pixels=1,
+            radius_min_pixels=1,
+            radius_max_pixels=100,
+            pickable=pickable,
+        )
+        return Map(layer, _height=600)
 
 
 class GeomUtils:
