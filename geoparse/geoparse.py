@@ -1736,7 +1736,7 @@ class SnabbKarta2:
             pickable=pickable,
         )
 
-        return Map(layer, _height=600)
+        return Map(layer, _height=800)
 
 
 class GeomUtils:
