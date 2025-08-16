@@ -14,6 +14,7 @@ from typing import List, Optional, Set, Tuple, Union
 import folium  # Folium is a Python library used for visualizing geospatial data. Actually, it's a Python wrapper for Leaflet which is a leading open-source JavaScript library for plotting interactive maps.
 import geopandas as gpd
 import h3
+import lonboard
 import matplotlib
 import matplotlib.colors
 import numpy as np
@@ -24,8 +25,6 @@ import pyproj
 import requests
 from branca.element import MacroElement, Template
 from folium import plugins
-from lonboard import Map, ScatterplotLayer
-from lonboard._geoarrow.geopandas_interop import geopandas_to_geoarrow
 from s2 import s2
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon, box
 from shapely.geometry.base import BaseGeometry
@@ -1660,6 +1659,67 @@ class SnabbKarta:
 
 class SnabbKarta2:
     @staticmethod
+    def _base_map(sw: list or tuple, ne: list or tuple, pitch: int = 30, layers: list = None) -> lonboard.Map:
+        """
+        Creates a base map with Carto's light base map and initial view state.
+        """
+        lat_center, lon_center = (sw[0] + ne[0]) / 2, (sw[1] + ne[1]) / 2
+        max_length = max(ne[0] - sw[0], ne[1] - sw[1])
+        zoom = 11 - math.log(max_length * 2, 1.5)
+
+        return lonboard.Map(
+            layers=layers if layers else [],
+            initial_view_state={"latitude": lat_center, "longitude": lon_center, "zoom": zoom, "pitch": pitch, "bearing": 0},
+            basemap_style="carto-light",
+            height=600,
+            width="100%",
+        )
+
+    @staticmethod
+    def _select_color(col: Union[int, float, str], head: int = None, tail: int = None) -> list:
+        """
+        Generates a consistent color based on input value.
+        """
+        palette = [
+            [230, 25, 75, 200],  # red
+            [67, 99, 216, 200],  # blue
+            [60, 180, 75, 200],  # green
+            [128, 0, 0, 200],  # maroon
+            [0, 128, 128, 200],  # teal
+            [0, 0, 128, 200],  # navy
+            [245, 130, 49, 200],  # orange
+            [145, 30, 180, 200],  # purple
+            [128, 128, 0, 200],  # olive
+            [154, 99, 36, 200],  # brown
+            [240, 50, 230, 200],  # magenta
+            [223, 177, 25, 200],  # dark yellow
+            [66, 212, 244, 200],  # cyan
+            [128, 128, 128, 200],  # grey
+            [225, 35, 72, 200],  # Bright Red
+            [220, 44, 70, 200],  # Strong Red
+            [215, 54, 68, 200],  # Vivid Red
+            [205, 74, 64, 200],  # Deep Red
+            [200, 84, 62, 200],  # Intense Red
+            [194, 94, 60, 200],  # Fire Red
+            [189, 104, 58, 200],  # Scarlet
+            [183, 114, 56, 200],  # Fiery Orange
+            [178, 124, 54, 200],  # Tangerine
+            [173, 134, 52, 200],  # Burnt Orange
+        ]
+
+        if col is None or (isinstance(col, float) and math.isnan(col)):
+            return [0, 0, 0, 255]
+
+        if isinstance(col, (int, float)):
+            idx = int(col) % len(palette)
+        else:
+            col = str(col)
+            col = re.sub(r"[\W_]+", "", col)
+            idx = int(col[head:tail], 36) % len(palette)
+
+        return palette[idx]
+
+    @staticmethod
     def _create_point_layer(
         gdf: gpd.GeoDataFrame,
         color: str = "blue",
@@ -1670,14 +1730,14 @@ class SnabbKarta2:
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
         pickable: bool = True,
-    ) -> ScatterplotLayer:
+    ) -> lonboard.ScatterplotLayer:
         """Creates a Lonboard ScatterplotLayer from a GeoDataFrame."""
-        table = geopandas_to_geoarrow(gdf)
+        table = gdf.copy()
+        table["lon"] = table.geometry.x
+        table["lat"] = table.geometry.y
 
-        # Convert opacity to 0-255 range
         opacity_uint8 = int(opacity * 255)
 
-        # Handle color assignment
         if color == speed_field:
 
             def speed_color(row):
@@ -1696,33 +1756,87 @@ class SnabbKarta2:
                 else:
                     return [0, 0, 0, opacity_uint8]  # black
 
-            fill_color = np.array([speed_color(row) for _, row in gdf.iterrows()], dtype=np.uint8)
-        elif color in gdf.columns:
-            fill_color = np.array(
-                [[*SnabbKarta._select_color(x, color_head, color_tail), opacity_uint8] for x in gdf[color]], dtype=np.uint8
-            )
+            table["color"] = table.apply(speed_color, axis=1)
+            get_fill_color = "color"
+        elif color in table.columns:
+            table["color"] = [SnabbKarta2._select_color(x, color_head, color_tail) for x in table[color]]
+            get_fill_color = "color"
         else:
-            rgb_color = [int(c * 255) for c in matplotlib.colors.to_rgb(color)]
-            fill_color = np.array([[*rgb_color, opacity_uint8]] * len(gdf), dtype=np.uint8)
+            rgb_color = [int(c * 255) for c in matplotlib.colors.to_rgb(color)] + [opacity_uint8]
+            get_fill_color = rgb_color
 
-        # Handle radius
-        radius = (
-            gdf[get_radius].values.astype(float) if get_radius and get_radius in gdf.columns else np.array([1.0] * len(gdf))
-        )
+        radius = table[get_radius].values if get_radius and get_radius in table.columns else 3
 
-        layer = ScatterplotLayer(
+        return lonboard.ScatterplotLayer(
             table=table,
-            get_fill_color=fill_color,
+            get_position=["lon", "lat"],
+            get_fill_color=get_fill_color,
+            get_line_color=get_fill_color,
             get_radius=radius,
-            get_line_color=fill_color,
+            radius_min_pixels=1,
+            radius_max_pixels=100,
             filled=True,
             stroked=True,
             line_width_min_pixels=1,
-            radius_min_pixels=1,
-            radius_max_pixels=100,
             pickable=pickable,
         )
-        return Map(layer, _height=600)
+
+    @staticmethod
+    def _create_line_layer(
+        gdf: gpd.GeoDataFrame,
+        color: str = "[0, 0, 255]",
+        opacity: float = 0.5,
+        width: int = 6,
+    ) -> lonboard.PathLayer:
+        """Creates a Lonboard PathLayer from a GeoDataFrame."""
+        table = gdf.copy()
+
+        if color.startswith("[") and color.endswith("]"):
+            line_color = [int(x) for x in color.strip("[]").split(",")] + [int(opacity * 255)]
+        else:
+            line_color = [int(c * 255) for c in matplotlib.colors.to_rgb(color)] + [int(opacity * 255)]
+
+        # Convert LineString geometries to paths
+        table["path"] = table.geometry.apply(lambda geom: list(zip(*geom.xy)))
+
+        return lonboard.PathLayer(
+            table=table,
+            get_path="path",
+            width=width,
+            get_color=line_color,
+        )
+
+    @staticmethod
+    def _create_polygon_layer(
+        gdf: gpd.GeoDataFrame,
+        fill_color: str = "[255, 0, 0]",
+        highlight_color: str = "[0, 255, 0]",
+        fill_opacity: float = 0.25,
+        line_width: float = 0.3,
+    ) -> lonboard.PolygonLayer:
+        """Creates a Lonboard PolygonLayer from a GeoDataFrame."""
+        table = gdf.copy()
+
+        if fill_color.startswith("[") and fill_color.endswith("]"):
+            fill_color = [int(x) for x in fill_color.strip("[]").split(",")] + [int(fill_opacity * 255)]
+        else:
+            fill_color = [int(c * 255) for c in matplotlib.colors.to_rgb(fill_color)] + [int(fill_opacity * 255)]
+
+        if highlight_color.startswith("[") and highlight_color.endswith("]"):
+            highlight_color = [int(x) for x in highlight_color.strip("[]").split(",")] + [255]
+        else:
+            highlight_color = [int(c * 255) for c in matplotlib.colors.to_rgb(highlight_color)] + [255]
+
+        return lonboard.PolygonLayer(
+            table=table,
+            get_polygon="geometry",
+            filled=True,
+            stroked=True,
+            get_fill_color=fill_color,
+            get_line_color=highlight_color,
+            line_width_min_pixels=line_width,
+            pickable=True,
+        )
 
 
 class GeomUtils:
