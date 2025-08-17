@@ -14,6 +14,7 @@ from typing import List, Optional, Set, Tuple, Union
 import folium  # Folium is a Python library used for visualizing geospatial data. Actually, it's a Python wrapper for Leaflet which is a leading open-source JavaScript library for plotting interactive maps.
 import geopandas as gpd
 import h3
+import lonboard as lb
 import matplotlib
 import matplotlib.colors
 import numpy as np
@@ -24,8 +25,8 @@ import pyproj
 import requests
 from branca.element import MacroElement, Template
 from folium import plugins
-from lonboard import Map, ScatterplotLayer
-from lonboard._geoarrow.geopandas_interop import geopandas_to_geoarrow
+from lonboard import Map
+from lonboard.basemap import CartoBasemap
 from s2 import s2
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon, box
 from shapely.geometry.base import BaseGeometry
@@ -1660,6 +1661,22 @@ class SnabbKarta:
 
 class SnabbKarta2:
     @staticmethod
+    def _base_map(layers, basemap_style=CartoBasemap.Positron, pitch=30, map_height=800):
+        ## Create postitron map focused on the arch
+        return Map(
+            layers=layers,
+            basemap_style=basemap_style,
+            view_state={
+                #    "longitude": -90.1849,
+                #   "latitude": 38.6245,
+                #  "zoom": 16,
+                "pitch": pitch,
+                "bearing": 0,
+            },
+            _height=map_height,
+        )
+
+    @staticmethod
     def _create_point_layer(
         gdf: gpd.GeoDataFrame,
         color: str = "blue",
@@ -1670,10 +1687,8 @@ class SnabbKarta2:
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
         pickable: bool = True,
-    ) -> ScatterplotLayer:
+    ) -> lb.ScatterplotLayer:
         """Creates a Lonboard ScatterplotLayer from a GeoDataFrame."""
-
-        table = geopandas_to_geoarrow(gdf)
 
         # Convert opacity to 0-255 range
 
@@ -1723,8 +1738,8 @@ class SnabbKarta2:
             gdf[get_radius].values.astype(float) if get_radius and get_radius in gdf.columns else np.array([1.0] * len(gdf))
         )
 
-        layer = ScatterplotLayer(
-            table=table,
+        return lb.ScatterplotLayer.from_geopandas(
+            gdf,
             get_fill_color=fill_color,
             get_radius=radius,
             get_line_color=fill_color,
@@ -1736,7 +1751,7 @@ class SnabbKarta2:
             pickable=pickable,
         )
 
-        return Map(layer, _height=800)
+    #    return lb.Map(layer, _height=800)
 
 
 class GeomUtils:
