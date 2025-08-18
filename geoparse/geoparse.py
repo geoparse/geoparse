@@ -1786,19 +1786,13 @@ class SnabbKarta2:
         # Point
         cluster: bool = False,
         heatmap: bool = False,
-        heatmap_only: bool = True,
-        heatmap_radius: int = 12,
-        line: bool = False,
-        antpath: bool = False,
         point_color: str = "blue",
         color_head: Optional[str] = None,
         color_tail: Optional[str] = None,
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
         point_opacity: float = 0.5,
-        point_radius: int = 3,
-        point_weight: int = 6,
-        point_popup: Optional[dict] = None,
+        get_radius: Union[int, str] = None,
         buffer_radius: int = 0,
         ring_inner_radius: int = 0,
         ring_outer_radius: int = 0,
@@ -1807,8 +1801,6 @@ class SnabbKarta2:
         # LineString
         line_color: str = "blue",
         line_opacity: float = 0.5,
-        line_weight: int = 6,
-        line_popup: Optional[dict] = None,
         # Polygon
         centroid: bool = False,  # if True it shows centroids of polygons on the map.
         fill_color: str = "red",
@@ -1838,7 +1830,7 @@ class SnabbKarta2:
         for _i, gdf in enumerate(gdf_list, start=1):
             geom = gdf.geometry.values[0] if isinstance(gdf, gpd.GeoDataFrame) else None
             if isinstance(geom, Point):
-                point_layer = SnabbKarta2._create_point_layer(gdf, color=point_color, get_radius=point_radius)
+                point_layer = SnabbKarta2._create_point_layer(gdf, color=point_color, get_radius=get_radius)
                 layers.append(point_layer)
 
         # Initialize bounding box coordinates for the map
