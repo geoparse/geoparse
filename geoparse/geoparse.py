@@ -1660,26 +1660,6 @@ class SnabbKarta:
 
 class SnabbKarta2:
     @staticmethod
-    def _base_map(sw: list or tuple, ne: list or tuple, basemap_style=CartoBasemap.Positron, pitch=30, map_height=800):
-        # Calculate center and zoom if not provided
-        lat_center, lon_center = (sw[0] + ne[0]) / 2, (sw[1] + ne[1]) / 2
-        max_length = max(ne[0] - sw[0], ne[1] - sw[1])  # max(delta_lat, delta_lon)
-        zoom = 11 - math.log(max_length * 2, 1.5)
-
-        return lb.Map(
-            layers=[],
-            basemap_style=basemap_style,
-            _height=map_height,
-            view_state={
-                "longitude": lon_center,
-                "latitude": lat_center,
-                "zoom": zoom,
-                "pitch": pitch,
-                "bearing": 0,
-            },
-        )
-
-    @staticmethod
     def _create_point_layer(
         gdf: gpd.GeoDataFrame,
         color: str = "blue",
