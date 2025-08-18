@@ -1660,6 +1660,51 @@ class SnabbKarta:
 
 class SnabbKarta2:
     @staticmethod
+    def _select_color(col: Union[int, float, str], head: int = None, tail: int = None) -> list:
+        """
+        Generates a consistent color based on input value.
+        Returns as [R, G, B, A] list for Pydeck compatibility.
+        """
+        palette = [
+            [230, 25, 75, 200],  # red
+            [67, 99, 216, 200],  # blue
+            [60, 180, 75, 200],  # green
+            [128, 0, 0, 200],  # maroon
+            [0, 128, 128, 200],  # teal
+            [0, 0, 128, 200],  # navy
+            [245, 130, 49, 200],  # orange
+            [145, 30, 180, 200],  # purple
+            [128, 128, 0, 200],  # olive
+            [154, 99, 36, 200],  # brown
+            [240, 50, 230, 200],  # magenta
+            [223, 177, 25, 200],  # dark yellow
+            [66, 212, 244, 200],  # cyan
+            [128, 128, 128, 200],  # grey
+            [225, 35, 72, 200],  # Bright Red
+            [220, 44, 70, 200],  # Strong Red
+            [215, 54, 68, 200],  # Vivid Red
+            [205, 74, 64, 200],  # Deep Red
+            [200, 84, 62, 200],  # Intense Red
+            [194, 94, 60, 200],  # Fire Red
+            [189, 104, 58, 200],  # Scarlet
+            [183, 114, 56, 200],  # Fiery Orange
+            [178, 124, 54, 200],  # Tangerine
+            [173, 134, 52, 200],  # Burnt Orange
+        ]
+
+        if col is None or (isinstance(col, float) and math.isnan(col)):
+            return [0, 0, 0, 255]
+
+        if isinstance(col, (int, float)):
+            idx = int(col) % len(palette)
+        else:
+            col = str(col)
+            col = re.sub(r"[\W_]+", "", col)
+            idx = int(col[head:tail], 36) % len(palette)
+
+        return palette[idx]
+
+    @staticmethod
     def _create_point_layer(
         gdf: gpd.GeoDataFrame,
         color: str = "blue",
@@ -1674,11 +1719,9 @@ class SnabbKarta2:
         """Creates a Lonboard ScatterplotLayer from a GeoDataFrame."""
 
         # Convert opacity to 0-255 range
-
         opacity_uint8 = int(opacity * 255)
 
         # Handle color assignment
-
         if color == speed_field:
 
             def speed_color(row):
@@ -1707,16 +1750,14 @@ class SnabbKarta2:
 
         elif color in gdf.columns:
             fill_color = np.array(
-                [[*SnabbKarta._select_color(x, color_head, color_tail), opacity_uint8] for x in gdf[color]], dtype=np.uint8
+                [[*SnabbKarta2._select_color(x, color_head, color_tail), opacity_uint8] for x in gdf[color]], dtype=np.uint8
             )
 
         else:
             rgb_color = [int(c * 255) for c in matplotlib.colors.to_rgb(color)]
-
             fill_color = np.array([[*rgb_color, opacity_uint8]] * len(gdf), dtype=np.uint8)
 
         # Handle radius
-
         radius = (
             gdf[get_radius].values.astype(float) if get_radius and get_radius in gdf.columns else np.array([1.0] * len(gdf))
         )
@@ -1795,7 +1836,7 @@ class SnabbKarta2:
         for _i, gdf in enumerate(gdf_list, start=1):
             geom = gdf.geometry.values[0] if isinstance(gdf, gpd.GeoDataFrame) else None
             if isinstance(geom, Point):
-                point_layer = SnabbKarta2._create_point_layer(gdf)
+                point_layer = SnabbKarta2._create_point_layer(gdf, color=point_color)
                 layers.append(point_layer)
 
         # Initialize bounding box coordinates for the map
