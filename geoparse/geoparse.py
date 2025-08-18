@@ -1712,6 +1712,8 @@ class SnabbKarta2:
         color_tail: int = None,
         opacity: float = 0.5,
         get_radius: str = None,
+        radius_min_pixels: int = 1,
+        radius_max_pixels: int = 8,
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
         pickable: bool = True,
@@ -1836,7 +1838,7 @@ class SnabbKarta2:
         for _i, gdf in enumerate(gdf_list, start=1):
             geom = gdf.geometry.values[0] if isinstance(gdf, gpd.GeoDataFrame) else None
             if isinstance(geom, Point):
-                point_layer = SnabbKarta2._create_point_layer(gdf, color=point_color)
+                point_layer = SnabbKarta2._create_point_layer(gdf, color=point_color, get_radius=point_radius)
                 layers.append(point_layer)
 
         # Initialize bounding box coordinates for the map
