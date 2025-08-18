@@ -1786,19 +1786,13 @@ class SnabbKarta2:
         # Point
         cluster: bool = False,
         heatmap: bool = False,
-        heatmap_only: bool = True,
-        heatmap_radius: int = 12,
-        line: bool = False,
-        antpath: bool = False,
         point_color: str = "blue",
         color_head: Optional[str] = None,
         color_tail: Optional[str] = None,
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
         point_opacity: float = 0.5,
-        point_radius: int = 3,
-        point_weight: int = 6,
-        point_popup: Optional[dict] = None,
+        point_radius: str = None,
         buffer_radius: int = 0,
         ring_inner_radius: int = 0,
         ring_outer_radius: int = 0,
@@ -1807,8 +1801,6 @@ class SnabbKarta2:
         # LineString
         line_color: str = "blue",
         line_opacity: float = 0.5,
-        line_weight: int = 6,
-        line_popup: Optional[dict] = None,
         # Polygon
         centroid: bool = False,  # if True it shows centroids of polygons on the map.
         fill_color: str = "red",
