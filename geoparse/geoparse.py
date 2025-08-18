@@ -1721,43 +1721,43 @@ class SnabbKarta2:
         """Creates a Lonboard ScatterplotLayer from a GeoDataFrame."""
 
         # Convert opacity to 0-255 range
-        opacity_uint8 = int(opacity * 255)
+        opacity = int(opacity * 255)
 
         # Handle color assignment
         if color == speed_field:
 
             def speed_color(row):
                 if pd.isna(row[speed_limit_field]) or row[speed_limit_field] <= 0:
-                    return [128, 0, 128, opacity_uint8]  # purple
+                    return [128, 0, 128, opacity]  # purple
 
                 elif row[speed_field] <= row[speed_limit_field]:
-                    return [0, 0, 255, opacity_uint8]  # blue
+                    return [0, 0, 255, opacity]  # blue
 
                 elif row[speed_field] < 1.1 * row[speed_limit_field]:
-                    return [0, 255, 0, opacity_uint8]  # green
+                    return [0, 255, 0, opacity]  # green
 
                 elif row[speed_field] < 1.2 * row[speed_limit_field]:
-                    return [255, 255, 0, opacity_uint8]  # yellow
+                    return [255, 255, 0, opacity]  # yellow
 
                 elif row[speed_field] < 1.3 * row[speed_limit_field]:
-                    return [255, 165, 0, opacity_uint8]  # orange
+                    return [255, 165, 0, opacity]  # orange
 
                 elif row[speed_field] < 1.4 * row[speed_limit_field]:
-                    return [255, 0, 0, opacity_uint8]  # red
+                    return [255, 0, 0, opacity]  # red
 
                 else:
-                    return [0, 0, 0, opacity_uint8]  # black
+                    return [0, 0, 0, opacity]  # black
 
             fill_color = np.array([speed_color(row) for _, row in gdf.iterrows()], dtype=np.uint8)
 
         elif color in gdf.columns:
             fill_color = np.array(
-                [[*SnabbKarta2._select_color(x, color_head, color_tail), opacity_uint8] for x in gdf[color]], dtype=np.uint8
+                [[*SnabbKarta2._select_color(x, color_head, color_tail), opacity] for x in gdf[color]], dtype=np.uint8
             )
 
         else:
             rgb_color = [int(c * 255) for c in matplotlib.colors.to_rgb(color)]
-            fill_color = np.array([[*rgb_color, opacity_uint8]] * len(gdf), dtype=np.uint8)
+            fill_color = np.array([[*rgb_color, opacity]] * len(gdf), dtype=np.uint8)
 
         # Handle radius
         radius = (
