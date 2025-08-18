@@ -25,7 +25,6 @@ import pyproj
 import requests
 from branca.element import MacroElement, Template
 from folium import plugins
-from lonboard import Map
 from lonboard.basemap import CartoBasemap
 from s2 import s2
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon, box
@@ -1661,19 +1660,23 @@ class SnabbKarta:
 
 class SnabbKarta2:
     @staticmethod
-    def _base_map(layers, basemap_style=CartoBasemap.Positron, pitch=30, map_height=800):
-        ## Create postitron map focused on the arch
-        return Map(
-            layers=layers,
+    def _base_map(sw: list or tuple, ne: list or tuple, basemap_style=CartoBasemap.Positron, pitch=30, map_height=800):
+        # Calculate center and zoom if not provided
+        lat_center, lon_center = (sw[0] + ne[0]) / 2, (sw[1] + ne[1]) / 2
+        max_length = max(ne[0] - sw[0], ne[1] - sw[1])  # max(delta_lat, delta_lon)
+        zoom = 11 - math.log(max_length * 2, 1.5)
+
+        return lb.Map(
+            layers=[],
             basemap_style=basemap_style,
+            _height=map_height,
             view_state={
-                #    "longitude": -90.1849,
-                #   "latitude": 38.6245,
-                #  "zoom": 16,
+                "longitude": lon_center,
+                "latitude": lat_center,
+                "zoom": zoom,
                 "pitch": pitch,
                 "bearing": 0,
             },
-            _height=map_height,
         )
 
     @staticmethod
@@ -1751,7 +1754,108 @@ class SnabbKarta2:
             pickable=pickable,
         )
 
-    #    return lb.Map(layer, _height=800)
+    @staticmethod
+    def plp(
+        gdf_list: Union[pd.DataFrame, gpd.GeoDataFrame, List[Union[pd.DataFrame, gpd.GeoDataFrame]]] = None,
+        basemap_style=CartoBasemap.Positron,
+        pitch=30,
+        map_height=800,
+        # Point
+        cluster: bool = False,
+        heatmap: bool = False,
+        heatmap_only: bool = True,
+        heatmap_radius: int = 12,
+        line: bool = False,
+        antpath: bool = False,
+        point_color: str = "blue",
+        color_head: Optional[str] = None,
+        color_tail: Optional[str] = None,
+        speed_field: str = "speed",
+        speed_limit_field: str = "speedlimit",
+        point_opacity: float = 0.5,
+        point_radius: int = 3,
+        point_weight: int = 6,
+        point_popup: Optional[dict] = None,
+        buffer_radius: int = 0,
+        ring_inner_radius: int = 0,
+        ring_outer_radius: int = 0,
+        x: Optional[str] = None,
+        y: Optional[str] = None,
+        # LineString
+        line_color: str = "blue",
+        line_opacity: float = 0.5,
+        line_weight: int = 6,
+        line_popup: Optional[dict] = None,
+        # Polygon
+        centroid: bool = False,  # if True it shows centroids of polygons on the map.
+        fill_color: str = "red",
+        highlight_color: str = "green",
+        fill_opacity: float = 0.25,
+        highlight_opacity: float = 0.5,
+        line_width: float = 0.3,
+        poly_popup: Optional[dict] = None,
+        geohash_res: int = 0,
+        s2_res: int = -1,
+        h3_res: int = -1,
+        force_full_cover: bool = True,
+        geohash_inner: bool = False,
+        compact: bool = False,
+        # Cells and OSM objects
+        cells: Optional[List[str]] = None,
+        cell_type: Optional[str] = None,  # list of geohash, S2 or H3 cell IDs
+        osm_ways: Optional[List[int]] = None,  # list of OSM way IDs (lines or polygons) and Overpass API URL to query from
+        url: Optional[str] = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
+    ) -> lb.Map:
+        # Ensure `gdf_list` is always a list of GeoDataFrames or DataFrames
+        if isinstance(gdf_list, pd.DataFrame):
+            gdf_list = [gdf_list]
+
+        layers = []
+        # Iterate through each DataFrame or GeoDataFrame in the list to add layers to the map
+        for _i, gdf in enumerate(gdf_list, start=1):
+            geom = gdf.geometry.values[0] if isinstance(gdf, gpd.GeoDataFrame) else None
+            if isinstance(geom, Point):
+                point_layer = SnabbKarta2._create_point_layer(gdf)
+                layers.append(point_layer)
+
+        # Initialize bounding box coordinates for the map
+        minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
+        # Iterate through the list of GeoDataFrames to update bounding box
+        for gdf in gdf_list:
+            if not isinstance(gdf, gpd.GeoDataFrame):  # if pd.DataFrame
+                if not x:  # if x is not specified, determine longitude and latitude columns
+                    x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
+                    y = [col for col in gdf.columns if "lat" in col.lower()][0]
+                lons = gdf[x]
+                lats = gdf[y]
+                minlatg, minlong, maxlatg, maxlong = min(lats), min(lons), max(lats), max(lons)  # minlatg: minlat in gdf
+            else:  # If input is a GeoDataFrame, use total_bounds to get the bounding box
+                minlong, minlatg, maxlong, maxlatg = gdf.total_bounds
+            # Update overall bounding box
+            minlat, minlon = min(minlat, minlatg), min(minlon, minlong)
+            maxlat, maxlon = max(maxlat, maxlatg), max(maxlon, maxlong)
+
+        # Create a base map using the bounding box
+        sw = [minlat, minlon]  # South West (bottom left corner)
+        ne = [maxlat, maxlon]  # North East (top right corner)
+
+        # Calculate center and zoom if not provided
+        lat_center, lon_center = (sw[0] + ne[0]) / 2, (sw[1] + ne[1]) / 2
+        max_length = max(ne[0] - sw[0], ne[1] - sw[1])  # max(delta_lat, delta_lon)
+        zoom = 11 - math.log(max_length * 2, 1.5)
+
+        return lb.Map(
+            layers=layers,
+            basemap_style=basemap_style,
+            _height=map_height,
+            view_state={
+                "longitude": lon_center,
+                "latitude": lat_center,
+                "zoom": zoom,
+                "pitch": pitch,
+                "bearing": 0,
+            },
+        )
 
 
 class GeomUtils:
