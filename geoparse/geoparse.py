@@ -1778,6 +1778,24 @@ class SnabbKarta2:
         )
 
     @staticmethod
+    def _create_poly_layer(
+        gdf: gpd.GeoDataFrame,
+        poly_color=None,
+        poly_highlight=True,
+        pickable=True,
+    ) -> lb.PolygonLayer:
+        if poly_color is None:
+            poly_color = [255, 0, 0, 128]
+        return lb.PolygonLayer.from_geopandas(
+            gdf,
+            get_fill_color=poly_color,
+            auto_highlight=poly_highlight,
+            highlight_color=[255, 0, 0, 64],
+            get_line_color=[0, 0, 0, 255],
+            pickable=pickable,
+        )
+
+    @staticmethod
     def plp(
         gdf_list: Union[pd.DataFrame, gpd.GeoDataFrame, List[Union[pd.DataFrame, gpd.GeoDataFrame]]] = None,
         basemap_style=CartoBasemap.Positron,
@@ -1829,9 +1847,14 @@ class SnabbKarta2:
         # Iterate through each DataFrame or GeoDataFrame in the list to add layers to the map
         for _i, gdf in enumerate(gdf_list, start=1):
             geom = gdf.geometry.values[0] if isinstance(gdf, gpd.GeoDataFrame) else None
+
             if isinstance(geom, Point):
                 point_layer = SnabbKarta2._create_point_layer(gdf, color=point_color, get_radius=point_radius)
                 layers.append(point_layer)
+
+            elif isinstance(geom, (Polygon, MultiPolygon)):
+                poly_layer = SnabbKarta2._create_poly_layer(gdf)
+                layers.append(poly_layer)
 
         # Initialize bounding box coordinates for the map
         minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
