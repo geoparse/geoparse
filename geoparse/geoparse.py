@@ -1283,8 +1283,8 @@ class SnabbKarta:
     def _create_poly_layer(
         gdf: gpd.GeoDataFrame,
         fill_color=None,
-        poly_highlight=True,
         opacity: float = 0.5,
+        poly_highlight=True,
         pickable=True,
     ) -> lb.PolygonLayer:
         # Convert opacity to 0-255 range
@@ -1302,7 +1302,7 @@ class SnabbKarta:
             gdf,
             get_fill_color=get_fill_color,
             auto_highlight=poly_highlight,
-            highlight_color=[255, 0, 0],
+            highlight_color=[255, 0, 0, 128],
             get_line_color=[0, 0, 0, 255],
             pickable=pickable,
         )
