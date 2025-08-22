@@ -1162,6 +1162,246 @@ class Karta:
 
 class SnabbKarta:
     @staticmethod
+    def _select_color(col: Union[int, float, str], head: int = None, tail: int = None) -> list:
+        """
+        Generates a consistent color based on input value.
+        Returns as [R, G, B] list for deck.gl compatibility.
+        """
+        palette = [
+            [255, 0, 0],  # red
+            [0, 128, 0],  # green
+            [0, 0, 255],  # blue
+            [255, 255, 0],  # yellow
+            [128, 0, 128],  # purple
+            [255, 165, 0],  # orange
+            [255, 192, 203],  # pink
+            [165, 42, 42],  # brown
+            [128, 128, 128],  # gray
+            [255, 215, 0],  # gold
+            [255, 255, 255],  # white
+            [0, 255, 255],  # cyan
+            [255, 0, 255],  # magenta
+            [0, 255, 0],  # lime
+            [0, 0, 128],  # navy
+            [0, 128, 128],  # teal
+        ]
+
+        if col is None or (isinstance(col, float) and math.isnan(col)):
+            return [0, 0, 0]
+
+        if isinstance(col, (int, float)):
+            idx = int(col) % len(palette)
+        else:
+            col = str(col)
+            col = re.sub(r"[\W_]+", "", col)
+            idx = int(col[head:tail], 36) % len(palette)
+
+        return palette[idx]
+
+    @staticmethod
+    def _create_point_layer(
+        gdf: gpd.GeoDataFrame,
+        color: str = "blue",
+        color_head: int = None,
+        color_tail: int = None,
+        opacity: float = 0.5,
+        get_radius: str = None,
+        radius_min_pixels: int = 1,
+        radius_max_pixels: int = 8,
+        speed_field: str = "speed",
+        speed_limit_field: str = "speedlimit",
+        pickable: bool = True,
+    ) -> lb.ScatterplotLayer:
+        """Creates a Lonboard ScatterplotLayer from a GeoDataFrame."""
+
+        # Convert opacity to 0-255 range
+        opacity = int(opacity * 255)
+
+        # Handle color assignment
+        if color == speed_field:
+
+            def speed_color(row):
+                if pd.isna(row[speed_limit_field]) or row[speed_limit_field] <= 0:
+                    return [128, 0, 128, opacity]  # purple
+
+                elif row[speed_field] <= row[speed_limit_field]:
+                    return [0, 0, 255, opacity]  # blue
+
+                elif row[speed_field] < 1.1 * row[speed_limit_field]:
+                    return [0, 255, 0, opacity]  # green
+
+                elif row[speed_field] < 1.2 * row[speed_limit_field]:
+                    return [255, 255, 0, opacity]  # yellow
+
+                elif row[speed_field] < 1.3 * row[speed_limit_field]:
+                    return [255, 165, 0, opacity]  # orange
+
+                elif row[speed_field] < 1.4 * row[speed_limit_field]:
+                    return [255, 0, 0, opacity]  # red
+
+                else:
+                    return [0, 0, 0, opacity]  # black
+
+            fill_color = np.array([speed_color(row) for _, row in gdf.iterrows()], dtype=np.uint8)
+
+        elif color in gdf.columns:
+            fill_color = np.array(
+                [[*SnabbKarta._select_color(x, color_head, color_tail), opacity] for x in gdf[color]], dtype=np.uint8
+            )
+
+        else:
+            rgb_color = [int(c * 255) for c in matplotlib.colors.to_rgb(color)]
+            fill_color = np.array([[*rgb_color, opacity]] * len(gdf), dtype=np.uint8)
+
+        # Handle radius
+        radius = (
+            gdf[get_radius].values.astype(float) if get_radius and get_radius in gdf.columns else np.array([1.0] * len(gdf))
+        )
+
+        return lb.ScatterplotLayer.from_geopandas(
+            gdf,
+            get_fill_color=fill_color,
+            get_radius=radius,
+            get_line_color=fill_color,
+            filled=True,
+            stroked=True,
+            line_width_min_pixels=1,
+            radius_min_pixels=1,
+            radius_max_pixels=100,
+            pickable=pickable,
+        )
+
+    @staticmethod
+    def _create_poly_layer(
+        gdf: gpd.GeoDataFrame,
+        fill_color=None,
+        opacity: float = 0.5,
+        poly_highlight=True,
+        pickable=True,
+    ) -> lb.PolygonLayer:
+        # Convert opacity to 0-255 range
+        if fill_color is None:
+            fill_color = [255, 0, 0]
+        opacity = int(opacity * 255)
+
+        if fill_color in gdf.columns:
+            get_fill_color = np.array([SnabbKarta._select_color(item) + [opacity] for item in gdf[fill_color]], dtype=np.uint8)
+        else:
+            rgb_color = [int(c * 255) for c in matplotlib.colors.to_rgb(fill_color)]
+            get_fill_color = np.array([[*rgb_color, opacity]] * len(gdf), dtype=np.uint8)
+
+        return lb.PolygonLayer.from_geopandas(
+            gdf,
+            get_fill_color=get_fill_color,
+            auto_highlight=poly_highlight,
+            highlight_color=[255, 0, 0, 128],
+            get_line_color=[0, 0, 0, 255],
+            pickable=pickable,
+        )
+
+    @staticmethod
+    def plp(
+        gdf_list: Union[pd.DataFrame, gpd.GeoDataFrame, List[Union[pd.DataFrame, gpd.GeoDataFrame]]] = None,
+        basemap_style=CartoBasemap.Positron,
+        pitch=30,
+        map_height=800,
+        # Point
+        cluster: bool = False,
+        heatmap: bool = False,
+        point_color: str = "blue",
+        color_head: Optional[str] = None,
+        color_tail: Optional[str] = None,
+        speed_field: str = "speed",
+        speed_limit_field: str = "speedlimit",
+        point_opacity: float = 0.5,
+        point_radius: str = None,
+        buffer_radius: int = 0,
+        ring_inner_radius: int = 0,
+        ring_outer_radius: int = 0,
+        x: Optional[str] = None,
+        y: Optional[str] = None,
+        # LineString
+        line_color: str = "blue",
+        line_opacity: float = 0.5,
+        # Polygon
+        centroid: bool = False,  # if True it shows centroids of polygons on the map.
+        fill_color: str = "red",
+        highlight_color: str = "green",
+        fill_opacity: float = 0.25,
+        highlight_opacity: float = 0.5,
+        line_width: float = 0.3,
+        poly_popup: Optional[dict] = None,
+        geohash_res: int = 0,
+        s2_res: int = -1,
+        h3_res: int = -1,
+        force_full_cover: bool = True,
+        geohash_inner: bool = False,
+        compact: bool = False,
+        # Cells and OSM objects
+        cells: Optional[List[str]] = None,
+        cell_type: Optional[str] = None,  # list of geohash, S2 or H3 cell IDs
+        osm_ways: Optional[List[int]] = None,  # list of OSM way IDs (lines or polygons) and Overpass API URL to query from
+        url: Optional[str] = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
+    ) -> lb.Map:
+        # Ensure `gdf_list` is always a list of GeoDataFrames or DataFrames
+        if isinstance(gdf_list, pd.DataFrame):
+            gdf_list = [gdf_list]
+
+        layers = []
+        # Iterate through each DataFrame or GeoDataFrame in the list to add layers to the map
+        for _i, gdf in enumerate(gdf_list, start=1):
+            geom = gdf.geometry.values[0] if isinstance(gdf, gpd.GeoDataFrame) else None
+
+            if isinstance(geom, Point):
+                point_layer = SnabbKarta._create_point_layer(gdf, color=point_color, get_radius=point_radius)
+                layers.append(point_layer)
+
+            elif isinstance(geom, (Polygon, MultiPolygon)):
+                poly_layer = SnabbKarta._create_poly_layer(gdf, fill_color=fill_color)
+                layers.append(poly_layer)
+
+        # Initialize bounding box coordinates for the map
+        minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
+        # Iterate through the list of GeoDataFrames to update bounding box
+        for gdf in gdf_list:
+            if not isinstance(gdf, gpd.GeoDataFrame):  # if pd.DataFrame
+                if not x:  # if x is not specified, determine longitude and latitude columns
+                    x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
+                    y = [col for col in gdf.columns if "lat" in col.lower()][0]
+                lons = gdf[x]
+                lats = gdf[y]
+                minlatg, minlong, maxlatg, maxlong = min(lats), min(lons), max(lats), max(lons)  # minlatg: minlat in gdf
+            else:  # If input is a GeoDataFrame, use total_bounds to get the bounding box
+                minlong, minlatg, maxlong, maxlatg = gdf.total_bounds
+            # Update overall bounding box
+            minlat, minlon = min(minlat, minlatg), min(minlon, minlong)
+            maxlat, maxlon = max(maxlat, maxlatg), max(maxlon, maxlong)
+
+        # Create a base map using the bounding box
+        sw = [minlat, minlon]  # South West (bottom left corner)
+        ne = [maxlat, maxlon]  # North East (top right corner)
+
+        # Calculate center and zoom if not provided
+        lat_center, lon_center = (sw[0] + ne[0]) / 2, (sw[1] + ne[1]) / 2
+        max_length = max(ne[0] - sw[0], ne[1] - sw[1])  # max(delta_lat, delta_lon)
+        zoom = 11 - math.log(max_length * 2, 1.5)
+
+        return lb.Map(
+            layers=layers,
+            basemap_style=basemap_style,
+            _height=map_height,
+            view_state={
+                "longitude": lon_center,
+                "latitude": lat_center,
+                "zoom": zoom,
+                "pitch": pitch,
+                "bearing": 0,
+            },
+        )
+
+
+class SnabbKarta2:
+    @staticmethod
     def _base_map(sw: list or tuple, ne: list or tuple, pitch: int = 30) -> pdk.Deck:
         """
         Creates a base map with Carto's light base map and initial view state.
@@ -1293,7 +1533,7 @@ class SnabbKarta:
             df["color"] = df.apply(speed_color, axis=1)
             get_fill_color = "color"
         elif color in df.columns:
-            df["color"] = [SnabbKarta._select_color(x, color_head, color_tail) for x in df[color]]
+            df["color"] = [SnabbKarta2._select_color(x, color_head, color_tail) for x in df[color]]
             get_fill_color = "color"
         else:
             get_fill_color = [int(255 * c) for c in matplotlib.colors.to_rgb(color)]
@@ -1342,10 +1582,10 @@ class SnabbKarta:
         df["path"] = gdf.geometry.apply(lambda geom: list(geom.coords))
 
         if color in df.columns:
-            df["color"] = df[color].apply(lambda x: SnabbKarta._select_color(x))
+            df["color"] = df[color].apply(lambda x: SnabbKarta2._select_color(x))
             get_color = "color"
         else:
-            default_color = SnabbKarta._select_color(color)
+            default_color = SnabbKarta2._select_color(color)
             get_color = default_color
 
         width_scale = width
@@ -1391,7 +1631,7 @@ class SnabbKarta:
 
         # Color handling
         if fill_color in df.columns:
-            df["fill_color"] = df[fill_color].apply(lambda x: SnabbKarta._select_color(x))
+            df["fill_color"] = df[fill_color].apply(lambda x: SnabbKarta2._select_color(x))
             get_fill_color = "fill_color"
         else:
             default_color = fill_color
@@ -1494,7 +1734,7 @@ class SnabbKarta:
         ne = [maxlat, maxlon]
 
         # Create base map with Carto light style
-        deck = SnabbKarta._base_map(sw, ne, pitch=pitch)
+        deck = SnabbKarta2._base_map(sw, ne, pitch=pitch)
         layers = []
 
         # Process each GeoDataFrame
@@ -1509,7 +1749,7 @@ class SnabbKarta:
             geom = gdf.geometry.iloc[0] if len(gdf) > 0 else None
 
             if isinstance(geom, (Polygon, MultiPolygon)):
-                poly_layer = SnabbKarta._create_polygon_layer(
+                poly_layer = SnabbKarta2._create_polygon_layer(
                     gdf,
                     fill_color=fill_color,
                     highlight_color=highlight_color,
@@ -1520,18 +1760,18 @@ class SnabbKarta:
 
                 if centroid:
                     centroid_gdf = gpd.GeoDataFrame(geometry=gdf.centroid, crs="EPSG:4326")
-                    centroid_layer = SnabbKarta._create_point_layer(
+                    centroid_layer = SnabbKarta2._create_point_layer(
                         centroid_gdf, color=point_color, get_radius=get_radius, opacity=point_opacity
                     )
                     layers.append(centroid_layer)
 
             elif isinstance(geom, LineString):
-                line_layer = SnabbKarta._create_line_layer(gdf, color=line_color, opacity=line_opacity, width=line_weight)
+                line_layer = SnabbKarta2._create_line_layer(gdf, color=line_color, opacity=line_opacity, width=line_weight)
                 layers.append(line_layer)
 
             else:  # Point
                 if not heatmap or not heatmap_only:
-                    point_layer = SnabbKarta._create_point_layer(
+                    point_layer = SnabbKarta2._create_point_layer(
                         gdf,
                         color=point_color,
                         color_head=color_head,
@@ -1564,7 +1804,7 @@ class SnabbKarta:
                         "PathLayer",
                         data=line_df,
                         get_path="path",
-                        get_color=SnabbKarta._select_color(line_color),
+                        get_color=SnabbKarta2._select_color(line_color),
                         get_width=line_weight,
                         opacity=line_opacity,
                     )
@@ -1596,7 +1836,7 @@ class SnabbKarta:
         sw = [minlat, minlon]
         ne = [maxlat, maxlon]
 
-        deck = SnabbKarta._base_map(sw, ne, pitch=pitch)
+        deck = SnabbKarta2._base_map(sw, ne, pitch=pitch)
 
         id_col, value_col = columns
         df = pd.DataFrame(mdf.drop(columns="geometry"))
@@ -1655,255 +1895,7 @@ class SnabbKarta:
         mdf = pd.merge(mdf, counts, on=poly_id, how="left")
         mdf["count"] = mdf["count"].fillna(0)
 
-        return SnabbKarta.choropleth(mdf, columns=[poly_id, "count"], legend=legend, bins=bins, palette=palette, **kwargs)
-
-
-class SnabbKarta2:
-    @staticmethod
-    def _select_color(col: Union[int, float, str], head: int = None, tail: int = None) -> list:
-        """
-        Generates a consistent color based on input value.
-        Returns as [R, G, B, A] list for Pydeck compatibility.
-        """
-        palette = [
-            [230, 25, 75, 200],  # red
-            [67, 99, 216, 200],  # blue
-            [60, 180, 75, 200],  # green
-            [128, 0, 0, 200],  # maroon
-            [0, 128, 128, 200],  # teal
-            [0, 0, 128, 200],  # navy
-            [245, 130, 49, 200],  # orange
-            [145, 30, 180, 200],  # purple
-            [128, 128, 0, 200],  # olive
-            [154, 99, 36, 200],  # brown
-            [240, 50, 230, 200],  # magenta
-            [223, 177, 25, 200],  # dark yellow
-            [66, 212, 244, 200],  # cyan
-            [128, 128, 128, 200],  # grey
-            [225, 35, 72, 200],  # Bright Red
-            [220, 44, 70, 200],  # Strong Red
-            [215, 54, 68, 200],  # Vivid Red
-            [205, 74, 64, 200],  # Deep Red
-            [200, 84, 62, 200],  # Intense Red
-            [194, 94, 60, 200],  # Fire Red
-            [189, 104, 58, 200],  # Scarlet
-            [183, 114, 56, 200],  # Fiery Orange
-            [178, 124, 54, 200],  # Tangerine
-            [173, 134, 52, 200],  # Burnt Orange
-        ]
-
-        if col is None or (isinstance(col, float) and math.isnan(col)):
-            return [0, 0, 0, 255]
-
-        if isinstance(col, (int, float)):
-            idx = int(col) % len(palette)
-        else:
-            col = str(col)
-            col = re.sub(r"[\W_]+", "", col)
-            idx = int(col[head:tail], 36) % len(palette)
-
-        return palette[idx]
-
-    @staticmethod
-    def _create_point_layer(
-        gdf: gpd.GeoDataFrame,
-        color: str = "blue",
-        color_head: int = None,
-        color_tail: int = None,
-        opacity: float = 0.5,
-        get_radius: str = None,
-        radius_min_pixels: int = 1,
-        radius_max_pixels: int = 8,
-        speed_field: str = "speed",
-        speed_limit_field: str = "speedlimit",
-        pickable: bool = True,
-    ) -> lb.ScatterplotLayer:
-        """Creates a Lonboard ScatterplotLayer from a GeoDataFrame."""
-
-        # Convert opacity to 0-255 range
-        opacity = int(opacity * 255)
-
-        # Handle color assignment
-        if color == speed_field:
-
-            def speed_color(row):
-                if pd.isna(row[speed_limit_field]) or row[speed_limit_field] <= 0:
-                    return [128, 0, 128, opacity]  # purple
-
-                elif row[speed_field] <= row[speed_limit_field]:
-                    return [0, 0, 255, opacity]  # blue
-
-                elif row[speed_field] < 1.1 * row[speed_limit_field]:
-                    return [0, 255, 0, opacity]  # green
-
-                elif row[speed_field] < 1.2 * row[speed_limit_field]:
-                    return [255, 255, 0, opacity]  # yellow
-
-                elif row[speed_field] < 1.3 * row[speed_limit_field]:
-                    return [255, 165, 0, opacity]  # orange
-
-                elif row[speed_field] < 1.4 * row[speed_limit_field]:
-                    return [255, 0, 0, opacity]  # red
-
-                else:
-                    return [0, 0, 0, opacity]  # black
-
-            fill_color = np.array([speed_color(row) for _, row in gdf.iterrows()], dtype=np.uint8)
-
-        elif color in gdf.columns:
-            fill_color = np.array(
-                [[*SnabbKarta2._select_color(x, color_head, color_tail), opacity] for x in gdf[color]], dtype=np.uint8
-            )
-
-        else:
-            rgb_color = [int(c * 255) for c in matplotlib.colors.to_rgb(color)]
-            fill_color = np.array([[*rgb_color, opacity]] * len(gdf), dtype=np.uint8)
-
-        # Handle radius
-        radius = (
-            gdf[get_radius].values.astype(float) if get_radius and get_radius in gdf.columns else np.array([1.0] * len(gdf))
-        )
-
-        return lb.ScatterplotLayer.from_geopandas(
-            gdf,
-            get_fill_color=fill_color,
-            get_radius=radius,
-            get_line_color=fill_color,
-            filled=True,
-            stroked=True,
-            line_width_min_pixels=1,
-            radius_min_pixels=1,
-            radius_max_pixels=100,
-            pickable=pickable,
-        )
-
-    @staticmethod
-    def _create_poly_layer(
-        gdf: gpd.GeoDataFrame,
-        fill_color=None,
-        poly_highlight=True,
-        opacity: float = 0.5,
-        pickable=True,
-    ) -> lb.PolygonLayer:
-        # Convert opacity to 0-255 range
-        if fill_color is None:
-            fill_color = [255, 0, 0, 128]
-        opacity = int(opacity * 255)
-
-        if fill_color in gdf.columns:
-            get_fill_color = np.array([[*SnabbKarta2._select_color(x), opacity] for x in gdf[fill_color]], dtype=np.uint8)
-        else:
-            rgb_color = [int(c * 255) for c in matplotlib.colors.to_rgb(fill_color)]
-            get_fill_color = np.array([[*rgb_color, opacity]] * len(gdf), dtype=np.uint8)
-
-        return lb.PolygonLayer.from_geopandas(
-            gdf,
-            get_fill_color=get_fill_color,
-            auto_highlight=poly_highlight,
-            highlight_color=[255, 0, 0],
-            get_line_color=[0, 0, 0, 255],
-            pickable=pickable,
-        )
-
-    @staticmethod
-    def plp(
-        gdf_list: Union[pd.DataFrame, gpd.GeoDataFrame, List[Union[pd.DataFrame, gpd.GeoDataFrame]]] = None,
-        basemap_style=CartoBasemap.Positron,
-        pitch=30,
-        map_height=800,
-        # Point
-        cluster: bool = False,
-        heatmap: bool = False,
-        point_color: str = "blue",
-        color_head: Optional[str] = None,
-        color_tail: Optional[str] = None,
-        speed_field: str = "speed",
-        speed_limit_field: str = "speedlimit",
-        point_opacity: float = 0.5,
-        point_radius: str = None,
-        buffer_radius: int = 0,
-        ring_inner_radius: int = 0,
-        ring_outer_radius: int = 0,
-        x: Optional[str] = None,
-        y: Optional[str] = None,
-        # LineString
-        line_color: str = "blue",
-        line_opacity: float = 0.5,
-        # Polygon
-        centroid: bool = False,  # if True it shows centroids of polygons on the map.
-        fill_color: str = "red",
-        highlight_color: str = "green",
-        fill_opacity: float = 0.25,
-        highlight_opacity: float = 0.5,
-        line_width: float = 0.3,
-        poly_popup: Optional[dict] = None,
-        geohash_res: int = 0,
-        s2_res: int = -1,
-        h3_res: int = -1,
-        force_full_cover: bool = True,
-        geohash_inner: bool = False,
-        compact: bool = False,
-        # Cells and OSM objects
-        cells: Optional[List[str]] = None,
-        cell_type: Optional[str] = None,  # list of geohash, S2 or H3 cell IDs
-        osm_ways: Optional[List[int]] = None,  # list of OSM way IDs (lines or polygons) and Overpass API URL to query from
-        url: Optional[str] = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
-    ) -> lb.Map:
-        # Ensure `gdf_list` is always a list of GeoDataFrames or DataFrames
-        if isinstance(gdf_list, pd.DataFrame):
-            gdf_list = [gdf_list]
-
-        layers = []
-        # Iterate through each DataFrame or GeoDataFrame in the list to add layers to the map
-        for _i, gdf in enumerate(gdf_list, start=1):
-            geom = gdf.geometry.values[0] if isinstance(gdf, gpd.GeoDataFrame) else None
-
-            if isinstance(geom, Point):
-                point_layer = SnabbKarta2._create_point_layer(gdf, color=point_color, get_radius=point_radius)
-                layers.append(point_layer)
-
-            elif isinstance(geom, (Polygon, MultiPolygon)):
-                poly_layer = SnabbKarta2._create_poly_layer(gdf, fill_color=fill_color)
-                layers.append(poly_layer)
-
-        # Initialize bounding box coordinates for the map
-        minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
-        # Iterate through the list of GeoDataFrames to update bounding box
-        for gdf in gdf_list:
-            if not isinstance(gdf, gpd.GeoDataFrame):  # if pd.DataFrame
-                if not x:  # if x is not specified, determine longitude and latitude columns
-                    x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
-                    y = [col for col in gdf.columns if "lat" in col.lower()][0]
-                lons = gdf[x]
-                lats = gdf[y]
-                minlatg, minlong, maxlatg, maxlong = min(lats), min(lons), max(lats), max(lons)  # minlatg: minlat in gdf
-            else:  # If input is a GeoDataFrame, use total_bounds to get the bounding box
-                minlong, minlatg, maxlong, maxlatg = gdf.total_bounds
-            # Update overall bounding box
-            minlat, minlon = min(minlat, minlatg), min(minlon, minlong)
-            maxlat, maxlon = max(maxlat, maxlatg), max(maxlon, maxlong)
-
-        # Create a base map using the bounding box
-        sw = [minlat, minlon]  # South West (bottom left corner)
-        ne = [maxlat, maxlon]  # North East (top right corner)
-
-        # Calculate center and zoom if not provided
-        lat_center, lon_center = (sw[0] + ne[0]) / 2, (sw[1] + ne[1]) / 2
-        max_length = max(ne[0] - sw[0], ne[1] - sw[1])  # max(delta_lat, delta_lon)
-        zoom = 11 - math.log(max_length * 2, 1.5)
-
-        return lb.Map(
-            layers=layers,
-            basemap_style=basemap_style,
-            _height=map_height,
-            view_state={
-                "longitude": lon_center,
-                "latitude": lat_center,
-                "zoom": zoom,
-                "pitch": pitch,
-                "bearing": 0,
-            },
-        )
+        return SnabbKarta2.choropleth(mdf, columns=[poly_id, "count"], legend=legend, bins=bins, palette=palette, **kwargs)
 
 
 class GeomUtils:
