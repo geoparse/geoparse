@@ -1780,17 +1780,27 @@ class SnabbKarta2:
     @staticmethod
     def _create_poly_layer(
         gdf: gpd.GeoDataFrame,
-        poly_color=None,
+        fill_color=None,
         poly_highlight=True,
+        opacity: float = 0.5,
         pickable=True,
     ) -> lb.PolygonLayer:
-        if poly_color is None:
-            poly_color = [255, 0, 0, 128]
+        # Convert opacity to 0-255 range
+        if fill_color is None:
+            fill_color = [255, 0, 0, 128]
+        opacity = int(opacity * 255)
+
+        if fill_color in gdf.columns:
+            get_fill_color = np.array([[*SnabbKarta2._select_color(x), opacity] for x in gdf[fill_color]], dtype=np.uint8)
+        else:
+            rgb_color = [int(c * 255) for c in matplotlib.colors.to_rgb(fill_color)]
+            get_fill_color = np.array([[*rgb_color, opacity]] * len(gdf), dtype=np.uint8)
+
         return lb.PolygonLayer.from_geopandas(
             gdf,
-            get_fill_color=poly_color,
+            get_fill_color=get_fill_color,
             auto_highlight=poly_highlight,
-            highlight_color=[255, 0, 0, 64],
+            highlight_color=[255, 0, 0],
             get_line_color=[0, 0, 0, 255],
             pickable=pickable,
         )
@@ -1853,7 +1863,7 @@ class SnabbKarta2:
                 layers.append(point_layer)
 
             elif isinstance(geom, (Polygon, MultiPolygon)):
-                poly_layer = SnabbKarta2._create_poly_layer(gdf)
+                poly_layer = SnabbKarta2._create_poly_layer(gdf, fill_color=fill_color)
                 layers.append(poly_layer)
 
         # Initialize bounding box coordinates for the map
