@@ -1343,6 +1343,33 @@ class SnabbKarta:
         osm_ways: Optional[List[int]] = None,  # list of OSM way IDs (lines or polygons) and Overpass API URL to query from
         url: Optional[str] = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
     ) -> lb.Map:
+        # Handle `cells` input by converting cell IDs to geometries
+        if cells:
+            # cell_poly is faster than the parallelized pcell_poly because, for small datasets, the overhead of parallelization increases the total runtime.
+            geoms, res = SpatialIndex.cell_poly(cells, cell_type=cell_type)
+            gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
+            karta = SnabbKarta.plp(gdf, poly_popup={"ID": "id", "Resolution": "res"})
+            return karta
+
+        # Handle `osm_ways` input by converting OSM way IDs to geometries
+        if osm_ways:
+            geoms = OSMUtils.ways_to_geom(osm_ways, url)
+            gdf = gpd.GeoDataFrame({"way_id": osm_ways, "geometry": geoms}, crs="EPSG:4326")
+            if isinstance(gdf.geometry[0], LineString):
+                karta = SnabbKarta.plp(gdf, line_popup={"way_id": "way_id"}, line_color="red")
+            else:
+                karta = SnabbKarta.plp(
+                    gdf,
+                    geohash_res=geohash_res,
+                    s2_res=s2_res,
+                    h3_res=h3_res,
+                    geohash_inner=geohash_inner,
+                    compact=compact,
+                    poly_popup={"way_id": "way_id"},
+                    fill_color="red",
+                )
+            return karta
+
         # Ensure `gdf_list` is always a list of GeoDataFrames or DataFrames
         if isinstance(gdf_list, pd.DataFrame):
             gdf_list = [gdf_list]
