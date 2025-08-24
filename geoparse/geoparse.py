@@ -1272,14 +1272,12 @@ class SnabbKarta:
     @staticmethod
     def _create_poly_layer(
         gdf: gpd.GeoDataFrame,
-        fill_color=None,
+        fill_color="red",
         opacity: float = 0.5,
         poly_highlight=True,
         pickable=True,
     ) -> lb.PolygonLayer:
         # Convert opacity to 0-255 range
-        if fill_color is None:
-            fill_color = [255, 0, 0]
         opacity = int(opacity * 255)
 
         if fill_color in gdf.columns:
@@ -1408,6 +1406,37 @@ class SnabbKarta:
             if isinstance(geom, Point):
                 point_layer = SnabbKarta._create_point_layer(gdf, color=point_color, get_radius=point_radius)
                 layers.append(point_layer)
+
+                # Create a buffer visualization if `buffer_radius > 0`
+                if buffer_radius > 0:
+                    if not isinstance(gdf, gpd.GeoDataFrame):
+                        bgdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(lons, lats), crs="EPSG:4326")
+                    else:
+                        bgdf = gdf.copy()  # buffered gdf: Create a copy of the GeoDataFrame to modify geometries
+                    # Apply buffer to geometries using the specified radius in meters
+                    bgdf["geometry"] = (
+                        bgdf.to_crs(GeomUtils.find_proj(bgdf.geometry.values[0])).buffer(buffer_radius).to_crs("EPSG:4326")
+                    )
+                    # Add the buffer layer to the map
+                    buffer_layer = SnabbKarta._create_poly_layer(bgdf)
+                    layers.append(buffer_layer)
+
+                # Create ring visualization if `ring_outer_radius > 0`
+                if ring_outer_radius > 0:
+                    if not isinstance(gdf, gpd.GeoDataFrame):
+                        bgdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(lons, lats), crs="EPSG:4326")
+                    else:
+                        bgdf = gdf.copy()  # buffered gdf: Create a copy of the GeoDataFrame to modify geometries
+                    # Create ring shapes by applying an outer and inner buffer, subtracting the inner from the outer
+                    bgdf["geometry"] = (
+                        bgdf.to_crs(GeomUtils.find_proj(bgdf.geometry.values[0]))
+                        .buffer(ring_outer_radius)
+                        .difference(bgdf.to_crs(GeomUtils.find_proj(bgdf.geometry.values[0])).buffer(ring_inner_radius))
+                        .to_crs("EPSG:4326")
+                    )  # radius in meters
+                    # Add the ring-shaped geometries to the map as polygons
+                    ring_layer = SnabbKarta._create_poly_layer(bgdf)
+                    layers.append(ring_layer)
 
             elif isinstance(geom, (Polygon, MultiPolygon)):
                 poly_layer = SnabbKarta._create_poly_layer(gdf, fill_color=fill_color)
