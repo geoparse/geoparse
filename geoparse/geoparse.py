@@ -1372,8 +1372,9 @@ class SnabbKarta:
         lat_center, lon_center = (sw[0] + ne[0]) / 2, (sw[1] + ne[1]) / 2
         max_length = max(ne[0] - sw[0], ne[1] - sw[1])  # max(delta_lat, delta_lon)
         zoom = 11 - math.log(max_length * 2, 1.5)
-        layers = []
+
         # Iterate through each DataFrame or GeoDataFrame in the list to add layers to the map
+        layers = []
         for _i, gdf in enumerate(gdf_list, start=1):
             geom = gdf.geometry.values[0] if isinstance(gdf, gpd.GeoDataFrame) else None
 
