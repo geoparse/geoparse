@@ -1417,7 +1417,7 @@ class SnabbKarta:
                         bgdf.to_crs(GeomUtils.find_proj(bgdf.geometry.values[0])).buffer(buffer_radius).to_crs("EPSG:4326")
                     )
                     # Add the buffer layer to the map
-                    buffer_layer = SnabbKarta._create_poly_layer(bgdf)
+                    buffer_layer = SnabbKarta._create_poly_layer(bgdf[["geometry"]])
                     layers.append(buffer_layer)
 
                 # Create ring visualization if `ring_outer_radius > 0`
@@ -1434,7 +1434,7 @@ class SnabbKarta:
                         .to_crs("EPSG:4326")
                     )  # radius in meters
                     # Add the ring-shaped geometries to the map as polygons
-                    ring_layer = SnabbKarta._create_poly_layer(bgdf)
+                    ring_layer = SnabbKarta._create_poly_layer(bgdf[["geometry"]])
                     layers.append(ring_layer)
 
             elif isinstance(geom, (Polygon, MultiPolygon)):
