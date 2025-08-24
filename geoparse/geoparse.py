@@ -1327,7 +1327,6 @@ class SnabbKarta:
         highlight_color: str = "green",
         fill_opacity: float = 0.25,
         highlight_opacity: float = 0.5,
-        line_width: float = 0.3,
         poly_popup: Optional[dict] = None,
         geohash_res: int = 0,
         s2_res: int = -1,
@@ -1441,6 +1440,10 @@ class SnabbKarta:
             elif isinstance(geom, (Polygon, MultiPolygon)):
                 poly_layer = SnabbKarta._create_poly_layer(gdf, fill_color=fill_color)
                 layers.append(poly_layer)
+                if centroid:  # Show centroids of polygons if `centroid=True`
+                    cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs="EPSG:4326")  # centroid df
+                    centroid_layer = SnabbKarta._create_point_layer(cdf)
+                    layers.append(centroid_layer)
 
             # Geohash visualization if `geohash_res > 0`
             if geohash_res > 0:  # inner=False doesn't work if compact=True
