@@ -1295,7 +1295,7 @@ class SnabbKarta:
             highlight_color=[0, 255, 0, 255],
             get_line_color=[0, 0, 0, 255],
             line_width_min_pixels=1,
-            line_width_max_pixels=8,
+            line_width_max_pixels=1,
             pickable=pickable,
         )
 
@@ -1385,6 +1385,40 @@ class SnabbKarta:
             elif isinstance(geom, (Polygon, MultiPolygon)):
                 poly_layer = SnabbKarta._create_poly_layer(gdf, fill_color=fill_color)
                 layers.append(poly_layer)
+
+            # Geohash visualization if `geohash_res > 0`
+            if geohash_res > 0:  # inner=False doesn't work if compact=True
+                # Create a polygon for bounding box if input is not a polygon
+                if isinstance(geom, Polygon) or isinstance(geom, MultiPolygon):
+                    cdf = gdf.copy()
+                else:
+                    bb = Polygon([[minlon, minlat], [maxlon, minlat], [maxlon, maxlat], [minlon, maxlat], [minlon, minlat]])
+                    cdf = gpd.GeoDataFrame({"geometry": [bb]}, crs="EPSG:4326")  # Create a bounding box GeoDataFrame
+
+                # Convert geometries to geohash cells and their geometries
+                cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type="geohash", res=geohash_res, compact=compact)
+                geoms, res = SpatialIndex.cell_poly(cells, cell_type="geohash")
+                cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
+
+                geohash_layer = SnabbKarta._create_poly_layer(cdf, fill_color="green")
+                layers.append(geohash_layer)
+
+            # S2 cell visualization if `s2_res > -1`
+            if s2_res > -1:
+                # Create a polygon for bounding box if input is not a polygon
+                if isinstance(geom, Polygon) or isinstance(geom, MultiPolygon):
+                    cdf = gdf.copy()
+                else:
+                    bb = Polygon([[minlon, minlat], [maxlon, minlat], [maxlon, maxlat], [minlon, maxlat], [minlon, minlat]])
+                    cdf = gpd.GeoDataFrame({"geometry": [bb]}, crs="EPSG:4326")  # cell df
+
+                # Convert geometries to S2 cells and their geometries
+                cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type="s2", res=s2_res, compact=compact)
+                geoms, res = SpatialIndex.cell_poly(cells, cell_type="s2")
+                cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
+
+                s2_layer = SnabbKarta._create_poly_layer(cdf, fill_color="green")
+                layers.append(s2_layer)
 
             # H3 cell visualization if `h3_res > -1`
             if h3_res > -1:
