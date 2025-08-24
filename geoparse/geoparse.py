@@ -1292,8 +1292,10 @@ class SnabbKarta:
             gdf,
             get_fill_color=get_fill_color,
             auto_highlight=poly_highlight,
-            highlight_color=[255, 0, 0, 128],
+            highlight_color=[0, 255, 0, 255],
             get_line_color=[0, 0, 0, 255],
+            line_width_min_pixels=1,
+            line_width_max_pixels=8,
             pickable=pickable,
         )
 
@@ -1345,19 +1347,6 @@ class SnabbKarta:
         if isinstance(gdf_list, pd.DataFrame):
             gdf_list = [gdf_list]
 
-        layers = []
-        # Iterate through each DataFrame or GeoDataFrame in the list to add layers to the map
-        for _i, gdf in enumerate(gdf_list, start=1):
-            geom = gdf.geometry.values[0] if isinstance(gdf, gpd.GeoDataFrame) else None
-
-            if isinstance(geom, Point):
-                point_layer = SnabbKarta._create_point_layer(gdf, color=point_color, get_radius=point_radius)
-                layers.append(point_layer)
-
-            elif isinstance(geom, (Polygon, MultiPolygon)):
-                poly_layer = SnabbKarta._create_poly_layer(gdf, fill_color=fill_color)
-                layers.append(poly_layer)
-
         # Initialize bounding box coordinates for the map
         minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
         # Iterate through the list of GeoDataFrames to update bounding box
@@ -1383,6 +1372,37 @@ class SnabbKarta:
         lat_center, lon_center = (sw[0] + ne[0]) / 2, (sw[1] + ne[1]) / 2
         max_length = max(ne[0] - sw[0], ne[1] - sw[1])  # max(delta_lat, delta_lon)
         zoom = 11 - math.log(max_length * 2, 1.5)
+        layers = []
+        # Iterate through each DataFrame or GeoDataFrame in the list to add layers to the map
+        for _i, gdf in enumerate(gdf_list, start=1):
+            geom = gdf.geometry.values[0] if isinstance(gdf, gpd.GeoDataFrame) else None
+
+            if isinstance(geom, Point):
+                point_layer = SnabbKarta._create_point_layer(gdf, color=point_color, get_radius=point_radius)
+                layers.append(point_layer)
+
+            elif isinstance(geom, (Polygon, MultiPolygon)):
+                poly_layer = SnabbKarta._create_poly_layer(gdf, fill_color=fill_color)
+                layers.append(poly_layer)
+
+            # H3 cell visualization if `h3_res > -1`
+            if h3_res > -1:
+                if isinstance(geom, Polygon) or isinstance(geom, MultiPolygon):
+                    cdf = gdf.copy()
+                # Create a bounding box GeoDataFrame
+                else:
+                    bb = Polygon([[minlon, minlat], [maxlon, minlat], [maxlon, maxlat], [minlon, maxlat], [minlon, minlat]])
+                    cdf = gpd.GeoDataFrame({"geometry": [bb]}, crs="EPSG:4326")  # cell df
+
+                # Convert geometries to H3 cells and their Shapely hexagons
+                cells, _ = SpatialIndex.ppoly_cell(
+                    cdf, cell_type="h3", res=h3_res, force_full_cover=force_full_cover, compact=compact
+                )
+                geoms, res = SpatialIndex.cell_poly(cells, cell_type="h3")
+                cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
+
+                h3_layer = SnabbKarta._create_poly_layer(cdf, fill_color="green")
+                layers.append(h3_layer)
 
         return lb.Map(
             layers=layers,
