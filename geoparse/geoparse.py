@@ -623,9 +623,6 @@ class Karta:
         if isinstance(gdf_list, pd.DataFrame):
             gdf_list = [gdf_list]
 
-        # Initialize bounding box coordinates for the map
-        minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
-
         # Iterate through the list of GeoDataFrames to update bounding box
         for gdf in gdf_list:
             if not isinstance(gdf, gpd.GeoDataFrame):  # if pd.DataFrame
@@ -634,12 +631,9 @@ class Karta:
                     y = [col for col in gdf.columns if "lat" in col.lower()][0]
                 lons = gdf[x]
                 lats = gdf[y]
-                minlatg, minlong, maxlatg, maxlong = min(lats), min(lons), max(lats), max(lons)  # minlatg: minlat in gdf
+                minlat, minlon, maxlat, maxlon = min(lats), min(lons), max(lats), max(lons)  # minlatg: minlat in gdf
             else:  # If input is a GeoDataFrame, use total_bounds to get the bounding box
-                minlong, minlatg, maxlong, maxlatg = gdf.total_bounds
-            # Update overall bounding box
-            minlat, minlon = min(minlat, minlatg), min(minlon, minlong)
-            maxlat, maxlon = max(maxlat, maxlatg), max(maxlon, maxlong)
+                minlon, minlat, maxlon, maxlat = gdf.total_bounds
 
         # Create a base map using the bounding box
         sw = [minlat, minlon]  # South West (bottom left corner)
