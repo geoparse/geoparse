@@ -191,8 +191,6 @@ class Karta:
         color: str = "black",
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
-        color_head: int = None,
-        color_tail: int = None,
         opacity: float = 0.5,
         radius: int = 3,
         weight: int = 6,
@@ -218,14 +216,7 @@ class Karta:
         color : str
             Specifies the color of the marker. If "speed" is passed, the marker color is determined by comparing
             the 'speed' and 'speedlimit' values in the row (e.g., blue for under the speed limit, black for very high speeds).
-            Otherwise, it can be a column name in the `row` that determines the color based on the `color_head` and
-            `color_tail` parameters to create a unique color from that column's value.
-
-        color_head : int, optional
-            Starting index for substring extraction from the `color` column value to create a unique color (default is None).
-
-        color_tail : int, optional
-            Ending index for substring extraction from the `color` column value to create a unique color (default is None).
+            Otherwise, it can be a column name in the `row` to create a unique color from that column's value.
 
         opacity : float, optional
             Opacity of the marker (default is 0.5).
@@ -284,7 +275,7 @@ class Karta:
                 color = "black"
         # Determine color if column is specified
         elif color in row.index:  # color in DataFrame columns
-            color = Karta._select_color(row[color], color_head, color_tail)
+            color = Karta._select_color(row[color])
 
         # Create a popup HTML if popup_dict is provided
         popup = "".join(f"{item}: <b>{row[popup_dict[item]]}</b><br>" for item in popup_dict) if popup_dict else None
@@ -431,8 +422,6 @@ class Karta:
         line: bool = False,
         antpath: bool = False,
         point_color: str = "blue",
-        color_head: Optional[str] = None,
-        color_tail: Optional[str] = None,
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
         point_opacity: float = 0.5,
@@ -500,12 +489,6 @@ class Karta:
 
         point_color : str, default "blue"
             Color of the points when displayed on the map.
-
-        color_head : str, optional
-            Substring index for the head to extract color.
-
-        color_tail : str, optional
-            Substring index for the tail to extract color.
 
         speed_field : str, default "speed"
             Name of the speed field in DataFrame or GeoDataFrame.
@@ -709,8 +692,6 @@ class Karta:
                         Karta._add_point,
                         karta=group_point,
                         color=point_color,
-                        color_head=color_head,
-                        color_tail=color_tail,
                         speed_field=speed_field,
                         speed_limit_field=speed_limit_field,
                         opacity=point_opacity,
@@ -1200,8 +1181,6 @@ class SnabbKarta:
     def _create_point_layer(
         gdf: gpd.GeoDataFrame,
         color: str = "blue",
-        color_head: int = None,
-        color_tail: int = None,
         opacity: float = 0.5,
         get_radius: str = None,
         radius_min_pixels: int = 1,
@@ -1243,9 +1222,7 @@ class SnabbKarta:
             fill_color = np.array([speed_color(row) for _, row in gdf.iterrows()], dtype=np.uint8)
 
         elif color in gdf.columns:
-            fill_color = np.array(
-                [[*SnabbKarta._select_color(x, color_head, color_tail), opacity] for x in gdf[color]], dtype=np.uint8
-            )
+            fill_color = np.array([[*SnabbKarta._select_color(x), opacity] for x in gdf[color]], dtype=np.uint8)
 
         else:
             rgb_color = [int(c * 255) for c in matplotlib.colors.to_rgb(color)]
@@ -1307,11 +1284,9 @@ class SnabbKarta:
         cluster: bool = False,
         heatmap: bool = False,
         point_color: str = "blue",
-        color_head: Optional[str] = None,
-        color_tail: Optional[str] = None,
+        point_opacity: float = 0.5,
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
-        point_opacity: float = 0.5,
         point_radius: str = None,
         buffer_radius: int = 0,
         ring_inner_radius: int = 0,
