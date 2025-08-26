@@ -21,6 +21,7 @@ import pandas as pd
 import pygeohash
 import pyproj
 import requests
+import shapely
 from branca.element import MacroElement, Template
 from folium import plugins
 from lonboard.basemap import CartoBasemap
@@ -1397,10 +1398,12 @@ class SnabbKarta:
             if geohash_res > 0:  # inner=False doesn't work if compact=True
                 # Create a polygon for bounding box if input is not a polygon
                 if isinstance(geom, Polygon) or isinstance(geom, MultiPolygon):
-                    cdf = gdf.copy()
+                    cdf = gdf[["geometry"]]
                 else:
-                    bb = Polygon([[minlon, minlat], [maxlon, minlat], [maxlon, maxlat], [minlon, maxlat], [minlon, minlat]])
-                    cdf = gpd.GeoDataFrame({"geometry": [bb]}, crs="EPSG:4326")  # Create a bounding box GeoDataFrame
+                    # Get the concave hull with a ratio parameter (0-1)
+                    # Smaller ratio = tighter fit, larger ratio = more convex
+                    tight_polygon = shapely.concave_hull(gdf.geometry.unary_union, ratio=0.1)
+                    cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
 
                 # Convert geometries to geohash cells and their geometries
                 cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type="geohash", res=geohash_res, compact=compact)
@@ -1414,10 +1417,10 @@ class SnabbKarta:
             if s2_res > -1:
                 # Create a polygon for bounding box if input is not a polygon
                 if isinstance(geom, Polygon) or isinstance(geom, MultiPolygon):
-                    cdf = gdf.copy()
+                    cdf = gdf[["geometry"]]
                 else:
-                    bb = Polygon([[minlon, minlat], [maxlon, minlat], [maxlon, maxlat], [minlon, maxlat], [minlon, minlat]])
-                    cdf = gpd.GeoDataFrame({"geometry": [bb]}, crs="EPSG:4326")  # cell df
+                    tight_polygon = shapely.concave_hull(gdf.geometry.unary_union, ratio=0.1)
+                    cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
 
                 # Convert geometries to S2 cells and their geometries
                 cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type="s2", res=s2_res, compact=compact)
@@ -1430,11 +1433,10 @@ class SnabbKarta:
             # H3 cell visualization if `h3_res > -1`
             if h3_res > -1:
                 if isinstance(geom, Polygon) or isinstance(geom, MultiPolygon):
-                    cdf = gdf.copy()
-                # Create a bounding box GeoDataFrame
+                    cdf = gdf[["geometry"]]
                 else:
-                    bb = Polygon([[minlon, minlat], [maxlon, minlat], [maxlon, maxlat], [minlon, maxlat], [minlon, minlat]])
-                    cdf = gpd.GeoDataFrame({"geometry": [bb]}, crs="EPSG:4326")  # cell df
+                    tight_polygon = shapely.concave_hull(gdf.geometry.unary_union, ratio=0.1)
+                    cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
 
                 # Convert geometries to H3 cells and their Shapely hexagons
                 cells, _ = SpatialIndex.ppoly_cell(
