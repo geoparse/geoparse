@@ -1340,40 +1340,24 @@ class SnabbKarta:
         if isinstance(gdf_list, pd.DataFrame):
             gdf_list = [gdf_list]
 
-        # Initialize bounding box coordinates for the map
+        # Iterate through each DataFrame or GeoDataFrame in the list to add layers to the map
         minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
-        # Iterate through the list of GeoDataFrames to update bounding box
+        layers = []
         for gdf in gdf_list:
-            if not isinstance(gdf, gpd.GeoDataFrame):  # if pd.DataFrame
-                if not x:  # if x is not specified, determine longitude and latitude columns
+            # Convert pd.DataFrame to gpd.GeoDataFrame
+            if not isinstance(gdf, gpd.GeoDataFrame):
+                if not x:  # if x=None determine lat, lon columns
                     x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
                     y = [col for col in gdf.columns if "lat" in col.lower()][0]
-                lons = gdf[x]
-                lats = gdf[y]
-                minlatg, minlong, maxlatg, maxlong = min(lats), min(lons), max(lats), max(lons)  # minlatg: minlat in gdf
-            else:  # If input is a GeoDataFrame, use total_bounds to get the bounding box
-                minlong, minlatg, maxlong, maxlatg = gdf.total_bounds
+                gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[x], gdf[y]), crs="EPSG:4326")
 
             # Update overall bounding box
-            minlat, minlon = min(minlat, minlatg), min(minlon, minlong)
-            maxlat, maxlon = max(maxlat, maxlatg), max(maxlon, maxlong)
+            gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
+            minlat, minlon = min(minlat, gminlat), min(minlon, gminlon)  # minlat: total minlat
+            maxlat, maxlon = max(maxlat, gmaxlat), max(maxlon, gmaxlon)
 
-        # Create a base map using the bounding box
-        sw = [minlat, minlon]  # South West (bottom left corner)
-        ne = [maxlat, maxlon]  # North East (top right corner)
-
-        # Calculate center and zoom if not provided
-        lat_center, lon_center = (sw[0] + ne[0]) / 2, (sw[1] + ne[1]) / 2
-        max_length = max(ne[0] - sw[0], ne[1] - sw[1])  # max(delta_lat, delta_lon)
-        zoom = 11 - math.log(max_length * 2, 1.5)
-
-        # Iterate through each DataFrame or GeoDataFrame in the list to add layers to the map
-        layers = []
-        for _i, gdf in enumerate(gdf_list, start=1):
-            if not isinstance(gdf, gpd.GeoDataFrame):  # if pd.DataFrame
-                gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(lons, lats), crs="EPSG:4326")
+            # Create layers
             geom = gdf.geometry.values[0]
-
             if isinstance(geom, Point):
                 point_layer = SnabbKarta._create_point_layer(gdf, color=point_color, get_radius=point_radius)
                 layers.append(point_layer)
@@ -1463,6 +1447,15 @@ class SnabbKarta:
 
                 h3_layer = SnabbKarta._create_poly_layer(cdf, fill_color="green")
                 layers.append(h3_layer)
+
+        # Create a base map using the bounding box
+        sw = [minlat, minlon]  # South West (bottom left corner)
+        ne = [maxlat, maxlon]  # North East (top right corner)
+
+        # Calculate center and zoom if not provided
+        lat_center, lon_center = (sw[0] + ne[0]) / 2, (sw[1] + ne[1]) / 2
+        max_length = max(ne[0] - sw[0], ne[1] - sw[1])  # max(delta_lat, delta_lon)
+        zoom = 11 - math.log(max_length * 2, 1.5)
 
         return lb.Map(
             layers=layers,
