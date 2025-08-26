@@ -1419,8 +1419,6 @@ class SnabbKarta:
                 if isinstance(geom, Polygon) or isinstance(geom, MultiPolygon):
                     cdf = gdf[["geometry"]]
                 else:
-                    # Get the concave hull with a ratio parameter (0-1)
-                    # Smaller ratio = tighter fit, larger ratio = more convex
                     tight_polygon = shapely.concave_hull(gdf.geometry.unary_union, ratio=0.1)
                     cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
 
@@ -1437,8 +1435,6 @@ class SnabbKarta:
                 if isinstance(geom, Polygon) or isinstance(geom, MultiPolygon):
                     cdf = gdf[["geometry"]]
                 else:
-                    # Get the concave hull with a ratio parameter (0-1)
-                    # Smaller ratio = tighter fit, larger ratio = more convex
                     tight_polygon = shapely.concave_hull(gdf.geometry.unary_union, ratio=0.1)
                     cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
 
