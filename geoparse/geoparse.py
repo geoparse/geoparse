@@ -1286,8 +1286,7 @@ class SnabbKarta:
         buffer_radius: int = 0,
         ring_inner_radius: int = 0,
         ring_outer_radius: int = 0,
-        x: Optional[str] = None,
-        y: Optional[str] = None,
+        coordinates: Optional[list] = None,
         # LineString
         line_color: str = "blue",
         line_opacity: float = 0.5,
@@ -1347,9 +1346,11 @@ class SnabbKarta:
         for gdf in gdf_list:
             # Convert pd.DataFrame to gpd.GeoDataFrame
             if not isinstance(gdf, gpd.GeoDataFrame):
-                if not x:  # if x=None determine lat, lon columns
+                if not coordinates:  # if coordinates=None determine lat, lon columns
                     x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
                     y = [col for col in gdf.columns if "lat" in col.lower()][0]
+                else:
+                    x, y = coordinates[1], coordinates[0]
                 gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[x], gdf[y]), crs="EPSG:4326")
 
             # Update overall bounding box
