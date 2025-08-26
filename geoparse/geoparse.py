@@ -1453,7 +1453,11 @@ class SnabbKarta:
         # Calculate center and zoom if not provided
         lat_center, lon_center = (sw[0] + ne[0]) / 2, (sw[1] + ne[1]) / 2
         max_length = max(ne[0] - sw[0], ne[1] - sw[1])  # max(delta_lat, delta_lon)
-        zoom = 11 - math.log(max_length * 2, 1.5)
+        # Adjust zoom baseline depending on map extent
+        if max_length > 5:  # large area (e.g. whole UK)
+            zoom = 12 - math.log(max_length * 2, 1.5)
+        else:  # smaller area (e.g. London)
+            zoom = 11 - math.log(max_length * 2, 1.5)
 
         return lb.Map(
             layers=layers,
