@@ -623,9 +623,6 @@ class Karta:
         if isinstance(gdf_list, pd.DataFrame):
             gdf_list = [gdf_list]
 
-        # Initialize bounding box coordinates for the map
-        minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
-
         # Iterate through the list of GeoDataFrames to update bounding box
         for gdf in gdf_list:
             if not isinstance(gdf, gpd.GeoDataFrame):  # if pd.DataFrame
@@ -634,12 +631,9 @@ class Karta:
                     y = [col for col in gdf.columns if "lat" in col.lower()][0]
                 lons = gdf[x]
                 lats = gdf[y]
-                minlatg, minlong, maxlatg, maxlong = min(lats), min(lons), max(lats), max(lons)  # minlatg: minlat in gdf
+                minlat, minlon, maxlat, maxlon = min(lats), min(lons), max(lats), max(lons)
             else:  # If input is a GeoDataFrame, use total_bounds to get the bounding box
-                minlong, minlatg, maxlong, maxlatg = gdf.total_bounds
-            # Update overall bounding box
-            minlat, minlon = min(minlat, minlatg), min(minlon, minlong)
-            maxlat, maxlon = max(maxlat, maxlatg), max(maxlon, maxlong)
+                minlon, minlat, maxlon, maxlat = gdf.total_bounds
 
         # Create a base map using the bounding box
         sw = [minlat, minlon]  # South West (bottom left corner)
@@ -1359,6 +1353,7 @@ class SnabbKarta:
                 minlatg, minlong, maxlatg, maxlong = min(lats), min(lons), max(lats), max(lons)  # minlatg: minlat in gdf
             else:  # If input is a GeoDataFrame, use total_bounds to get the bounding box
                 minlong, minlatg, maxlong, maxlatg = gdf.total_bounds
+
             # Update overall bounding box
             minlat, minlon = min(minlat, minlatg), min(minlon, minlong)
             maxlat, maxlon = max(maxlat, maxlatg), max(maxlon, maxlong)
@@ -1375,7 +1370,9 @@ class SnabbKarta:
         # Iterate through each DataFrame or GeoDataFrame in the list to add layers to the map
         layers = []
         for _i, gdf in enumerate(gdf_list, start=1):
-            geom = gdf.geometry.values[0] if isinstance(gdf, gpd.GeoDataFrame) else None
+            if not isinstance(gdf, gpd.GeoDataFrame):  # if pd.DataFrame
+                gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(lons, lats), crs="EPSG:4326")
+            geom = gdf.geometry.values[0]
 
             if isinstance(geom, Point):
                 point_layer = SnabbKarta._create_point_layer(gdf, color=point_color, get_radius=point_radius)
@@ -1383,10 +1380,7 @@ class SnabbKarta:
 
                 # Create a buffer visualization if `buffer_radius > 0`
                 if buffer_radius > 0:
-                    if not isinstance(gdf, gpd.GeoDataFrame):
-                        bgdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(lons, lats), crs="EPSG:4326")
-                    else:
-                        bgdf = gdf.copy()  # buffered gdf: Create a copy of the GeoDataFrame to modify geometries
+                    bgdf = gdf.copy()  # buffered gdf: Create a copy of the GeoDataFrame to modify geometries
                     # Apply buffer to geometries using the specified radius in meters
                     bgdf["geometry"] = (
                         bgdf.to_crs(GeomUtils.find_proj(bgdf.geometry.values[0])).buffer(buffer_radius).to_crs("EPSG:4326")
@@ -1397,10 +1391,7 @@ class SnabbKarta:
 
                 # Create ring visualization if `ring_outer_radius > 0`
                 if ring_outer_radius > 0:
-                    if not isinstance(gdf, gpd.GeoDataFrame):
-                        bgdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(lons, lats), crs="EPSG:4326")
-                    else:
-                        bgdf = gdf.copy()  # buffered gdf: Create a copy of the GeoDataFrame to modify geometries
+                    bgdf = gdf.copy()  # buffered gdf: Create a copy of the GeoDataFrame to modify geometries
                     # Create ring shapes by applying an outer and inner buffer, subtracting the inner from the outer
                     bgdf["geometry"] = (
                         bgdf.to_crs(GeomUtils.find_proj(bgdf.geometry.values[0]))
