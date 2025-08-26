@@ -1340,68 +1340,27 @@ class SnabbKarta:
         if isinstance(gdf_list, pd.DataFrame):
             gdf_list = [gdf_list]
 
-        # Initialize bounding box coordinates for the map
+        # Iterate through each DataFrame or GeoDataFrame in the list to add layers to the map
         minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
-        # Iterate through the list of GeoDataFrames to update bounding box
+        layers = []
         for gdf in gdf_list:
-            if not isinstance(gdf, gpd.GeoDataFrame):  # if pd.DataFrame
-                if not x:  # if x is not specified, determine longitude and latitude columns
+            # Convert pd.DataFrame to gpd.GeoDataFrame
+            if not isinstance(gdf, gpd.GeoDataFrame):
+                if not x:  # if x=None determine lat, lon columns
                     x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
                     y = [col for col in gdf.columns if "lat" in col.lower()][0]
-                lons = gdf[x]
-                lats = gdf[y]
-                minlatg, minlong, maxlatg, maxlong = min(lats), min(lons), max(lats), max(lons)  # minlatg: minlat in gdf
-            else:  # If input is a GeoDataFrame, use total_bounds to get the bounding box
-                minlong, minlatg, maxlong, maxlatg = gdf.total_bounds
+                gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[x], gdf[y]), crs="EPSG:4326")
 
             # Update overall bounding box
-            minlat, minlon = min(minlat, minlatg), min(minlon, minlong)
-            maxlat, maxlon = max(maxlat, maxlatg), max(maxlon, maxlong)
+            gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
+            minlat, minlon = min(minlat, gminlat), min(minlon, gminlon)  # minlat: total minlat
+            maxlat, maxlon = max(maxlat, gmaxlat), max(maxlon, gmaxlon)
 
-        # Create a base map using the bounding box
-        sw = [minlat, minlon]  # South West (bottom left corner)
-        ne = [maxlat, maxlon]  # North East (top right corner)
-
-        # Calculate center and zoom if not provided
-        lat_center, lon_center = (sw[0] + ne[0]) / 2, (sw[1] + ne[1]) / 2
-        max_length = max(ne[0] - sw[0], ne[1] - sw[1])  # max(delta_lat, delta_lon)
-        zoom = 11 - math.log(max_length * 2, 1.5)
-
-        # Iterate through each DataFrame or GeoDataFrame in the list to add layers to the map
-        layers = []
-        for _i, gdf in enumerate(gdf_list, start=1):
-            if not isinstance(gdf, gpd.GeoDataFrame):  # if pd.DataFrame
-                gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(lons, lats), crs="EPSG:4326")
-            geom = gdf.geometry.values[0]
-
+            # Create layers
+            geom = gdf.geometry.iloc[0]
             if isinstance(geom, Point):
                 point_layer = SnabbKarta._create_point_layer(gdf, color=point_color, get_radius=point_radius)
                 layers.append(point_layer)
-
-                # Create a buffer visualization if `buffer_radius > 0`
-                if buffer_radius > 0:
-                    bgdf = gdf.copy()  # buffered gdf: Create a copy of the GeoDataFrame to modify geometries
-                    # Apply buffer to geometries using the specified radius in meters
-                    bgdf["geometry"] = (
-                        bgdf.to_crs(GeomUtils.find_proj(bgdf.geometry.values[0])).buffer(buffer_radius).to_crs("EPSG:4326")
-                    )
-                    # Add the buffer layer to the map
-                    buffer_layer = SnabbKarta._create_poly_layer(bgdf[["geometry"]])
-                    layers.append(buffer_layer)
-
-                # Create ring visualization if `ring_outer_radius > 0`
-                if ring_outer_radius > 0:
-                    bgdf = gdf.copy()  # buffered gdf: Create a copy of the GeoDataFrame to modify geometries
-                    # Create ring shapes by applying an outer and inner buffer, subtracting the inner from the outer
-                    bgdf["geometry"] = (
-                        bgdf.to_crs(GeomUtils.find_proj(bgdf.geometry.values[0]))
-                        .buffer(ring_outer_radius)
-                        .difference(bgdf.to_crs(GeomUtils.find_proj(bgdf.geometry.values[0])).buffer(ring_inner_radius))
-                        .to_crs("EPSG:4326")
-                    )  # radius in meters
-                    # Add the ring-shaped geometries to the map as polygons
-                    ring_layer = SnabbKarta._create_poly_layer(bgdf[["geometry"]])
-                    layers.append(ring_layer)
 
             elif isinstance(geom, (Polygon, MultiPolygon)):
                 poly_layer = SnabbKarta._create_poly_layer(gdf, fill_color=fill_color)
@@ -1410,6 +1369,29 @@ class SnabbKarta:
                     cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs="EPSG:4326")  # centroid df
                     centroid_layer = SnabbKarta._create_point_layer(cdf)
                     layers.append(centroid_layer)
+
+            # Create a buffer layer if `buffer_radius > 0`
+            if buffer_radius > 0:
+                bgdf = gdf[["geometry"]]  # buffered gdf: Create a copy of the GeoDataFrame to modify geometries
+                # Apply buffer to geometries using the specified radius in meters
+                bgdf["geometry"] = bgdf.to_crs(GeomUtils.find_proj(geom)).buffer(buffer_radius).to_crs("EPSG:4326")
+                # Add the buffer layer to the map
+                buffer_layer = SnabbKarta._create_poly_layer(bgdf)
+                layers.append(buffer_layer)
+
+            # Create ring layer if `ring_outer_radius > 0`
+            if ring_outer_radius > 0:
+                bgdf = gdf[["geometry"]]  # buffered gdf: Create a copy of the GeoDataFrame to modify geometries
+                # Create ring shapes by applying an outer and inner buffer, subtracting the inner from the outer
+                bgdf["geometry"] = (
+                    bgdf.to_crs(GeomUtils.find_proj(geom))
+                    .buffer(ring_outer_radius)
+                    .difference(bgdf.to_crs(GeomUtils.find_proj(geom)).buffer(ring_inner_radius))
+                    .to_crs("EPSG:4326")
+                )  # radius in meters
+                # Add the ring-shaped geometries to the map as polygons
+                ring_layer = SnabbKarta._create_poly_layer(bgdf)
+                layers.append(ring_layer)
 
             # Geohash visualization if `geohash_res > 0`
             if geohash_res > 0:  # inner=False doesn't work if compact=True
@@ -1463,6 +1445,19 @@ class SnabbKarta:
 
                 h3_layer = SnabbKarta._create_poly_layer(cdf, fill_color="green")
                 layers.append(h3_layer)
+
+        # Create a base map using the bounding box
+        sw = [minlat, minlon]  # South West (bottom left corner)
+        ne = [maxlat, maxlon]  # North East (top right corner)
+
+        # Calculate center and zoom if not provided
+        lat_center, lon_center = (sw[0] + ne[0]) / 2, (sw[1] + ne[1]) / 2
+        max_length = max(ne[0] - sw[0], ne[1] - sw[1])  # max(delta_lat, delta_lon)
+        # Adjust zoom baseline depending on map extent
+        if max_length > 5:  # large area (e.g. whole UK)
+            zoom = 12 - math.log(max_length * 2, 1.5)
+        else:  # smaller area (e.g. London)
+            zoom = 11 - math.log(max_length * 2, 1.5)
 
         return lb.Map(
             layers=layers,
