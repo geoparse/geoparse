@@ -1236,8 +1236,8 @@ class SnabbKarta:
             filled=True,
             stroked=True,
             line_width_min_pixels=1,
-            radius_min_pixels=1,
-            radius_max_pixels=100,
+            radius_min_pixels=radius_min_pixels,
+            radius_max_pixels=radius_max_pixels,
             pickable=pickable,
         )
 
@@ -1283,6 +1283,8 @@ class SnabbKarta:
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
         point_radius: str = None,
+        radius_min_pixels=1,
+        radius_max_pixels=8,
         buffer_radius: int = 0,
         ring_inner_radius: int = 0,
         ring_outer_radius: int = 0,
@@ -1361,7 +1363,13 @@ class SnabbKarta:
             # Create layers
             geom = gdf.geometry.iloc[0]
             if isinstance(geom, Point):
-                point_layer = SnabbKarta._create_point_layer(gdf, color=point_color, get_radius=point_radius)
+                point_layer = SnabbKarta._create_point_layer(
+                    gdf,
+                    color=point_color,
+                    speed_field=speed_field,
+                    speed_limit_field=speed_limit_field,
+                    get_radius=point_radius,
+                )
                 layers.append(point_layer)
 
             elif isinstance(geom, (Polygon, MultiPolygon)):
