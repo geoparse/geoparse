@@ -1198,7 +1198,7 @@ class SnabbKarta:
     def _create_point_layer(
         gdf: gpd.GeoDataFrame,
         color: str = "blue",
-        opacity: float = 0.5,
+        opacity: float = 1,
         get_radius: str = None,
         radius_min_pixels: int = 1,
         radius_max_pixels: int = 8,
@@ -1276,7 +1276,7 @@ class SnabbKarta:
         cluster: bool = False,
         heatmap: bool = False,
         point_color: str = "blue",
-        point_opacity: float = 0.5,
+        point_opacity: float = 1,
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
         point_radius=1,
@@ -1363,6 +1363,7 @@ class SnabbKarta:
                 point_layer = SnabbKarta._create_point_layer(
                     gdf,
                     color=point_color,
+                    opacity=point_opacity,
                     speed_field=speed_field,
                     speed_limit_field=speed_limit_field,
                     get_radius=point_radius,
