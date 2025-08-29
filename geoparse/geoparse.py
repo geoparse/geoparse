@@ -1186,35 +1186,35 @@ class SnabbKarta:
     ) -> lb.ScatterplotLayer:
         """Creates a Lonboard ScatterplotLayer from a GeoDataFrame."""
 
-        # Convert opacity to 0-255 range
-        opacity = int(opacity * 255)
+        # Convert opacity to uint8 (0-255 range)
+        opacity = np.uint8(opacity * 255)
 
         # Handle color assignment
         if color == speed_field:
 
-            def speed_color(row):
-                if pd.isna(row[speed_limit_field]) or row[speed_limit_field] <= 0:
-                    return [128, 0, 128, opacity]  # purple
+            def get_speed_colors(speeds, speed_limits, opacity):
+                # Create result array filled with default values (black)
+                result = np.full((len(speeds), 4), [0, 0, 0, opacity], dtype=np.uint8)
 
-                elif row[speed_field] <= row[speed_limit_field]:
-                    return [0, 0, 255, opacity]  # blue
+                # Create masks for each condition
+                invalid_mask = pd.isna(speed_limits) | (speed_limits <= 0)
+                within_limit_mask = ~invalid_mask & (speeds <= speed_limits)
+                green_mask = ~invalid_mask & (speeds < 1.1 * speed_limits) & (speeds > speed_limits)
+                yellow_mask = ~invalid_mask & (speeds < 1.2 * speed_limits) & (speeds >= 1.1 * speed_limits)
+                orange_mask = ~invalid_mask & (speeds < 1.3 * speed_limits) & (speeds >= 1.2 * speed_limits)
+                red_mask = ~invalid_mask & (speeds < 1.4 * speed_limits) & (speeds >= 1.3 * speed_limits)
 
-                elif row[speed_field] < 1.1 * row[speed_limit_field]:
-                    return [0, 255, 0, opacity]  # green
+                # Apply colors based on masks (all values as uint8)
+                result[invalid_mask] = [128, 0, 128, opacity]  # purple
+                result[within_limit_mask] = [0, 0, 255, opacity]  # blue
+                result[green_mask] = [0, 255, 0, opacity]  # green
+                result[yellow_mask] = [255, 255, 0, opacity]  # yellow
+                result[orange_mask] = [255, 165, 0, opacity]  # orange
+                result[red_mask] = [255, 0, 0, opacity]  # red
 
-                elif row[speed_field] < 1.2 * row[speed_limit_field]:
-                    return [255, 255, 0, opacity]  # yellow
+                return result
 
-                elif row[speed_field] < 1.3 * row[speed_limit_field]:
-                    return [255, 165, 0, opacity]  # orange
-
-                elif row[speed_field] < 1.4 * row[speed_limit_field]:
-                    return [255, 0, 0, opacity]  # red
-
-                else:
-                    return [0, 0, 0, opacity]  # black
-
-            fill_color = np.array([speed_color(row) for _, row in gdf.iterrows()], dtype=np.uint8)
+            fill_color = get_speed_colors(gdf[speed_field].values, gdf[speed_limit_field].values, opacity)
 
         elif color in gdf.columns:
             fill_color = np.array([SnabbKarta._select_color(item) + [opacity] for item in gdf[color]], dtype=np.uint8)
