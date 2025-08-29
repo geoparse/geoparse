@@ -1136,7 +1136,7 @@ class Karta:
 
 class SnabbKarta:
     @staticmethod
-    def _select_color(col: Union[int, float, str], head: int = None, tail: int = None) -> list:
+    def _get_color(col: Union[int, float, str]) -> list:
         """
         Generates a consistent color based on input value.
         Returns as [R, G, B] list for deck.gl compatibility.
@@ -1152,7 +1152,6 @@ class SnabbKarta:
             [165, 42, 42],  # brown
             [128, 128, 128],  # gray
             [255, 215, 0],  # gold
-            [255, 255, 255],  # white
             [0, 255, 255],  # cyan
             [255, 0, 255],  # magenta
             [0, 255, 0],  # lime
@@ -1168,9 +1167,32 @@ class SnabbKarta:
         else:
             col = str(col)
             col = re.sub(r"[\W_]+", "", col)
-            idx = int(col[head:tail], 36) % len(palette)
+            idx = int(col, 36) % len(palette)
 
         return palette[idx]
+
+    @staticmethod
+    def _get_speed_colors(speeds, speed_limits, opacity):
+        # Create result array filled with default values (black)
+        result = np.full((len(speeds), 4), [0, 0, 0, opacity], dtype=np.uint8)
+
+        # Create masks for each condition
+        invalid_mask = pd.isna(speed_limits) | (speed_limits <= 0)
+        within_limit_mask = ~invalid_mask & (speeds <= speed_limits)
+        green_mask = ~invalid_mask & (speeds < 1.1 * speed_limits) & (speeds > speed_limits)
+        yellow_mask = ~invalid_mask & (speeds < 1.2 * speed_limits) & (speeds >= 1.1 * speed_limits)
+        orange_mask = ~invalid_mask & (speeds < 1.3 * speed_limits) & (speeds >= 1.2 * speed_limits)
+        red_mask = ~invalid_mask & (speeds < 1.4 * speed_limits) & (speeds >= 1.3 * speed_limits)
+
+        # Apply colors based on masks (all values as uint8)
+        result[invalid_mask] = [128, 0, 128, opacity]  # purple
+        result[within_limit_mask] = [0, 0, 255, opacity]  # blue
+        result[green_mask] = [0, 255, 0, opacity]  # green
+        result[yellow_mask] = [255, 255, 0, opacity]  # yellow
+        result[orange_mask] = [255, 165, 0, opacity]  # orange
+        result[red_mask] = [255, 0, 0, opacity]  # red
+
+        return result
 
     @staticmethod
     def _create_point_layer(
@@ -1191,33 +1213,10 @@ class SnabbKarta:
 
         # Handle color assignment
         if color == speed_field:
-
-            def get_speed_colors(speeds, speed_limits, opacity):
-                # Create result array filled with default values (black)
-                result = np.full((len(speeds), 4), [0, 0, 0, opacity], dtype=np.uint8)
-
-                # Create masks for each condition
-                invalid_mask = pd.isna(speed_limits) | (speed_limits <= 0)
-                within_limit_mask = ~invalid_mask & (speeds <= speed_limits)
-                green_mask = ~invalid_mask & (speeds < 1.1 * speed_limits) & (speeds > speed_limits)
-                yellow_mask = ~invalid_mask & (speeds < 1.2 * speed_limits) & (speeds >= 1.1 * speed_limits)
-                orange_mask = ~invalid_mask & (speeds < 1.3 * speed_limits) & (speeds >= 1.2 * speed_limits)
-                red_mask = ~invalid_mask & (speeds < 1.4 * speed_limits) & (speeds >= 1.3 * speed_limits)
-
-                # Apply colors based on masks (all values as uint8)
-                result[invalid_mask] = [128, 0, 128, opacity]  # purple
-                result[within_limit_mask] = [0, 0, 255, opacity]  # blue
-                result[green_mask] = [0, 255, 0, opacity]  # green
-                result[yellow_mask] = [255, 255, 0, opacity]  # yellow
-                result[orange_mask] = [255, 165, 0, opacity]  # orange
-                result[red_mask] = [255, 0, 0, opacity]  # red
-
-                return result
-
-            fill_color = get_speed_colors(gdf[speed_field].values, gdf[speed_limit_field].values, opacity)
+            fill_color = SnabbKarta._get_speed_colors(gdf[speed_field].values, gdf[speed_limit_field].values, opacity)
 
         elif color in gdf.columns:
-            fill_color = np.array([SnabbKarta._select_color(item) + [opacity] for item in gdf[color]], dtype=np.uint8)
+            fill_color = np.array([SnabbKarta._get_color(item) + [opacity] for item in gdf[color]], dtype=np.uint8)
 
         else:
             rgb_color = [int(c * 255) for c in matplotlib.colors.to_rgb(color)]
@@ -1253,7 +1252,7 @@ class SnabbKarta:
         opacity = int(opacity * 255)
 
         if fill_color in gdf.columns:
-            get_fill_color = np.array([SnabbKarta._select_color(item) + [opacity] for item in gdf[fill_color]], dtype=np.uint8)
+            get_fill_color = np.array([SnabbKarta._get_color(item) + [opacity] for item in gdf[fill_color]], dtype=np.uint8)
         else:
             rgb_color = [int(c * 255) for c in matplotlib.colors.to_rgb(fill_color)]
             get_fill_color = np.array([[*rgb_color, opacity]] * len(gdf), dtype=np.uint8)
