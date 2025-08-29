@@ -1200,7 +1200,6 @@ class SnabbKarta:
         color: str = "blue",
         opacity: float = 0.5,
         get_radius: str = None,
-        radius_units: str = "meters",
         radius_min_pixels: int = 1,
         radius_max_pixels: int = 8,
         speed_field: str = "speed",
@@ -1224,9 +1223,7 @@ class SnabbKarta:
             fill_color = np.array([rgb_color + [opacity]] * len(gdf), dtype=np.uint8)
 
         # Handle radius
-        radius = (
-            gdf[get_radius].values.astype(float) if get_radius and get_radius in gdf.columns else np.array([1.0] * len(gdf))
-        )
+        radius = gdf[get_radius].values.astype(float) if get_radius in gdf.columns else np.array([get_radius] * len(gdf))
 
         return lb.ScatterplotLayer.from_geopandas(
             gdf,
@@ -1238,7 +1235,6 @@ class SnabbKarta:
             line_width_min_pixels=1,
             radius_min_pixels=radius_min_pixels,
             radius_max_pixels=radius_max_pixels,
-            radius_units=radius_units,
             pickable=pickable,
         )
 
@@ -1283,8 +1279,7 @@ class SnabbKarta:
         point_opacity: float = 0.5,
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
-        point_radius: str = None,
-        radius_units: str = "meters",
+        point_radius=1,
         radius_min_pixels=1,
         radius_max_pixels=8,
         buffer_radius: int = 0,
@@ -1371,7 +1366,6 @@ class SnabbKarta:
                     speed_field=speed_field,
                     speed_limit_field=speed_limit_field,
                     get_radius=point_radius,
-                    radius_units=radius_units,
                 )
                 layers.append(point_layer)
 
