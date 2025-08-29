@@ -1136,7 +1136,7 @@ class Karta:
 
 class SnabbKarta:
     @staticmethod
-    def _select_color(col: Union[int, float, str], head: int = None, tail: int = None) -> list:
+    def _get_color(col: Union[int, float, str]) -> list:
         """
         Generates a consistent color based on input value.
         Returns as [R, G, B] list for deck.gl compatibility.
@@ -1152,7 +1152,6 @@ class SnabbKarta:
             [165, 42, 42],  # brown
             [128, 128, 128],  # gray
             [255, 215, 0],  # gold
-            [255, 255, 255],  # white
             [0, 255, 255],  # cyan
             [255, 0, 255],  # magenta
             [0, 255, 0],  # lime
@@ -1168,15 +1167,38 @@ class SnabbKarta:
         else:
             col = str(col)
             col = re.sub(r"[\W_]+", "", col)
-            idx = int(col[head:tail], 36) % len(palette)
+            idx = int(col, 36) % len(palette)
 
         return palette[idx]
+
+    @staticmethod
+    def _get_speed_colors(speeds, speed_limits, opacity):
+        # Create result array filled with default values (black)
+        result = np.full((len(speeds), 4), [0, 0, 0, opacity], dtype=np.uint8)
+
+        # Create masks for each condition
+        invalid_mask = pd.isna(speed_limits) | (speed_limits <= 0)
+        within_limit_mask = ~invalid_mask & (speeds <= speed_limits)
+        green_mask = ~invalid_mask & (speeds < 1.1 * speed_limits) & (speeds > speed_limits)
+        yellow_mask = ~invalid_mask & (speeds < 1.2 * speed_limits) & (speeds >= 1.1 * speed_limits)
+        orange_mask = ~invalid_mask & (speeds < 1.3 * speed_limits) & (speeds >= 1.2 * speed_limits)
+        red_mask = ~invalid_mask & (speeds < 1.4 * speed_limits) & (speeds >= 1.3 * speed_limits)
+
+        # Apply colors based on masks (all values as uint8)
+        result[invalid_mask] = [128, 0, 128, opacity]  # purple
+        result[within_limit_mask] = [0, 0, 255, opacity]  # blue
+        result[green_mask] = [0, 255, 0, opacity]  # green
+        result[yellow_mask] = [255, 255, 0, opacity]  # yellow
+        result[orange_mask] = [255, 165, 0, opacity]  # orange
+        result[red_mask] = [255, 0, 0, opacity]  # red
+
+        return result
 
     @staticmethod
     def _create_point_layer(
         gdf: gpd.GeoDataFrame,
         color: str = "blue",
-        opacity: float = 0.5,
+        opacity: float = 1,
         get_radius: str = None,
         radius_min_pixels: int = 1,
         radius_max_pixels: int = 8,
@@ -1186,47 +1208,22 @@ class SnabbKarta:
     ) -> lb.ScatterplotLayer:
         """Creates a Lonboard ScatterplotLayer from a GeoDataFrame."""
 
-        # Convert opacity to 0-255 range
-        opacity = int(opacity * 255)
+        # Convert opacity to uint8 (0-255 range)
+        opacity = np.uint8(opacity * 255)
 
         # Handle color assignment
         if color == speed_field:
-
-            def speed_color(row):
-                if pd.isna(row[speed_limit_field]) or row[speed_limit_field] <= 0:
-                    return [128, 0, 128, opacity]  # purple
-
-                elif row[speed_field] <= row[speed_limit_field]:
-                    return [0, 0, 255, opacity]  # blue
-
-                elif row[speed_field] < 1.1 * row[speed_limit_field]:
-                    return [0, 255, 0, opacity]  # green
-
-                elif row[speed_field] < 1.2 * row[speed_limit_field]:
-                    return [255, 255, 0, opacity]  # yellow
-
-                elif row[speed_field] < 1.3 * row[speed_limit_field]:
-                    return [255, 165, 0, opacity]  # orange
-
-                elif row[speed_field] < 1.4 * row[speed_limit_field]:
-                    return [255, 0, 0, opacity]  # red
-
-                else:
-                    return [0, 0, 0, opacity]  # black
-
-            fill_color = np.array([speed_color(row) for _, row in gdf.iterrows()], dtype=np.uint8)
+            fill_color = SnabbKarta._get_speed_colors(gdf[speed_field].values, gdf[speed_limit_field].values, opacity)
 
         elif color in gdf.columns:
-            fill_color = np.array([[*SnabbKarta._select_color(x), opacity] for x in gdf[color]], dtype=np.uint8)
+            fill_color = np.array([SnabbKarta._get_color(item) + [opacity] for item in gdf[color]], dtype=np.uint8)
 
         else:
             rgb_color = [int(c * 255) for c in matplotlib.colors.to_rgb(color)]
-            fill_color = np.array([[*rgb_color, opacity]] * len(gdf), dtype=np.uint8)
+            fill_color = np.array([rgb_color + [opacity]] * len(gdf), dtype=np.uint8)
 
         # Handle radius
-        radius = (
-            gdf[get_radius].values.astype(float) if get_radius and get_radius in gdf.columns else np.array([1.0] * len(gdf))
-        )
+        radius = gdf[get_radius].values.astype(float) if get_radius in gdf.columns else np.array([get_radius] * len(gdf))
 
         return lb.ScatterplotLayer.from_geopandas(
             gdf,
@@ -1253,7 +1250,7 @@ class SnabbKarta:
         opacity = int(opacity * 255)
 
         if fill_color in gdf.columns:
-            get_fill_color = np.array([SnabbKarta._select_color(item) + [opacity] for item in gdf[fill_color]], dtype=np.uint8)
+            get_fill_color = np.array([SnabbKarta._get_color(item) + [opacity] for item in gdf[fill_color]], dtype=np.uint8)
         else:
             rgb_color = [int(c * 255) for c in matplotlib.colors.to_rgb(fill_color)]
             get_fill_color = np.array([[*rgb_color, opacity]] * len(gdf), dtype=np.uint8)
@@ -1279,12 +1276,12 @@ class SnabbKarta:
         cluster: bool = False,
         heatmap: bool = False,
         point_color: str = "blue",
-        point_opacity: float = 0.5,
+        point_opacity: float = 1,
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
-        point_radius: str = None,
-        radius_min_pixels=1,
-        radius_max_pixels=8,
+        point_radius: int | str = 1,
+        radius_min_pixels: int = 1,
+        radius_max_pixels: int = 8,
         buffer_radius: int = 0,
         ring_inner_radius: int = 0,
         ring_outer_radius: int = 0,
@@ -1366,6 +1363,7 @@ class SnabbKarta:
                 point_layer = SnabbKarta._create_point_layer(
                     gdf,
                     color=point_color,
+                    opacity=point_opacity,
                     speed_field=speed_field,
                     speed_limit_field=speed_limit_field,
                     get_radius=point_radius,
