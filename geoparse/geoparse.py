@@ -1200,6 +1200,7 @@ class SnabbKarta:
         color: str = "blue",
         opacity: float = 0.5,
         get_radius: str = None,
+        radius_units: str = "meters",
         radius_min_pixels: int = 1,
         radius_max_pixels: int = 8,
         speed_field: str = "speed",
@@ -1237,6 +1238,7 @@ class SnabbKarta:
             line_width_min_pixels=1,
             radius_min_pixels=radius_min_pixels,
             radius_max_pixels=radius_max_pixels,
+            radius_units=radius_units,
             pickable=pickable,
         )
 
@@ -1282,6 +1284,7 @@ class SnabbKarta:
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
         point_radius: str = None,
+        radius_units: str = "meters",
         radius_min_pixels=1,
         radius_max_pixels=8,
         buffer_radius: int = 0,
@@ -1368,6 +1371,7 @@ class SnabbKarta:
                     speed_field=speed_field,
                     speed_limit_field=speed_limit_field,
                     get_radius=point_radius,
+                    radius_units=radius_units,
                 )
                 layers.append(point_layer)
 
