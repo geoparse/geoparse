@@ -1217,11 +1217,11 @@ class SnabbKarta:
             fill_color = np.array([speed_color(row) for _, row in gdf.iterrows()], dtype=np.uint8)
 
         elif color in gdf.columns:
-            fill_color = np.array([[*SnabbKarta._select_color(x), opacity] for x in gdf[color]], dtype=np.uint8)
+            fill_color = np.array([SnabbKarta._select_color(item) + [opacity] for item in gdf[color]], dtype=np.uint8)
 
         else:
             rgb_color = [int(c * 255) for c in matplotlib.colors.to_rgb(color)]
-            fill_color = np.array([[*rgb_color, opacity]] * len(gdf), dtype=np.uint8)
+            fill_color = np.array([rgb_color + [opacity]] * len(gdf), dtype=np.uint8)
 
         # Handle radius
         radius = (
