@@ -1285,7 +1285,6 @@ class SnabbKarta:
         buffer_radius: int = 0,
         ring_inner_radius: int = 0,
         ring_outer_radius: int = 0,
-        coordinates: Optional[list] = None,
         # LineString
         line_color: str = "blue",
         line_opacity: float = 0.5,
@@ -1303,21 +1302,21 @@ class SnabbKarta:
         geohash_inner: bool = False,
         compact: bool = False,
         # Cells and OSM objects
+        location: Optional[Union[list, str]] = None,  # e.g. ['Latitude', 'Longitude'], 'geohash', 's2', 'h3', 'osm', 'uprn'
         cells: Optional[List[str]] = None,
-        cell_type: Optional[str] = None,  # list of geohash, S2 or H3 cell IDs
         osm_ways: Optional[List[int]] = None,  # list of OSM way IDs (lines or polygons) and Overpass API URL to query from
         url: Optional[str] = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
     ) -> lb.Map:
         # Handle `cells` input by converting cell IDs to geometries
-        if cells:
+        if location in ["geohash", "s2", "h3"]:
             # cell_poly is faster than the parallelized pcell_poly because, for small datasets, the overhead of parallelization increases the total runtime.
-            geoms, res = SpatialIndex.cell_poly(cells, cell_type=cell_type)
+            geoms, res = SpatialIndex.cell_poly(cells, cell_type=location)
             gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
             karta = SnabbKarta.plp(gdf, poly_popup={"ID": "id", "Resolution": "res"})
             return karta
 
         # Handle `osm_ways` input by converting OSM way IDs to geometries
-        if osm_ways:
+        elif location == "osm":
             geoms = OSMUtils.ways_to_geom(osm_ways, url)
             gdf = gpd.GeoDataFrame({"way_id": osm_ways, "geometry": geoms}, crs="EPSG:4326")
             if isinstance(gdf.geometry[0], LineString):
@@ -1345,11 +1344,11 @@ class SnabbKarta:
         for gdf in gdf_list:
             # Convert pd.DataFrame to gpd.GeoDataFrame
             if not isinstance(gdf, gpd.GeoDataFrame):
-                if not coordinates:  # if coordinates=None determine lat, lon columns
+                if not location:  # if location=None determine lat, lon columns
                     x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
                     y = [col for col in gdf.columns if "lat" in col.lower()][0]
                 else:
-                    x, y = coordinates[1], coordinates[0]
+                    x, y = location[1], location[0]
                 gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[x], gdf[y]), crs="EPSG:4326")
 
             # Update overall bounding box
