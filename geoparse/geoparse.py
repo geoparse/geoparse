@@ -8,7 +8,6 @@ from datetime import datetime
 from math import atan2, cos, radians, sin, sqrt
 from multiprocessing import Pool, cpu_count
 from time import time
-from typing import List, Optional, Set, Tuple, Union
 
 import folium  # Folium is a Python library used for visualizing geospatial data. Actually, it's a Python wrapper for Leaflet which is a leading open-source JavaScript library for plotting interactive maps.
 import geopandas as gpd
@@ -34,7 +33,7 @@ from shapely.prepared import prep
 
 class Karta:
     @staticmethod
-    def _base_map(sw: list or tuple, ne: list or tuple) -> folium.Map:
+    def _base_map(sw: list, ne: list) -> folium.Map:
         """
         Creates a base map with multiple tile layers and fits the map to the specified bounding box.
 
@@ -48,10 +47,10 @@ class Karta:
 
         Parameters
         ----------
-        sw : list or tuple
+        sw : list
             The southwest coordinate [latitude, longitude] of the bounding box to fit the map view.
 
-        ne : list or tuple
+        ne : list
             The northeast coordinate [latitude, longitude] of the bounding box to fit the map view.
 
         Returns
@@ -105,7 +104,7 @@ class Karta:
         return karta
 
     @staticmethod
-    def _select_color(col: Union[int, float, str], head: int = None, tail: int = None) -> str:
+    def _select_color(col: int | float | str, head: int | None = None, tail: int | None = None) -> str:
         """
         Generates a consistent color based on the input column value by mapping it to a predefined color palette.
 
@@ -414,7 +413,7 @@ class Karta:
 
     @staticmethod
     def plp(
-        gdf_list: Union[pd.DataFrame, gpd.GeoDataFrame, List[Union[pd.DataFrame, gpd.GeoDataFrame]]] = None,
+        gdf_list: pd.DataFrame | gpd.GeoDataFrame | list[pd.DataFrame | gpd.GeoDataFrame] | None = None,
         # Point
         cluster: bool = False,
         heatmap: bool = False,
@@ -428,17 +427,17 @@ class Karta:
         point_opacity: float = 0.5,
         point_radius: int = 3,
         point_weight: int = 6,
-        point_popup: Optional[dict] = None,
+        point_popup: dict | None = None,
         buffer_radius: int = 0,
         ring_inner_radius: int = 0,
         ring_outer_radius: int = 0,
-        x: Optional[str] = None,
-        y: Optional[str] = None,
+        x: str | None = None,
+        y: str | None = None,
         # LineString
         line_color: str = "blue",
         line_opacity: float = 0.5,
         line_weight: int = 6,
-        line_popup: Optional[dict] = None,
+        line_popup: dict | None = None,
         # Polygon
         centroid: bool = False,  # if True it shows centroids of polygons on the map.
         fill_color: str = "red",
@@ -446,7 +445,7 @@ class Karta:
         fill_opacity: float = 0.25,
         highlight_opacity: float = 0.5,
         line_width: float = 0.3,
-        poly_popup: Optional[dict] = None,
+        poly_popup: dict | None = None,
         geohash_res: int = 0,
         s2_res: int = -1,
         h3_res: int = -1,
@@ -454,10 +453,10 @@ class Karta:
         geohash_inner: bool = False,
         compact: bool = False,
         # Cells and OSM objects
-        cells: Optional[List[str]] = None,
-        cell_type: Optional[str] = None,  # list of geohash, S2 or H3 cell IDs
-        osm_ways: Optional[List[int]] = None,  # list of OSM way IDs (lines or polygons) and Overpass API URL to query from
-        url: Optional[str] = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
+        cells: list[str] | None = None,
+        cell_type: str | None = None,  # list of geohash, S2 or H3 cell IDs
+        osm_ways: list[int] | None = None,  # list of OSM way IDs (lines or polygons) and Overpass API URL to query from
+        url: str | None = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
     ) -> folium.Map:
         """
         plp (points, lines, polygons) creates a Folium map with points, lines, or polygons based on the input geospatial data.
@@ -1136,7 +1135,7 @@ class Karta:
 
 class SnabbKarta:
     @staticmethod
-    def _get_color(col: Union[int, float, str]) -> list:
+    def _get_color(col: int | float | str) -> list:
         """
         Generates a consistent color based on input value.
         Returns as [R, G, B] list for deck.gl compatibility.
@@ -1268,7 +1267,7 @@ class SnabbKarta:
 
     @staticmethod
     def plp(
-        gdf_list: Union[pd.DataFrame, gpd.GeoDataFrame, List[Union[pd.DataFrame, gpd.GeoDataFrame]]] = None,
+        gdf_list: pd.DataFrame | gpd.GeoDataFrame | list[pd.DataFrame | gpd.GeoDataFrame] | None = None,
         basemap_style=CartoBasemap.Positron,
         pitch=30,
         map_height=800,
@@ -1285,7 +1284,6 @@ class SnabbKarta:
         buffer_radius: int = 0,
         ring_inner_radius: int = 0,
         ring_outer_radius: int = 0,
-        coordinates: Optional[list] = None,
         # LineString
         line_color: str = "blue",
         line_opacity: float = 0.5,
@@ -1295,7 +1293,6 @@ class SnabbKarta:
         highlight_color: str = "green",
         fill_opacity: float = 0.25,
         highlight_opacity: float = 0.5,
-        poly_popup: Optional[dict] = None,
         geohash_res: int = 0,
         s2_res: int = -1,
         h3_res: int = -1,
@@ -1303,25 +1300,25 @@ class SnabbKarta:
         geohash_inner: bool = False,
         compact: bool = False,
         # Cells and OSM objects
-        cells: Optional[List[str]] = None,
-        cell_type: Optional[str] = None,  # list of geohash, S2 or H3 cell IDs
-        osm_ways: Optional[List[int]] = None,  # list of OSM way IDs (lines or polygons) and Overpass API URL to query from
-        url: Optional[str] = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
+        location: list[str] | str | None = None,  # e.g. ['Latitude', 'Longitude'], 'geohash', 's2', 'h3', 'osm', 'uprn'
+        cells: list[str] | None = None,
+        osm_ways: list[int] | None = None,  # list of OSM way IDs (lines or polygons) and Overpass API URL to query from
+        url: str | None = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
     ) -> lb.Map:
         # Handle `cells` input by converting cell IDs to geometries
-        if cells:
+        if location in ["geohash", "s2", "h3"]:
             # cell_poly is faster than the parallelized pcell_poly because, for small datasets, the overhead of parallelization increases the total runtime.
-            geoms, res = SpatialIndex.cell_poly(cells, cell_type=cell_type)
+            geoms, res = SpatialIndex.cell_poly(cells, cell_type=location)
             gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
-            karta = SnabbKarta.plp(gdf, poly_popup={"ID": "id", "Resolution": "res"})
+            karta = SnabbKarta.plp(gdf)
             return karta
 
         # Handle `osm_ways` input by converting OSM way IDs to geometries
-        if osm_ways:
+        elif location == "osm":
             geoms = OSMUtils.ways_to_geom(osm_ways, url)
             gdf = gpd.GeoDataFrame({"way_id": osm_ways, "geometry": geoms}, crs="EPSG:4326")
             if isinstance(gdf.geometry[0], LineString):
-                karta = SnabbKarta.plp(gdf, line_popup={"way_id": "way_id"}, line_color="red")
+                karta = SnabbKarta.plp(gdf, line_color="red")
             else:
                 karta = SnabbKarta.plp(
                     gdf,
@@ -1330,7 +1327,6 @@ class SnabbKarta:
                     h3_res=h3_res,
                     geohash_inner=geohash_inner,
                     compact=compact,
-                    poly_popup={"way_id": "way_id"},
                     fill_color="red",
                 )
             return karta
@@ -1345,11 +1341,11 @@ class SnabbKarta:
         for gdf in gdf_list:
             # Convert pd.DataFrame to gpd.GeoDataFrame
             if not isinstance(gdf, gpd.GeoDataFrame):
-                if not coordinates:  # if coordinates=None determine lat, lon columns
+                if not location:  # if location=None determine lat, lon columns
                     x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
                     y = [col for col in gdf.columns if "lat" in col.lower()][0]
                 else:
-                    x, y = coordinates[1], coordinates[0]
+                    x, y = location[1], location[0]
                 gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[x], gdf[y]), crs="EPSG:4326")
 
             # Update overall bounding box
@@ -1540,7 +1536,7 @@ class GeomUtils:
     """
 
     @staticmethod
-    def find_proj(geom: Union[Point, LineString, Polygon, MultiPolygon]) -> str:
+    def find_proj(geom: BaseGeometry) -> str:
         """
         Determines the appropriate UTM zone projection for a given geometry.
 
@@ -1638,8 +1634,8 @@ class GeomUtils:
 
     @staticmethod
     def geom_stats(
-        geom: Optional[Union[Polygon, MultiPolygon]] = None, projection=None, unit: str = "m"
-    ) -> Optional[List[Union[int, float]]]:
+        geom: Polygon | MultiPolygon | None = None, projection: str | None = None, unit: str = "m"
+    ) -> list[int | float] | None:
         """
         Computes geometric statistics for a Polygon or MultiPolygon geometry.
 
@@ -1715,7 +1711,7 @@ class GeomUtils:
             return [n_shells, n_holes, n_shell_points, area / 1_000_000, perimeter / 1000, projection]
 
     @staticmethod
-    def flatten_3d(geom: gpd.GeoSeries) -> List[Union[Polygon, MultiPolygon]]:
+    def flatten_3d(geom: gpd.GeoSeries) -> list[Polygon | MultiPolygon]:
         """
         Flattens a GeoSeries of 3D Polygons or MultiPolygons into 2D geometries.
 
@@ -2023,7 +2019,7 @@ class CellUtils:
         return list(set(uncompact_tokens))
 
     @staticmethod
-    def h3_stats(geom: BaseGeometry, h3_res: int, compact: bool = False) -> Tuple[int, float]:
+    def h3_stats(geom: BaseGeometry, h3_res: int, compact: bool = False) -> tuple[int, float]:
         """
         Computes H3 cell statistics for a given geometry at a specified resolution.
 
@@ -2105,7 +2101,7 @@ class OSMUtils:
     """
 
     @staticmethod
-    def way_to_geom(way_id: int, url: str = "https://overpass-api.de/api/interpreter") -> Optional[LineString or Polygon]:
+    def way_to_geom(way_id: int, url: str = "https://overpass-api.de/api/interpreter") -> LineString | Polygon:
         """
         Converts an OSM way ID into a Shapely Polygon or LineString object.
 
@@ -2151,7 +2147,7 @@ class OSMUtils:
             return LineString(coords)
 
     @staticmethod
-    def ways_to_geom(ids: List[int], url: str = "https://overpass-api.de/api/interpreter") -> List[LineString or Polygon]:
+    def ways_to_geom(ids: list[int], url: str = "https://overpass-api.de/api/interpreter") -> list[LineString | Polygon]:
         """
         Converts an array of OpenStreetMap (OSM) way IDs into Shapely geometries.
 
@@ -2263,7 +2259,7 @@ class OSMUtils:
         return decoded
 
     @staticmethod
-    def map_matching(df: pd.DataFrame, cost: str, url: str, format: str = "osrm") -> Optional[dict]:
+    def map_matching(df: pd.DataFrame, cost: str, url: str, format: str = "osrm") -> dict | None:
         """
         Performs map matching using Valhalla's Meili service.
 
@@ -2491,7 +2487,7 @@ class SpatialIndex:
         ]
 
     @staticmethod
-    def poly_to_geohashes(poly: Polygon, precision: int, inner: bool = False) -> Set[str]:
+    def poly_to_geohashes(poly: Polygon, precision: int, inner: bool = False) -> set[str]:
         """
         Cover a polygon with geohashes using pygeohash.
 
@@ -2596,12 +2592,12 @@ class SpatialIndex:
 
     @staticmethod
     def poly_cell(
-        geoms: List[Union[Polygon, MultiPolygon]],
+        geoms: list[Polygon | MultiPolygon],
         cell_type: str,
         res: int,
         force_full_cover: bool = True,
         dump_path: str = None,
-    ) -> Union[List[str], None]:
+    ) -> list[str] | None:
         """
         Converts a list of geometries into a set of unique spatial cells based on the specified cell type and resolution.
 
@@ -2782,7 +2778,7 @@ class SpatialIndex:
         compact: bool = False,
         dump_path: str = None,
         verbose: bool = False,
-    ) -> Tuple[List[str], int]:
+    ) -> tuple[list[str], int]:
         """
         Performs a parallelised conversion of geometries in a GeoDataFrame to cell identifiers of a specified type
         (e.g., Geohash, S2, or H3), optionally compacting the result to reduce the number of cells.
@@ -2954,7 +2950,7 @@ class SpatialIndex:
             return cells, cell_counts
 
     @staticmethod
-    def cell_point(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float, float]]:
+    def cell_point(cells: list[str | int], cell_type: str) -> list[tuple[float, float]]:
         """
         Converts a list of cell IDs into their corresponding centroids.
 
@@ -3098,7 +3094,7 @@ class SpatialIndex:
         return geoms, res
 
     @staticmethod
-    def pcell_point(cells: List[Union[str, int]], cell_type: str) -> List[Tuple[float, float]]:
+    def pcell_point(cells: list[str | int], cell_type: str) -> list[tuple[float, float]]:
         """
         Converts a list of cell IDs into their corresponding latitude and longitude points in parallel.
 
@@ -3128,7 +3124,7 @@ class SpatialIndex:
         return points
 
     @staticmethod
-    def pcell_poly(cells: List[Union[str, int]], cell_type: str) -> tuple:
+    def pcell_poly(cells: list[str | int], cell_type: str) -> tuple:
         """
         Parallelized version of `cell_poly`, converting a list of spatial cells to geometries and resolution levels.
 
@@ -3214,8 +3210,8 @@ class SpatialOps:
 
     @staticmethod
     def geom_in_poly(
-        gdf: gpd.GeoDataFrame, mdf: gpd.GeoDataFrame, mdf_col: Optional[str] = None
-    ) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray, np.ndarray]]:
+        gdf: gpd.GeoDataFrame, mdf: gpd.GeoDataFrame, mdf_col: str | None = None
+    ) -> tuple[np.ndarray, np.ndarray] | tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Compute spatial intersections between two GeoDataFrames.
 
