@@ -9,7 +9,6 @@ from math import atan2, cos, radians, sin, sqrt
 from multiprocessing import Pool, cpu_count
 from time import time
 
-# from typing import List, Optional, Set, Tuple, Union
 import folium  # Folium is a Python library used for visualizing geospatial data. Actually, it's a Python wrapper for Leaflet which is a leading open-source JavaScript library for plotting interactive maps.
 import geopandas as gpd
 import h3
