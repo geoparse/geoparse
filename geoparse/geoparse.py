@@ -1198,7 +1198,7 @@ class SnabbKarta:
         gdf: gpd.GeoDataFrame,
         color: str = "blue",
         opacity: float = 1,
-        get_radius: str = None,
+        get_radius: str | int = 1,
         radius_min_pixels: int = 1,
         radius_max_pixels: int = 8,
         speed_field: str = "speed",
@@ -1267,7 +1267,12 @@ class SnabbKarta:
 
     @staticmethod
     def plp(
-        gdf_list: pd.DataFrame | gpd.GeoDataFrame | list[pd.DataFrame | gpd.GeoDataFrame] | None = None,
+        gdf_list: gpd.GeoDataFrame | pd.DataFrame | dict | list[gpd.GeoDataFrame | pd.DataFrame | dict],
+        # Cells and OSM objects
+        geom_col: str | list[str] | None = None,  # e.g. ['northing', 'easting'], 'h3_8', 'osm_id', 'uprn'
+        geom_type: str | None = None,  #  'h3', 's2', 'geohash', 'osm', 'uprn'
+        osm_url: str | None = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
+        # Map tiles
         basemap_style=CartoBasemap.Positron,
         pitch=30,
         map_height=800,
@@ -1299,54 +1304,56 @@ class SnabbKarta:
         force_full_cover: bool = True,
         geohash_inner: bool = False,
         compact: bool = False,
-        # Cells and OSM objects
-        location: list[str] | str | None = None,  # e.g. ['Latitude', 'Longitude'], 'geohash', 's2', 'h3', 'osm', 'uprn'
-        cells: list[str] | None = None,
-        osm_ways: list[int] | None = None,  # list of OSM way IDs (lines or polygons) and Overpass API URL to query from
-        url: str | None = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
     ) -> lb.Map:
-        # Handle `cells` input by converting cell IDs to geometries
-        if location in ["geohash", "s2", "h3"]:
-            # cell_poly is faster than the parallelized pcell_poly because, for small datasets, the overhead of parallelization increases the total runtime.
-            geoms, res = SpatialIndex.cell_poly(cells, cell_type=location)
-            gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
-            karta = SnabbKarta.plp(gdf)
-            return karta
-
-        # Handle `osm_ways` input by converting OSM way IDs to geometries
-        elif location == "osm":
-            geoms = OSMUtils.ways_to_geom(osm_ways, url)
-            gdf = gpd.GeoDataFrame({"way_id": osm_ways, "geometry": geoms}, crs="EPSG:4326")
-            if isinstance(gdf.geometry[0], LineString):
-                karta = SnabbKarta.plp(gdf, line_color="red")
-            else:
-                karta = SnabbKarta.plp(
-                    gdf,
-                    geohash_res=geohash_res,
-                    s2_res=s2_res,
-                    h3_res=h3_res,
-                    geohash_inner=geohash_inner,
-                    compact=compact,
-                    fill_color="red",
-                )
-            return karta
-
-        # Ensure `gdf_list` is always a list of GeoDataFrames or DataFrames
-        if isinstance(gdf_list, pd.DataFrame):
+        # Ensure `gdf_list` is always a list (of gpd.GeoDataFrames, df.DataFrames or dict)
+        if not isinstance(gdf_list, list):
             gdf_list = [gdf_list]
 
         # Iterate through each DataFrame or GeoDataFrame in the list to add layers to the map
         minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
         layers = []
         for gdf in gdf_list:
-            # Convert pd.DataFrame to gpd.GeoDataFrame
-            if not isinstance(gdf, gpd.GeoDataFrame):
-                if not location:  # if location=None determine lat, lon columns
-                    x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
-                    y = [col for col in gdf.columns if "lat" in col.lower()][0]
-                else:
-                    x, y = location[1], location[0]
-                gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[x], gdf[y]), crs="EPSG:4326")
+            # if gdf is a dict convert it to gpd.GeoDataFrame
+            if isinstance(gdf, dict):
+                # Convert geospatial cells to Shapely geometries
+                if gdf["geom_type"] in ["geohash", "s2", "h3"]:
+                    geoms, res = SpatialIndex.cell_poly(gdf["geom_list"], cell_type=gdf["geom_type"])
+                    gdf = gpd.GeoDataFrame({"id": gdf["geom_list"], "res": res, "geometry": geoms}, crs="EPSG:4326")
+                # Convert OSM way IDs to Shapely geometries
+                elif gdf["geom_type"] == "osm":
+                    geoms = OSMUtils.ways_to_geom(gdf["geom_list"], osm_url)
+                    gdf = gpd.GeoDataFrame({"way_id": gdf["geom_list"], "geometry": geoms}, crs="EPSG:4326")
+                # Convert UPRNs to Shapely geometries
+                elif gdf["geom_type"] == "uprn":
+                    gdf = gpd.GeoDataFrame({"uprn": gdf["geom_list"]})
+                    udf = pd.read_parquet("../data/uprn/osopenuprn_202507.parquet")
+                    gdf = gdf.merge(udf, on="uprn", how="left")
+                    gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf["lon"], gdf["lat"]), crs="EPSG:4326")
+                    gdf = gdf.drop(columns=["lat", "lon"])
+
+            # if gdf is a pd.DataFrame convert it to gpd.GeoDataFrame
+            elif not isinstance(gdf, gpd.GeoDataFrame):
+                if geom_type in ["geohash", "s2", "h3"]:
+                    gdf["geometry"], _ = SpatialIndex.cell_poly(gdf[geom_col].values, cell_type=geom_type)
+                    gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
+
+                elif geom_type == "osm":
+                    gdf["geometry"] = OSMUtils.ways_to_geom(gdf[geom_col].values, osm_url)
+                    gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
+
+                elif geom_type == "uprn":
+                    udf = pd.read_parquet("../data/uprn/osopenuprn_202507.parquet")
+                    gdf = gdf.merge(udf, left_on=geom_col, right_on="uprn", how="left")
+                    gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf["lon"], gdf["lat"]), crs="EPSG:4326")
+                    gdf = gdf.drop(columns=["lat", "lon"])
+
+                else:  # if geom_type == None, find lat, lon columns
+                    if geom_col:  # if geom_col provided
+                        x, y = geom_col[1], geom_col[0]
+                    else:  # if geom_col = None determine lat, lon columns
+                        x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
+                        y = [col for col in gdf.columns if "lat" in col.lower()][0]
+                    gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[x], gdf[y]), crs="EPSG:4326")
 
             # Update overall bounding box
             gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
@@ -1371,7 +1378,7 @@ class SnabbKarta:
                 layers.append(poly_layer)
                 if centroid:  # Show centroids of polygons if `centroid=True`
                     cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs="EPSG:4326")  # centroid df
-                    centroid_layer = SnabbKarta._create_point_layer(cdf)
+                    centroid_layer = SnabbKarta._create_point_layer(cdf, get_radius=1000)
                     layers.append(centroid_layer)
 
             # Create a buffer layer if `buffer_radius > 0`
@@ -2101,7 +2108,7 @@ class OSMUtils:
     """
 
     @staticmethod
-    def way_to_geom(way_id: int, url: str = "https://overpass-api.de/api/interpreter") -> LineString | Polygon:
+    def way_to_geom(way_id: int, osm_url: str = "https://overpass-api.de/api/interpreter") -> LineString | Polygon:
         """
         Converts an OSM way ID into a Shapely Polygon or LineString object.
 
@@ -2113,7 +2120,7 @@ class OSMUtils:
         ----------
         way_id : int
             The OpenStreetMap (OSM) way ID to be retrieved.
-        url : str, optional
+        osm_url : str, optional
             The URL endpoint for the Overpass API. Defaults to "https://overpass-api.de/api/interpreter".
 
         Returns
@@ -2131,13 +2138,13 @@ class OSMUtils:
         Examples
         --------
         >>> way_id = 123456
-        >>> url = "https://overpass-api.de/api/interpreter"
-        >>> geometry = way_to_geom(way_id, url)
+        >>> osm_url = "https://overpass-api.de/api/interpreter"
+        >>> geometry = way_to_geom(way_id, osm_url)
         >>> print(geometry)
         POLYGON ((13.3888 52.5170, 13.3976 52.5291, 13.4286 52.5232, 13.3888 52.5170))
         """
         query = f"[out:json][timeout:600][maxsize:4073741824];way({way_id});out geom;"
-        response = requests.get(url, params={"data": query}).json()
+        response = requests.get(osm_url, params={"data": query}).json()
         response = response["elements"][0]
         geom = response["geometry"]
         coords = [(node["lon"], node["lat"]) for node in geom]
@@ -2147,7 +2154,7 @@ class OSMUtils:
             return LineString(coords)
 
     @staticmethod
-    def ways_to_geom(ids: list[int], url: str = "https://overpass-api.de/api/interpreter") -> list[LineString | Polygon]:
+    def ways_to_geom(ids: list[int], osm_url: str = "https://overpass-api.de/api/interpreter") -> list[LineString | Polygon]:
         """
         Converts an array of OpenStreetMap (OSM) way IDs into Shapely geometries.
 
@@ -2159,7 +2166,7 @@ class OSMUtils:
         ----------
         ids : list of int
             A list of OSM way IDs to be retrieved.
-        url : str, optional
+        osm_url : str, optional
             The URL endpoint for the Overpass API. Defaults to "https://overpass-api.de/api/interpreter".
 
         Returns
@@ -2179,8 +2186,8 @@ class OSMUtils:
         Examples
         --------
         >>> way_ids = [123456, 234567, 345678]
-        >>> url = "https://overpass-api.de/api/interpreter"
-        >>> geometries = ways_to_geom(way_ids, url)
+        >>> osm_url = "https://overpass-api.de/api/interpreter"
+        >>> geometries = ways_to_geom(way_ids, osm_url)
         >>> print(geometries)
         [<shapely.geometry.polygon.Polygon object at 0x...>,
          <shapely.geometry.linestring.LineString object at 0x...>]
@@ -2189,7 +2196,7 @@ class OSMUtils:
         for item in ids:
             query += f"way({item});out geom;"
 
-        response = requests.get(url, params={"data": query}).json()
+        response = requests.get(osm_url, params={"data": query}).json()
         response = response["elements"]
         nodes = response[0]["geometry"]  # used later to determine if the way is a Polygon or a LineString
         ways = [item["geometry"] for item in response]
