@@ -1330,8 +1330,12 @@ class SnabbKarta:
                         else:  # if geom_from = None determine lat, lon columns
                             x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
                             y = [col for col in gdf.columns if "lat" in col.lower()][0]
-                    # Create a gpd.GeoDataFrame from pd.DataFrame
-                    gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[x], gdf[y]), crs="EPSG:4326")
+                        # Create a gpd.GeoDataFrame from pd.DataFrame
+                        gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[x], gdf[y]), crs="EPSG:4326")
+
+                    elif geom_type in ["geohash", "s2", "h3"]:
+                        gdf["geometry"], _ = SpatialIndex.cell_poly(gdf[geom_from].values, cell_type=geom_type)
+                        gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
 
                 # Update overall bounding box
                 gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
