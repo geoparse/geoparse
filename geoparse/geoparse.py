@@ -1267,7 +1267,7 @@ class SnabbKarta:
 
     @staticmethod
     def plp(
-        gdf_list: gpd.GeoDataFrame | pd.DataFrame | dict | list[gpd.GeoDataFrame | pd.DataFrame | dict] | None = None,
+        gdf_list: gpd.GeoDataFrame | pd.DataFrame | dict | list[gpd.GeoDataFrame | pd.DataFrame | dict],
         # Cells and OSM objects
         geom_col: str | list[str] | None = None,  # e.g. ['northing', 'easting'], 'h3_8', 'osm_id', 'uprn'
         geom_type: str | None = None,  #  'h3', 's2', 'geohash', 'osm', 'uprn'
