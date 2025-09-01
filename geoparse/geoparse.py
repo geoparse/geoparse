@@ -1270,10 +1270,7 @@ class SnabbKarta:
         gdf_list: gpd.GeoDataFrame | pd.DataFrame | dict | list[gpd.GeoDataFrame | pd.DataFrame | dict] | None = None,
         # Cells and OSM objects
         geom_col: str | list[str] | None = None,  # e.g. ['northing', 'easting'], 'h3_8', 'osm_id', 'uprn'
-        geom_type: str | None = "coords",  #  'coords', 'h3', 's2', 'geohash', 'osm', 'uprn'
-        # location: list[str] | str | None = None,  # e.g. ['Latitude', 'Longitude'], 'geohash', 's2', 'h3', 'osm', 'uprn'
-        # cells: list[str] | None = None,
-        # osm_ways: list[int] | None = None,  # list of OSM way IDs (lines or polygons) and Overpass API URL to query from
+        geom_type: str | None = None,  #  'h3', 's2', 'geohash', 'osm', 'uprn'
         osm_url: str | None = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
         # Map tiles
         basemap_style=CartoBasemap.Positron,
@@ -1327,27 +1324,36 @@ class SnabbKarta:
                     geoms = OSMUtils.ways_to_geom(gdf["geom_list"], osm_url)
                     gdf = gpd.GeoDataFrame({"way_id": gdf["geom_list"], "geometry": geoms}, crs="EPSG:4326")
                 # Convert UPRNs to Shapely geometries
-                elif geom_type == "uprn":
-                    return
+                elif gdf["geom_type"] == "uprn":
+                    gdf = gpd.GeoDataFrame({"uprn": gdf["geom_list"]})
+                    udf = pd.read_parquet("../data/uprn/osopenuprn_202507.parquet")
+                    gdf = gdf.merge(udf, on="uprn", how="left")
+                    gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf["lon"], gdf["lat"]), crs="EPSG:4326")
+                    gdf = gdf.drop(columns=["lat", "lon"])
 
             # if gdf is a pd.DataFrame convert it to gpd.GeoDataFrame
             elif not isinstance(gdf, gpd.GeoDataFrame):
-                if geom_type == "coords":
-                    if geom_col:  # if geom_col provided
-                        x, y = geom_col[1], geom_col[0]
-                    else:  # if geom_col = None determine lat, lon columns
-                        x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
-                        y = [col for col in gdf.columns if "lat" in col.lower()][0]
-                    # Create a gpd.GeoDataFrame from pd.DataFrame
-                    gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[x], gdf[y]), crs="EPSG:4326")
-
-                elif geom_type in ["geohash", "s2", "h3"]:
+                if geom_type in ["geohash", "s2", "h3"]:
                     gdf["geometry"], _ = SpatialIndex.cell_poly(gdf[geom_col].values, cell_type=geom_type)
                     gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
 
                 elif geom_type == "osm":
                     gdf["geometry"] = OSMUtils.ways_to_geom(gdf[geom_col].values, osm_url)
                     gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
+
+                elif geom_type == "uprn":
+                    udf = pd.read_parquet("../data/uprn/osopenuprn_202507.parquet")
+                    gdf = gdf.merge(udf, left_on=geom_col, right_on="uprn", how="left")
+                    gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf["lon"], gdf["lat"]), crs="EPSG:4326")
+                    gdf = gdf.drop(columns=["lat", "lon"])
+
+                else:  # if geom_type == None, find lat, lon columns
+                    if geom_col:  # if geom_col provided
+                        x, y = geom_col[1], geom_col[0]
+                    else:  # if geom_col = None determine lat, lon columns
+                        x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
+                        y = [col for col in gdf.columns if "lat" in col.lower()][0]
+                    gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[x], gdf[y]), crs="EPSG:4326")
 
             # Update overall bounding box
             gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
