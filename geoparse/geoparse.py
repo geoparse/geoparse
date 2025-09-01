@@ -1313,11 +1313,6 @@ class SnabbKarta:
             # Ensure `gdf_list` is always a list of GeoDataFrames or DataFrames
             if isinstance(gdf_list, pd.DataFrame):
                 gdf_list = [gdf_list]
-
-            # geom_type: str | None = 'coords', #  'coords', 'h3', 's2', 'geohash', 'osm', 'uprn'
-            # geom_from: str | list[str] | None = None,  # e.g. ['Latitude', 'Longitude'], 'h3_8', 'osm_id', 'uprn', 'list'
-            # geom_list: list | None = None,
-
             # Iterate through each DataFrame or GeoDataFrame in the list to add layers to the map
             minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
             layers = []
@@ -1333,8 +1328,16 @@ class SnabbKarta:
                         # Create a gpd.GeoDataFrame from pd.DataFrame
                         gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[x], gdf[y]), crs="EPSG:4326")
 
+                    # geom_type: str | None = 'coords', #  'coords', 'h3', 's2', 'geohash', 'osm', 'uprn'
+                    # geom_from: str | list[str] | None = None,  # e.g. ['Latitude', 'Longitude'], 'h3_8', 'osm_id', 'uprn', 'list'
+                    # geom_list: list | None = None,
+
                     elif geom_type in ["geohash", "s2", "h3"]:
                         gdf["geometry"], _ = SpatialIndex.cell_poly(gdf[geom_from].values, cell_type=geom_type)
+                        gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
+
+                    elif geom_type == "osm":
+                        gdf["geometry"] = OSMUtils.ways_to_geom(gdf[geom_from].values, osm_url)
                         gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
 
                 # Update overall bounding box
