@@ -1198,7 +1198,7 @@ class SnabbKarta:
         gdf: gpd.GeoDataFrame,
         color: str = "blue",
         opacity: float = 1,
-        get_radius: str = None,
+        get_radius: str | int = 1,
         radius_min_pixels: int = 1,
         radius_max_pixels: int = 8,
         speed_field: str = "speed",
@@ -1372,7 +1372,7 @@ class SnabbKarta:
                 layers.append(poly_layer)
                 if centroid:  # Show centroids of polygons if `centroid=True`
                     cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs="EPSG:4326")  # centroid df
-                    centroid_layer = SnabbKarta._create_point_layer(cdf)
+                    centroid_layer = SnabbKarta._create_point_layer(cdf, get_radius=1000)
                     layers.append(centroid_layer)
 
             # Create a buffer layer if `buffer_radius > 0`
