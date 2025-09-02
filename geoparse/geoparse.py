@@ -1289,7 +1289,7 @@ class SnabbKarta:
         speed_limit_field: str = "speedlimit",
         point_radius: int | str = 1,
         radius_min_pixels: int = 1,
-        radius_max_pixels: int = 8,
+        radius_max_pixels: int = 10,
         buffer_radius: int = 0,
         ring_inner_radius: int = 0,
         ring_outer_radius: int = 0,
