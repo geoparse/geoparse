@@ -25,7 +25,7 @@ from branca.element import MacroElement, Template
 from folium import plugins
 from lonboard.basemap import CartoBasemap
 from s2 import s2
-from shapely.geometry import LineString, MultiPolygon, Point, Polygon, box
+from shapely.geometry import GeometryCollection, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon, box
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import transform, unary_union
 from shapely.prepared import prep
@@ -1727,49 +1727,62 @@ class GeomUtils:
             return [n_shells, n_holes, n_shell_points, area / 1_000_000, perimeter / 1000, projection]
 
     @staticmethod
-    def flatten_3d(geom: gpd.GeoSeries) -> list[Polygon | MultiPolygon]:
+    def flatten_3d(geom: gpd.GeoSeries) -> gpd.GeoSeries:
         """
-        Flattens a GeoSeries of 3D Polygons or MultiPolygons into 2D geometries.
+        Flattens a GeoSeries of 3D geometries into 2D geometries.
 
-        This function removes the z-coordinate from each 3D geometry in the input GeoSeries,
-        converting it into a 2D Polygon or MultiPolygon. The result is a list of 2D geometries.
+        This function removes the z-coordinate from each geometry in the input GeoSeries,
+        converting it into its 2D equivalent. Non-3D geometries are preserved.
 
         Parameters
         ----------
         geom : gpd.GeoSeries
-            A GeoSeries containing 3D Polygons or MultiPolygons (geometries with z-coordinates).
+            A GeoSeries containing geometries (with or without z-coordinates).
 
         Returns
         -------
-        List[Union[Polygon, MultiPolygon]]
-            A list of 2D Polygons or MultiPolygons with the z-coordinates removed.
-
-        Examples
-        --------
-        >>> gdf.geometry = flatten_3d(gdf.geometry)
-            Converts all 3D geometries in the GeoSeries `gdf.geometry` to 2D geometries.
+        gpd.GeoSeries
+            A GeoSeries of 2D geometries.
 
         Notes
         -----
-        The function is useful when working with datasets that contain 3D geometries but
-        only 2D geometries are needed for further spatial analysis or visualization.
-
+        - Preserves polygon holes (interior rings).
+        - Keeps non-3D geometries unchanged.
+        - Supports Point, LineString, Polygon, MultiPoint, MultiLineString,
+          MultiPolygon, and GeometryCollection.
         """
-        new_geom = []
-        for p in geom:
-            if p.has_z:
-                if p.geom_type == "Polygon":
-                    lines = [xy[:2] for xy in list(p.exterior.coords)]
-                    new_p = Polygon(lines)
-                    new_geom.append(new_p)
-                elif p.geom_type == "MultiPolygon":
-                    new_multi_p = []
-                    for ap in p:
-                        lines = [xy[:2] for xy in list(ap.exterior.coords)]
-                        new_p = Polygon(lines)
-                        new_multi_p.append(new_p)
-                    new_geom.append(MultiPolygon(new_multi_p))
-        return new_geom
+
+        def drop_z(geometry):
+            if geometry is None or not getattr(geometry, "has_z", False):
+                return geometry
+
+            if isinstance(geometry, Point):
+                return Point(geometry.x, geometry.y)
+
+            elif isinstance(geometry, LineString):
+                return LineString([(x, y) for x, y, _ in geometry.coords])
+
+            elif isinstance(geometry, Polygon):
+                exterior = [(x, y) for x, y, _ in geometry.exterior.coords]
+                interiors = [[(x, y) for x, y, _ in ring.coords] for ring in geometry.interiors]
+                return Polygon(exterior, interiors)
+
+            elif isinstance(geometry, MultiPoint):
+                return MultiPoint([drop_z(g) for g in geometry.geoms])
+
+            elif isinstance(geometry, MultiLineString):
+                return MultiLineString([drop_z(g) for g in geometry.geoms])
+
+            elif isinstance(geometry, MultiPolygon):
+                return MultiPolygon([drop_z(g) for g in geometry.geoms])
+
+            elif isinstance(geometry, GeometryCollection):
+                return GeometryCollection([drop_z(g) for g in geometry.geoms])
+
+            else:
+                return geometry  # Unknown type: leave unchanged
+
+        return geom.apply(drop_z)
 
     @staticmethod
     def bearing(geom: LineString) -> tuple[int, int, str, str]:
