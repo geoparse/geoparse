@@ -1727,7 +1727,7 @@ class GeomUtils:
             return [n_shells, n_holes, n_shell_points, area / 1_000_000, perimeter / 1000, projection]
 
     @staticmethod
-    def flatten_3d(geom: gpd.GeoSeries) -> gpd.GeoSeries:
+    def flatten_3d(geoms: gpd.GeoSeries) -> gpd.GeoSeries:
         """
         Flattens a GeoSeries of 3D geometries into 2D geometries.
 
@@ -1752,37 +1752,37 @@ class GeomUtils:
           MultiPolygon, and GeometryCollection.
         """
 
-        def drop_z(geometry):
-            if geometry is None or not getattr(geometry, "has_z", False):
-                return geometry
+        def drop_z(geom):
+            if geom is None or not getattr(geom, "has_z", False):
+                return geom
 
-            if isinstance(geometry, Point):
-                return Point(geometry.x, geometry.y)
+            if isinstance(geom, Point):
+                return Point(geom.x, geom.y)
 
-            elif isinstance(geometry, LineString):
-                return LineString([(x, y) for x, y, _ in geometry.coords])
+            elif isinstance(geom, LineString):
+                return LineString([(x, y) for x, y, _ in geom.coords])
 
-            elif isinstance(geometry, Polygon):
-                exterior = [(x, y) for x, y, _ in geometry.exterior.coords]
-                interiors = [[(x, y) for x, y, _ in ring.coords] for ring in geometry.interiors]
+            elif isinstance(geom, Polygon):
+                exterior = [(x, y) for x, y, _ in geom.exterior.coords]
+                interiors = [[(x, y) for x, y, _ in ring.coords] for ring in geom.interiors]
                 return Polygon(exterior, interiors)
 
-            elif isinstance(geometry, MultiPoint):
-                return MultiPoint([drop_z(g) for g in geometry.geoms])
+            elif isinstance(geom, MultiPoint):
+                return MultiPoint([drop_z(g) for g in geom.geoms])
 
-            elif isinstance(geometry, MultiLineString):
-                return MultiLineString([drop_z(g) for g in geometry.geoms])
+            elif isinstance(geom, MultiLineString):
+                return MultiLineString([drop_z(g) for g in geom.geoms])
 
-            elif isinstance(geometry, MultiPolygon):
-                return MultiPolygon([drop_z(g) for g in geometry.geoms])
+            elif isinstance(geom, MultiPolygon):
+                return MultiPolygon([drop_z(g) for g in geom.geoms])
 
-            elif isinstance(geometry, GeometryCollection):
-                return GeometryCollection([drop_z(g) for g in geometry.geoms])
+            elif isinstance(geom, GeometryCollection):
+                return GeometryCollection([drop_z(g) for g in geom.geoms])
 
             else:
-                return geometry  # Unknown type: leave unchanged
+                return geom  # Unknown type: leave unchanged
 
-        return geom.apply(drop_z)
+        return [drop_z(geom) for geom in geoms]
 
     @staticmethod
     def bearing(geom: LineString) -> tuple[int, int, str, str]:
