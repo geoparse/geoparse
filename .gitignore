@@ -17,6 +17,9 @@ __pycache__/
 # Documentations
 docs/
 
+# Data
+data/
+
 # Distribution / packaging
 .Python
 build/

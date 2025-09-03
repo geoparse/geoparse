@@ -25,7 +25,7 @@ from branca.element import MacroElement, Template
 from folium import plugins
 from lonboard.basemap import CartoBasemap
 from s2 import s2
-from shapely.geometry import LineString, MultiPolygon, Point, Polygon, box
+from shapely.geometry import GeometryCollection, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon, box
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import transform, unary_union
 from shapely.prepared import prep
@@ -1268,10 +1268,14 @@ class SnabbKarta:
     @staticmethod
     def plp(
         gdf_list: gpd.GeoDataFrame | pd.DataFrame | dict | list[gpd.GeoDataFrame | pd.DataFrame | dict],
-        # Cells and OSM objects
+        # Geospatial cells, OSM and UPRN
         geom_col: str | list[str] | None = None,  # e.g. ['northing', 'easting'], 'h3_8', 'osm_id', 'uprn'
         geom_type: str | None = None,  #  'h3', 's2', 'geohash', 'osm', 'uprn'
         osm_url: str | None = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
+        uprn_df: pd.DataFrame = None,
+        uprn_col: str = "uprn",  # UPRN column name in uprn_df
+        lat_col: str = "lat",  # Latitude column name in uprn_df
+        lon_col: str = "lon",  # Longitude column name in uprn_df
         # Map tiles
         basemap_style=CartoBasemap.Positron,
         pitch=30,
@@ -1285,7 +1289,7 @@ class SnabbKarta:
         speed_limit_field: str = "speedlimit",
         point_radius: int | str = 1,
         radius_min_pixels: int = 1,
-        radius_max_pixels: int = 8,
+        radius_max_pixels: int = 10,
         buffer_radius: int = 0,
         ring_inner_radius: int = 0,
         ring_outer_radius: int = 0,
@@ -1325,11 +1329,13 @@ class SnabbKarta:
                     gdf = gpd.GeoDataFrame({"way_id": gdf["geom_list"], "geometry": geoms}, crs="EPSG:4326")
                 # Convert UPRNs to Shapely geometries
                 elif gdf["geom_type"] == "uprn":
-                    gdf = gpd.GeoDataFrame({"uprn": gdf["geom_list"]})
-                    udf = pd.read_parquet("../data/uprn/osopenuprn_202507.parquet")
-                    gdf = gdf.merge(udf, on="uprn", how="left")
-                    gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf["lon"], gdf["lat"]), crs="EPSG:4326")
-                    gdf = gdf.drop(columns=["lat", "lon"])
+                    if uprn_df is None:
+                        uprn_df = pd.read_parquet("https://geoparse.io/tutorials/data/osopenuprn_202507.parquet")
+                        uprn_col, lat_col, lon_col = uprn_df.columns
+                    gdf = gpd.GeoDataFrame({"uprn": sorted(gdf["geom_list"])})
+                    gdf = gdf.merge(uprn_df, left_on="uprn", right_on=uprn_col, how="left")
+                    gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[lon_col], gdf[lat_col]), crs="EPSG:4326")
+                    gdf = gdf.drop(columns=[lat_col, lon_col])
 
             # if gdf is a pd.DataFrame convert it to gpd.GeoDataFrame
             elif not isinstance(gdf, gpd.GeoDataFrame):
@@ -1342,10 +1348,13 @@ class SnabbKarta:
                     gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
 
                 elif geom_type == "uprn":
-                    udf = pd.read_parquet("../data/uprn/osopenuprn_202507.parquet")
-                    gdf = gdf.merge(udf, left_on=geom_col, right_on="uprn", how="left")
-                    gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf["lon"], gdf["lat"]), crs="EPSG:4326")
-                    gdf = gdf.drop(columns=["lat", "lon"])
+                    if uprn_df is None:
+                        uprn_df = pd.read_parquet("https://geoparse.io/tutorials/data/osopenuprn_202507.parquet")
+                        uprn_col, lat_col, lon_col = uprn_df.columns
+                    gdf = gdf.sort_values(by=geom_col).reset_index(drop=True)
+                    gdf = gdf.merge(uprn_df, left_on=geom_col, right_on=uprn_col, how="left")
+                    gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[lon_col], gdf[lat_col]), crs="EPSG:4326")
+                    gdf = gdf.drop(columns=[lat_col, lon_col])
 
                 else:  # if geom_type == None, find lat, lon columns
                     if geom_col:  # if geom_col provided
@@ -1718,49 +1727,62 @@ class GeomUtils:
             return [n_shells, n_holes, n_shell_points, area / 1_000_000, perimeter / 1000, projection]
 
     @staticmethod
-    def flatten_3d(geom: gpd.GeoSeries) -> list[Polygon | MultiPolygon]:
+    def flatten_3d(geoms: gpd.GeoSeries) -> gpd.GeoSeries:
         """
-        Flattens a GeoSeries of 3D Polygons or MultiPolygons into 2D geometries.
+        Flattens a GeoSeries of 3D geometries into 2D geometries.
 
-        This function removes the z-coordinate from each 3D geometry in the input GeoSeries,
-        converting it into a 2D Polygon or MultiPolygon. The result is a list of 2D geometries.
+        This function removes the z-coordinate from each geometry in the input GeoSeries,
+        converting it into its 2D equivalent. Non-3D geometries are preserved.
 
         Parameters
         ----------
         geom : gpd.GeoSeries
-            A GeoSeries containing 3D Polygons or MultiPolygons (geometries with z-coordinates).
+            A GeoSeries containing geometries (with or without z-coordinates).
 
         Returns
         -------
-        List[Union[Polygon, MultiPolygon]]
-            A list of 2D Polygons or MultiPolygons with the z-coordinates removed.
-
-        Examples
-        --------
-        >>> gdf.geometry = flatten_3d(gdf.geometry)
-            Converts all 3D geometries in the GeoSeries `gdf.geometry` to 2D geometries.
+        gpd.GeoSeries
+            A GeoSeries of 2D geometries.
 
         Notes
         -----
-        The function is useful when working with datasets that contain 3D geometries but
-        only 2D geometries are needed for further spatial analysis or visualization.
-
+        - Preserves polygon holes (interior rings).
+        - Keeps non-3D geometries unchanged.
+        - Supports Point, LineString, Polygon, MultiPoint, MultiLineString,
+          MultiPolygon, and GeometryCollection.
         """
-        new_geom = []
-        for p in geom:
-            if p.has_z:
-                if p.geom_type == "Polygon":
-                    lines = [xy[:2] for xy in list(p.exterior.coords)]
-                    new_p = Polygon(lines)
-                    new_geom.append(new_p)
-                elif p.geom_type == "MultiPolygon":
-                    new_multi_p = []
-                    for ap in p:
-                        lines = [xy[:2] for xy in list(ap.exterior.coords)]
-                        new_p = Polygon(lines)
-                        new_multi_p.append(new_p)
-                    new_geom.append(MultiPolygon(new_multi_p))
-        return new_geom
+
+        def drop_z(geom):
+            if geom is None or not getattr(geom, "has_z", False):
+                return geom
+
+            if isinstance(geom, Point):
+                return Point(geom.x, geom.y)
+
+            elif isinstance(geom, LineString):
+                return LineString([(x, y) for x, y, _ in geom.coords])
+
+            elif isinstance(geom, Polygon):
+                exterior = [(x, y) for x, y, _ in geom.exterior.coords]
+                interiors = [[(x, y) for x, y, _ in ring.coords] for ring in geom.interiors]
+                return Polygon(exterior, interiors)
+
+            elif isinstance(geom, MultiPoint):
+                return MultiPoint([drop_z(g) for g in geom.geoms])
+
+            elif isinstance(geom, MultiLineString):
+                return MultiLineString([drop_z(g) for g in geom.geoms])
+
+            elif isinstance(geom, MultiPolygon):
+                return MultiPolygon([drop_z(g) for g in geom.geoms])
+
+            elif isinstance(geom, GeometryCollection):
+                return GeometryCollection([drop_z(g) for g in geom.geoms])
+
+            else:
+                return geom  # Unknown type: leave unchanged
+
+        return [drop_z(geom) for geom in geoms]
 
     @staticmethod
     def bearing(geom: LineString) -> tuple[int, int, str, str]:
