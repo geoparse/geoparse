@@ -258,7 +258,7 @@ class TestGeomUtils(unittest.TestCase):
         self.assertEqual(list(gc.geoms[1].coords), [(0, 0), (1, 1)])
 
         # 2D geometry stays the same
-        self.assertTrue(result[7].equals(Point(100, 20)))
+        self.assertTrue(result[7].equals(Point(100, 200)))
 
 
 if __name__ == "__main__":
