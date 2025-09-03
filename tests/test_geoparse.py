@@ -1,9 +1,14 @@
+import os
+import sys
 import unittest
 
 import folium
-from shapely.geometry import MultiPolygon, Polygon
+import geopandas as gpd
+from shapely.geometry import GeometryCollection, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon
 
-from geoparse.geoparse import Karta, SpatialIndex
+sys.path.append(os.path.abspath("../geoparse/"))
+
+from geoparse import GeomUtils, Karta, SpatialIndex
 
 
 class TestKarta(unittest.TestCase):
@@ -172,8 +177,88 @@ class TestCellPoly(unittest.TestCase):
             SpatialIndex.cell_poly(cells, "invalid")
 
 
-if __name__ == "__main__":
-    unittest.main()
+class TestGeomUtils(unittest.TestCase):
+    def test_flatten_3d(self):
+        # --- Test geometries ---
+        geoms = [
+            Point(1, 2, 5),  # 3D Point
+            LineString([(0, 0, 3), (1, 1, 3), (2, 0, 3)]),  # 3D LineString
+            Polygon(  # 3D Polygon with hole
+                shell=[(0, 0, 7), (4, 0, 7), (4, 4, 7), (0, 4, 7), (0, 0, 7)],
+                holes=[[(1, 1, 7), (3, 1, 7), (3, 3, 7), (1, 3, 7), (1, 1, 7)]],
+            ),
+            MultiPolygon(
+                [  # 3D MultiPolygon with hole
+                    Polygon(
+                        shell=[(0, 0, 1), (5, 0, 1), (5, 5, 1), (0, 5, 1), (0, 0, 1)],
+                        holes=[[(1, 1, 1), (2, 1, 1), (2, 2, 1), (1, 2, 1), (1, 1, 1)]],
+                    )
+                ]
+            ),
+            MultiPoint([Point(0, 0, 9), Point(1, 1, 9)]),  # 3D MultiPoint
+            MultiLineString(
+                [  # 3D MultiLineString
+                    LineString([(0, 0, 2), (1, 1, 2)]),
+                    LineString([(2, 2, 2), (3, 3, 2)]),
+                ]
+            ),
+            GeometryCollection(
+                [  # Mixed GeometryCollection
+                    Point(10, 20, 30),
+                    LineString([(0, 0, 8), (1, 1, 8)]),
+                ]
+            ),
+            Point(100, 200),  # Already 2D
+        ]
+        gdf = gpd.GeoSeries(geoms)
+
+        # --- Run flatten_3d ---
+        result = GeomUtils.flatten_3d(gdf)
+
+        # --- Assertions ---
+        # 1. All geometries should be 2D
+        for geom in result:
+            self.assertFalse(getattr(geom, "has_z", False))
+
+        # 2. Types preserved
+        self.assertIsInstance(result[0], Point)
+        self.assertIsInstance(result[1], LineString)
+        self.assertIsInstance(result[2], Polygon)
+        self.assertIsInstance(result[3], MultiPolygon)
+        self.assertIsInstance(result[4], MultiPoint)
+        self.assertIsInstance(result[5], MultiLineString)
+        self.assertIsInstance(result[6], GeometryCollection)
+        self.assertIsInstance(result[7], Point)
+
+        # 3. XY values preserved
+        self.assertEqual(list(result[0].coords), [(1, 2)])
+        self.assertEqual(list(result[1].coords), [(0, 0), (1, 1), (2, 0)])
+
+        # Polygon with hole
+        self.assertEqual(list(result[2].exterior.coords), [(0, 0), (4, 0), (4, 4), (0, 4), (0, 0)])
+        self.assertEqual(list(result[2].interiors[0].coords), [(1, 1), (3, 1), (3, 3), (1, 3), (1, 1)])
+
+        # MultiPolygon with hole
+        mp = result[3]
+        self.assertEqual(len(mp.geoms), 1)
+        self.assertEqual(list(mp.geoms[0].exterior.coords), [(0, 0), (5, 0), (5, 5), (0, 5), (0, 0)])
+        self.assertEqual(list(mp.geoms[0].interiors[0].coords), [(1, 1), (2, 1), (2, 2), (1, 2), (1, 1)])
+
+        # MultiPoint
+        self.assertEqual([list(pt.coords) for pt in result[4].geoms], [[(0, 0)], [(1, 1)]])
+
+        # MultiLineString
+        self.assertEqual([list(ls.coords) for ls in result[5].geoms], [[(0, 0), (1, 1)], [(2, 2), (3, 3)]])
+
+        # GeometryCollection
+        gc = result[6]
+        self.assertIsInstance(gc.geoms[0], Point)
+        self.assertEqual(list(gc.geoms[0].coords), [(10, 20)])
+        self.assertIsInstance(gc.geoms[1], LineString)
+        self.assertEqual(list(gc.geoms[1].coords), [(0, 0), (1, 1)])
+
+        # 2D geometry stays the same
+        self.assertTrue(result[7].equals(Point(100, 20)))
 
 
 if __name__ == "__main__":
