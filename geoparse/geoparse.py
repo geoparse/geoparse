@@ -680,7 +680,7 @@ class Karta:
 
             # Handle DataFrame or Point geometry
             else:  # if not isinstance(gdf, gpd.GeoDataFrame) or isinstance(geom, Point):
-                if not heatmap or not heatmap_only:
+                if not heatmap or not heatmap_only or not cluster:
                     group_point = folium.FeatureGroup(name=f"{i}- Point")
                     gdf.apply(
                         Karta._add_point,
