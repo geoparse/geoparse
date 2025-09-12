@@ -1200,7 +1200,7 @@ class SnabbKarta:
         opacity: float = 1,
         get_radius: str | int = 1,
         radius_min_pixels: int = 1,
-        radius_max_pixels: int = 8,
+        radius_max_pixels: int = 10,
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
         pickable: bool = True,
@@ -1256,8 +1256,10 @@ class SnabbKarta:
         return lb.PathLayer.from_geopandas(
             gdf,
             get_color=get_color,
+            auto_highlight=True,
+            highlight_color=[255, 0, 0],
             width_min_pixels=1,
-            width_max_pixels=100,
+            width_max_pixels=10,
             pickable=pickable,
         )
 
