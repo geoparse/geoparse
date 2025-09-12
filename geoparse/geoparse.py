@@ -680,7 +680,7 @@ class Karta:
 
             # Handle DataFrame or Point geometry
             else:  # if not isinstance(gdf, gpd.GeoDataFrame) or isinstance(geom, Point):
-                if not heatmap or not heatmap_only:
+                if not heatmap or not heatmap_only or not cluster:
                     group_point = folium.FeatureGroup(name=f"{i}- Point")
                     gdf.apply(
                         Karta._add_point,
@@ -1200,7 +1200,7 @@ class SnabbKarta:
         opacity: float = 1,
         get_radius: str | int = 1,
         radius_min_pixels: int = 1,
-        radius_max_pixels: int = 8,
+        radius_max_pixels: int = 10,
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
         pickable: bool = True,
@@ -1234,6 +1234,32 @@ class SnabbKarta:
             line_width_min_pixels=1,
             radius_min_pixels=radius_min_pixels,
             radius_max_pixels=radius_max_pixels,
+            pickable=pickable,
+        )
+
+    @staticmethod
+    def _create_line_layer(
+        gdf: gpd.GeoDataFrame,
+        line_color="blue",
+        opacity: float = 0.5,
+        pickable=True,
+    ) -> lb.PathLayer:
+        # Convert opacity to 0-255 range
+        opacity = int(opacity * 255)
+
+        if line_color in gdf.columns:
+            get_color = np.array([SnabbKarta._get_color(item) + [opacity] for item in gdf[line_color]], dtype=np.uint8)
+        else:
+            rgb_color = [int(c * 255) for c in matplotlib.colors.to_rgb(line_color)]
+            get_color = np.array([[*rgb_color, opacity]] * len(gdf), dtype=np.uint8)
+
+        return lb.PathLayer.from_geopandas(
+            gdf,
+            get_color=get_color,
+            auto_highlight=True,
+            highlight_color=[255, 0, 0],
+            width_min_pixels=1,
+            width_max_pixels=10,
             pickable=pickable,
         )
 
@@ -1381,6 +1407,13 @@ class SnabbKarta:
                     get_radius=point_radius,
                 )
                 layers.append(point_layer)
+
+            elif isinstance(geom, (LineString, MultiLineString)):
+                line_layer = SnabbKarta._create_line_layer(
+                    gdf,
+                    line_color=line_color,
+                )
+                layers.append(line_layer)
 
             elif isinstance(geom, (Polygon, MultiPolygon)):
                 poly_layer = SnabbKarta._create_poly_layer(gdf, fill_color=fill_color)
