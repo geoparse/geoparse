@@ -1295,13 +1295,13 @@ class SnabbKarta:
     def plp(
         gdf_list: gpd.GeoDataFrame | pd.DataFrame | dict | list[gpd.GeoDataFrame | pd.DataFrame | dict],
         # Geospatial cells, OSM and UPRN
-        geom_col: str | list[str] | None = None,  # e.g. ['northing', 'easting'], 'h3_8', 'osm_id', 'uprn'
-        geom_type: str | None = None,  #  'h3', 's2', 'geohash', 'osm', 'uprn'
+        geom_col: str | list[str] | None = None,  # e.g. ['northing', 'easting'], 'h3_8', 'osm_id', 'uprn', 'postcode_sec'
+        geom_type: str | None = None,  #  'h3', 's2', 'geohash', 'osm', 'uprn', 'usrn', 'postcode'
+        aux_gdf: pd.DataFrame | gpd.GeoDataFrame | None = None,  # external df containing geometry
+        aux_geom_id: str = None,  # UPRN column name in aux_gdf
+        # lat_col: str = "lat",  # Latitude column name in aux_gdf
+        # lon_col: str = "lon",  # Longitude column name in aux_gdf
         osm_url: str | None = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
-        uprn_df: pd.DataFrame = None,
-        uprn_col: str = "uprn",  # UPRN column name in uprn_df
-        lat_col: str = "lat",  # Latitude column name in uprn_df
-        lon_col: str = "lon",  # Longitude column name in uprn_df
         # Map tiles
         basemap_style=CartoBasemap.Positron,
         pitch=30,
@@ -1344,7 +1344,7 @@ class SnabbKarta:
         layers = []
         for gdf in gdf_list:
             # if gdf is a dict convert it to gpd.GeoDataFrame
-            if isinstance(gdf, dict):
+            if isinstance(gdf, dict):  # keys: geom_type, geom_list
                 # Convert geospatial cells to Shapely geometries
                 if gdf["geom_type"] in ["geohash", "s2", "h3"]:
                     geoms, res = SpatialIndex.cell_poly(gdf["geom_list"], cell_type=gdf["geom_type"])
@@ -1353,15 +1353,17 @@ class SnabbKarta:
                 elif gdf["geom_type"] == "osm":
                     geoms = OSMUtils.ways_to_geom(gdf["geom_list"], osm_url)
                     gdf = gpd.GeoDataFrame({"way_id": gdf["geom_list"], "geometry": geoms}, crs="EPSG:4326")
-                # Convert UPRNs to Shapely geometries
-                elif gdf["geom_type"] == "uprn":
-                    if uprn_df is None:
-                        uprn_df = pd.read_parquet("https://geoparse.io/tutorials/data/osopenuprn_202507.parquet")
-                        uprn_col, lat_col, lon_col = uprn_df.columns
-                    gdf = gpd.GeoDataFrame({"uprn": sorted(gdf["geom_list"])})
-                    gdf = gdf.merge(uprn_df, left_on="uprn", right_on=uprn_col, how="left")
-                    gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[lon_col], gdf[lat_col]), crs="EPSG:4326")
-                    gdf = gdf.drop(columns=[lat_col, lon_col])
+                # Convert other types to Shapely geometries
+                elif gdf["geom_type"] in ["uprn", "usrn", "postcode"]:
+                    # if aux_gdf is None:
+                    #    aux_gdf = pd.read_parquet("https://geoparse.io/tutorials/data/osopenuprn_202507.parquet")
+                    #    aux_geom_id, lat_col, lon_col = aux_gdf.columns
+                    df = pd.DataFrame({gdf["geom_type"]: sorted(gdf["geom_list"])})
+                    df = df.merge(aux_gdf, left_on=gdf["geom_type"], right_on=aux_geom_id, how="left")
+                    if "geometry" in df.columns:
+                        gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
+                    # gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[lon_col], gdf[lat_col]), crs="EPSG:4326")
+                    # gdf = gdf.drop(columns=[lat_col, lon_col])
 
             # if gdf is a pd.DataFrame convert it to gpd.GeoDataFrame
             elif not isinstance(gdf, gpd.GeoDataFrame):
@@ -1373,14 +1375,15 @@ class SnabbKarta:
                     gdf["geometry"] = OSMUtils.ways_to_geom(gdf[geom_col].values, osm_url)
                     gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
 
-                elif geom_type == "uprn":
-                    if uprn_df is None:
-                        uprn_df = pd.read_parquet("https://geoparse.io/tutorials/data/osopenuprn_202507.parquet")
-                        uprn_col, lat_col, lon_col = uprn_df.columns
+                elif geom_type in ["uprn", "usrn", "postcode"]:
+                    # if aux_gdf is None:
+                    #    aux_gdf = pd.read_parquet("https://geoparse.io/tutorials/data/osopenuprn_202507.parquet")
+                    #    aux_geom_id, lat_col, lon_col = aux_gdf.columns
                     gdf = gdf.sort_values(by=geom_col).reset_index(drop=True)
-                    gdf = gdf.merge(uprn_df, left_on=geom_col, right_on=uprn_col, how="left")
-                    gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[lon_col], gdf[lat_col]), crs="EPSG:4326")
-                    gdf = gdf.drop(columns=[lat_col, lon_col])
+                    gdf = gdf.merge(aux_gdf, left_on=geom_col, right_on=aux_geom_id, how="left")
+                    gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
+                    # gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[lon_col], gdf[lat_col]), crs="EPSG:4326")
+                    # gdf = gdf.drop(columns=[lat_col, lon_col])
 
                 else:  # if geom_type == None, find lat, lon columns
                     if geom_col:  # if geom_col provided
@@ -1396,32 +1399,32 @@ class SnabbKarta:
             maxlat, maxlon = max(maxlat, gmaxlat), max(maxlon, gmaxlon)
 
             # Create layers
-            geom = gdf.geometry.iloc[0]
-            if isinstance(geom, Point):
-                point_layer = SnabbKarta._create_point_layer(
-                    gdf,
-                    color=point_color,
-                    opacity=point_opacity,
-                    speed_field=speed_field,
-                    speed_limit_field=speed_limit_field,
-                    get_radius=point_radius,
-                )
-                layers.append(point_layer)
+            for geom in gdf.geometry.type.unique():
+                if geom == "Point":
+                    point_layer = SnabbKarta._create_point_layer(
+                        gdf[gdf.geometry.type == geom_type],
+                        color=point_color,
+                        opacity=point_opacity,
+                        speed_field=speed_field,
+                        speed_limit_field=speed_limit_field,
+                        get_radius=point_radius,
+                    )
+                    layers.append(point_layer)
 
-            elif isinstance(geom, (LineString, MultiLineString)):
-                line_layer = SnabbKarta._create_line_layer(
-                    gdf,
-                    line_color=line_color,
-                )
-                layers.append(line_layer)
+                elif isinstance(geom, (LineString, MultiLineString)):
+                    line_layer = SnabbKarta._create_line_layer(
+                        gdf,
+                        line_color=line_color,
+                    )
+                    layers.append(line_layer)
 
-            elif isinstance(geom, (Polygon, MultiPolygon)):
-                poly_layer = SnabbKarta._create_poly_layer(gdf, fill_color=fill_color)
-                layers.append(poly_layer)
-                if centroid:  # Show centroids of polygons if `centroid=True`
-                    cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs="EPSG:4326")  # centroid df
-                    centroid_layer = SnabbKarta._create_point_layer(cdf, get_radius=1000)
-                    layers.append(centroid_layer)
+                elif isinstance(geom, (Polygon, MultiPolygon)):
+                    poly_layer = SnabbKarta._create_poly_layer(gdf, fill_color=fill_color)
+                    layers.append(poly_layer)
+                    if centroid:  # Show centroids of polygons if `centroid=True`
+                        cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs="EPSG:4326")  # centroid df
+                        centroid_layer = SnabbKarta._create_point_layer(cdf, get_radius=1000)
+                        layers.append(centroid_layer)
 
             # Create a buffer layer if `buffer_radius > 0`
             if buffer_radius > 0:
