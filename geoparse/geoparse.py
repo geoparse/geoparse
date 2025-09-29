@@ -417,7 +417,6 @@ class Karta:
         # Point
         cluster: bool = False,
         heatmap: bool = False,
-        heatmap_only: bool = True,
         heatmap_radius: int = 12,
         line: bool = False,
         antpath: bool = False,
@@ -474,9 +473,6 @@ class Karta:
 
         heatmap : bool, default False
             If True, creates a heatmap layer using Folium's `HeatMap` for points.
-
-        heatmap_only : bool, default True
-            If True, displays only the heatmap layer without the individual points.
 
         heatmap_radius : int, default 12
             Radius of each point of the heatmap
@@ -680,7 +676,7 @@ class Karta:
 
             # Handle DataFrame or Point geometry
             else:  # if not isinstance(gdf, gpd.GeoDataFrame) or isinstance(geom, Point):
-                if not heatmap or not heatmap_only or not cluster:
+                if not (heatmap or cluster):
                     group_point = folium.FeatureGroup(name=f"{i}- Point")
                     gdf.apply(
                         Karta._add_point,
