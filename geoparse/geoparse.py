@@ -1294,7 +1294,7 @@ class SnabbKarta:
         geom_col: str | list[str] | None = None,  # e.g. ['northing', 'easting'], 'h3_8', 'osm_id', 'uprn', 'postcode_sec'
         geom_type: str | None = None,  #  'h3', 's2', 'geohash', 'osm', 'uprn', 'usrn', 'postcode'
         aux_gdf: pd.DataFrame | gpd.GeoDataFrame | None = None,  # external df containing geometry
-        aux_geom_id: str = None,  # UPRN column name in aux_gdf
+        aux_geom_id: str = None,  # geometry column name in aux_gdf
         # lat_col: str = "lat",  # Latitude column name in aux_gdf
         # lon_col: str = "lon",  # Longitude column name in aux_gdf
         osm_url: str | None = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
@@ -1358,6 +1358,7 @@ class SnabbKarta:
                     df = df.merge(aux_gdf, left_on=gdf["geom_type"], right_on=aux_geom_id, how="left")
                     if "geometry" in df.columns:
                         gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
+                    # else
                     # gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[lon_col], gdf[lat_col]), crs="EPSG:4326")
                     # gdf = gdf.drop(columns=[lat_col, lon_col])
 
@@ -1366,11 +1367,9 @@ class SnabbKarta:
                 if geom_type in ["geohash", "s2", "h3"]:
                     gdf["geometry"], _ = SpatialIndex.cell_poly(gdf[geom_col].values, cell_type=geom_type)
                     gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
-
                 elif geom_type == "osm":
                     gdf["geometry"] = OSMUtils.ways_to_geom(gdf[geom_col].values, osm_url)
                     gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
-
                 elif geom_type in ["uprn", "usrn", "postcode"]:
                     # if aux_gdf is None:
                     #    aux_gdf = pd.read_parquet("https://geoparse.io/tutorials/data/osopenuprn_202507.parquet")
@@ -1380,7 +1379,6 @@ class SnabbKarta:
                     gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
                     # gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[lon_col], gdf[lat_col]), crs="EPSG:4326")
                     # gdf = gdf.drop(columns=[lat_col, lon_col])
-
                 else:  # if geom_type == None, find lat, lon columns
                     if geom_col:  # if geom_col provided
                         x, y = geom_col[1], geom_col[0]
@@ -1388,7 +1386,6 @@ class SnabbKarta:
                         x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
                         y = [col for col in gdf.columns if "lat" in col.lower()][0]
                     gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[x], gdf[y]), crs="EPSG:4326")
-
             # Update overall bounding box
             gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
             minlat, minlon = min(minlat, gminlat), min(minlon, gminlon)  # minlat: total minlat
@@ -1396,108 +1393,107 @@ class SnabbKarta:
 
             # Create layers
             for geom in gdf.geometry.type.unique():
+                sdf = gdf[gdf.geometry.type == geom]  # subset gdf
                 if geom == "Point":
-                    point_layer = SnabbKarta._create_point_layer(
-                        gdf[gdf.geometry.type == geom_type],
-                        color=point_color,
-                        opacity=point_opacity,
-                        speed_field=speed_field,
-                        speed_limit_field=speed_limit_field,
-                        get_radius=point_radius,
+                    layers.append(
+                        SnabbKarta._create_point_layer(
+                            sdf,
+                            color=point_color,
+                            opacity=point_opacity,
+                            speed_field=speed_field,
+                            speed_limit_field=speed_limit_field,
+                            get_radius=point_radius,
+                        )
                     )
-                    layers.append(point_layer)
+                elif geom in ("LineString", "MultiLineString"):
+                    layers.append(SnabbKarta._create_line_layer(sdf, line_color=line_color))
+                elif geom in ("Polygon", "MultiPolygon"):
+                    layers.append(SnabbKarta._create_poly_layer(sdf, fill_color=fill_color))
 
-                elif isinstance(geom, (LineString, MultiLineString)):
-                    line_layer = SnabbKarta._create_line_layer(
-                        gdf,
-                        line_color=line_color,
+                # Show centroids of the geometry if `centroid=True`
+                if centroid:
+                    cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs=gdf.crs)  # centroid df
+                    centroid_layer = SnabbKarta._create_point_layer(cdf, get_radius=1000)
+                    layers.append(centroid_layer)
+
+                # Create a buffer layer if `buffer_radius > 0`
+                if buffer_radius > 0:
+                    bgdf = gdf[["geometry"]]  # buffered gdf: Create a copy of the GeoDataFrame to modify geometries
+                    # Apply buffer to geometries using the specified radius in meters
+                    bgdf["geometry"] = bgdf.to_crs(GeomUtils.find_proj(geom)).buffer(buffer_radius).to_crs("EPSG:4326")
+                    # Add the buffer layer to the map
+                    buffer_layer = SnabbKarta._create_poly_layer(bgdf)
+                    layers.append(buffer_layer)
+
+                # Create ring layer if `ring_outer_radius > 0`
+                if ring_outer_radius > 0:
+                    bgdf = gdf[["geometry"]]  # buffered gdf: Create a copy of the GeoDataFrame to modify geometries
+                    # Create ring shapes by applying an outer and inner buffer, subtracting the inner from the outer
+                    bgdf["geometry"] = (
+                        bgdf.to_crs(GeomUtils.find_proj(geom))
+                        .buffer(ring_outer_radius)
+                        .difference(bgdf.to_crs(GeomUtils.find_proj(geom)).buffer(ring_inner_radius))
+                        .to_crs("EPSG:4326")
+                    )  # radius in meters
+                    # Add the ring-shaped geometries to the map as polygons
+                    ring_layer = SnabbKarta._create_poly_layer(bgdf)
+                    layers.append(ring_layer)
+
+                # Geohash visualization if `geohash_res > 0`
+                if geohash_res > 0:  # inner=False doesn't work if compact=True
+                    # Create a polygon for bounding box if input is not a polygon
+                    if geom in ("Polygon", "MultiPolygon"):
+                        cdf = gdf[["geometry"]]
+                    else:
+                        # Get the concave hull with a ratio parameter (0-1)
+                        # Smaller ratio = tighter fit, larger ratio = more convex
+                        tight_polygon = shapely.concave_hull(gdf.geometry.unary_union, ratio=0.1)
+                        cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
+
+                    # Convert geometries to geohash cells and their geometries
+                    cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type="geohash", res=geohash_res, compact=compact)
+                    geoms, res = SpatialIndex.cell_poly(cells, cell_type="geohash")
+                    cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
+
+                    geohash_layer = SnabbKarta._create_poly_layer(cdf, fill_color="green")
+                    layers.append(geohash_layer)
+
+                # S2 cell visualization if `s2_res > -1`
+                if s2_res > -1:
+                    # Create a polygon for bounding box if input is not a polygon
+                    if geom in ("Polygon", "MultiPolygon"):
+                        cdf = gdf[["geometry"]]
+                    else:
+                        tight_polygon = shapely.concave_hull(gdf.geometry.unary_union, ratio=0.1)
+                        cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
+
+                    # Convert geometries to S2 cells and their geometries
+                    cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type="s2", res=s2_res, compact=compact)
+                    geoms, res = SpatialIndex.cell_poly(cells, cell_type="s2")
+                    cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
+
+                    s2_layer = SnabbKarta._create_poly_layer(cdf, fill_color="green")
+                    layers.append(s2_layer)
+
+                # H3 cell visualization if `h3_res > -1`
+                if h3_res > -1:
+                    if geom in ("Polygon", "MultiPolygon"):
+                        cdf = gdf[["geometry"]]
+                    else:
+                        tight_polygon = shapely.concave_hull(gdf.geometry.unary_union, ratio=0.1)
+                        cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
+
+                    # Convert geometries to H3 cells and their Shapely hexagons
+                    cells, _ = SpatialIndex.ppoly_cell(
+                        cdf, cell_type="h3", res=h3_res, force_full_cover=force_full_cover, compact=compact
                     )
-                    layers.append(line_layer)
+                    geoms, res = SpatialIndex.cell_poly(cells, cell_type="h3")
+                    cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
 
-                elif isinstance(geom, (Polygon, MultiPolygon)):
-                    poly_layer = SnabbKarta._create_poly_layer(gdf, fill_color=fill_color)
-                    layers.append(poly_layer)
-                    if centroid:  # Show centroids of polygons if `centroid=True`
-                        cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs="EPSG:4326")  # centroid df
-                        centroid_layer = SnabbKarta._create_point_layer(cdf, get_radius=1000)
-                        layers.append(centroid_layer)
-
-            # Create a buffer layer if `buffer_radius > 0`
-            if buffer_radius > 0:
-                bgdf = gdf[["geometry"]]  # buffered gdf: Create a copy of the GeoDataFrame to modify geometries
-                # Apply buffer to geometries using the specified radius in meters
-                bgdf["geometry"] = bgdf.to_crs(GeomUtils.find_proj(geom)).buffer(buffer_radius).to_crs("EPSG:4326")
-                # Add the buffer layer to the map
-                buffer_layer = SnabbKarta._create_poly_layer(bgdf)
-                layers.append(buffer_layer)
-
-            # Create ring layer if `ring_outer_radius > 0`
-            if ring_outer_radius > 0:
-                bgdf = gdf[["geometry"]]  # buffered gdf: Create a copy of the GeoDataFrame to modify geometries
-                # Create ring shapes by applying an outer and inner buffer, subtracting the inner from the outer
-                bgdf["geometry"] = (
-                    bgdf.to_crs(GeomUtils.find_proj(geom))
-                    .buffer(ring_outer_radius)
-                    .difference(bgdf.to_crs(GeomUtils.find_proj(geom)).buffer(ring_inner_radius))
-                    .to_crs("EPSG:4326")
-                )  # radius in meters
-                # Add the ring-shaped geometries to the map as polygons
-                ring_layer = SnabbKarta._create_poly_layer(bgdf)
-                layers.append(ring_layer)
-
-            # Geohash visualization if `geohash_res > 0`
-            if geohash_res > 0:  # inner=False doesn't work if compact=True
-                # Create a polygon for bounding box if input is not a polygon
-                if isinstance(geom, Polygon) or isinstance(geom, MultiPolygon):
-                    cdf = gdf[["geometry"]]
-                else:
-                    # Get the concave hull with a ratio parameter (0-1)
-                    # Smaller ratio = tighter fit, larger ratio = more convex
-                    tight_polygon = shapely.concave_hull(gdf.geometry.unary_union, ratio=0.1)
-                    cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
-
-                # Convert geometries to geohash cells and their geometries
-                cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type="geohash", res=geohash_res, compact=compact)
-                geoms, res = SpatialIndex.cell_poly(cells, cell_type="geohash")
-                cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
-
-                geohash_layer = SnabbKarta._create_poly_layer(cdf, fill_color="green")
-                layers.append(geohash_layer)
-
-            # S2 cell visualization if `s2_res > -1`
-            if s2_res > -1:
-                # Create a polygon for bounding box if input is not a polygon
-                if isinstance(geom, Polygon) or isinstance(geom, MultiPolygon):
-                    cdf = gdf[["geometry"]]
-                else:
-                    tight_polygon = shapely.concave_hull(gdf.geometry.unary_union, ratio=0.1)
-                    cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
-
-                # Convert geometries to S2 cells and their geometries
-                cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type="s2", res=s2_res, compact=compact)
-                geoms, res = SpatialIndex.cell_poly(cells, cell_type="s2")
-                cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
-
-                s2_layer = SnabbKarta._create_poly_layer(cdf, fill_color="green")
-                layers.append(s2_layer)
-
-            # H3 cell visualization if `h3_res > -1`
-            if h3_res > -1:
-                if isinstance(geom, Polygon) or isinstance(geom, MultiPolygon):
-                    cdf = gdf[["geometry"]]
-                else:
-                    tight_polygon = shapely.concave_hull(gdf.geometry.unary_union, ratio=0.1)
-                    cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
-
-                # Convert geometries to H3 cells and their Shapely hexagons
-                cells, _ = SpatialIndex.ppoly_cell(
-                    cdf, cell_type="h3", res=h3_res, force_full_cover=force_full_cover, compact=compact
-                )
-                geoms, res = SpatialIndex.cell_poly(cells, cell_type="h3")
-                cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
-
-                h3_layer = SnabbKarta._create_poly_layer(cdf, fill_color="green")
-                layers.append(h3_layer)
+                    h3_layer = SnabbKarta._create_poly_layer(cdf, fill_color="green")
+                    layers.append(h3_layer)
+            # for geom in gdf.geometry.type.unique():
+        # for gdf in gdf_list:
 
         # Create a base map using the bounding box
         sw = [minlat, minlon]  # South West (bottom left corner)
