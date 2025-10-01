@@ -1412,10 +1412,11 @@ class SnabbKarta:
                 elif geom in ("Polygon", "MultiPolygon"):
                     poly_layer = SnabbKarta._create_poly_layer(gdf[gdf.geometry.type == geom], fill_color=fill_color)
                     layers.append(poly_layer)
-                    if centroid:  # Show centroids of polygons if `centroid=True`
-                        cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs="EPSG:4326")  # centroid df
-                        centroid_layer = SnabbKarta._create_point_layer(cdf, get_radius=1000)
-                        layers.append(centroid_layer)
+
+                if centroid:  # Show centroids of polygons if `centroid=True`
+                    cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs=gdf.crs)  # centroid df
+                    centroid_layer = SnabbKarta._create_point_layer(cdf, get_radius=1000)
+                    layers.append(centroid_layer)
 
                 # Create a buffer layer if `buffer_radius > 0`
                 if buffer_radius > 0:
