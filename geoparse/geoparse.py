@@ -1393,27 +1393,25 @@ class SnabbKarta:
 
             # Create layers
             for geom in gdf.geometry.type.unique():
+                sdf = gdf[gdf.geometry.type == geom]  # subset gdf
                 if geom == "Point":
-                    point_layer = SnabbKarta._create_point_layer(
-                        gdf[gdf.geometry.type == geom],
-                        color=point_color,
-                        opacity=point_opacity,
-                        speed_field=speed_field,
-                        speed_limit_field=speed_limit_field,
-                        get_radius=point_radius,
+                    layers.append(
+                        SnabbKarta._create_point_layer(
+                            sdf,
+                            color=point_color,
+                            opacity=point_opacity,
+                            speed_field=speed_field,
+                            speed_limit_field=speed_limit_field,
+                            get_radius=point_radius,
+                        )
                     )
-                    layers.append(point_layer)
                 elif geom in ("LineString", "MultiLineString"):
-                    line_layer = SnabbKarta._create_line_layer(
-                        gdf[gdf.geometry.type == geom],
-                        line_color=line_color,
-                    )
-                    layers.append(line_layer)
+                    layers.append(SnabbKarta._create_line_layer(sdf, line_color=line_color))
                 elif geom in ("Polygon", "MultiPolygon"):
-                    poly_layer = SnabbKarta._create_poly_layer(gdf[gdf.geometry.type == geom], fill_color=fill_color)
-                    layers.append(poly_layer)
+                    layers.append(SnabbKarta._create_poly_layer(sdf, fill_color=fill_color))
 
-                if centroid:  # Show centroids of polygons if `centroid=True`
+                # Show centroids of the geometry if `centroid=True`
+                if centroid:
                     cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs=gdf.crs)  # centroid df
                     centroid_layer = SnabbKarta._create_point_layer(cdf, get_radius=1000)
                     layers.append(centroid_layer)
