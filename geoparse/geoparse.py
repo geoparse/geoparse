@@ -1356,11 +1356,7 @@ class SnabbKarta:
                     #    aux_geom_id, lat_col, lon_col = aux_gdf.columns
                     df = pd.DataFrame({gdf["geom_type"]: sorted(gdf["geom_list"])})
                     df = df.merge(aux_gdf, left_on=gdf["geom_type"], right_on=aux_geom_id, how="left")
-                    if "geometry" in df.columns:
-                        gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
-                    # else
-                    # gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[lon_col], gdf[lat_col]), crs="EPSG:4326")
-                    # gdf = gdf.drop(columns=[lat_col, lon_col])
+                    gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
 
             # if gdf is a pd.DataFrame convert it to gpd.GeoDataFrame
             elif not isinstance(gdf, gpd.GeoDataFrame):
