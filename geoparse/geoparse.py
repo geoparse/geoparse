@@ -1345,36 +1345,28 @@ class SnabbKarta:
                 if gdf["geom_type"] in ["geohash", "s2", "h3"]:
                     geoms, res = SpatialIndex.cell_poly(gdf["geom_list"], cell_type=gdf["geom_type"])
                     gdf = gpd.GeoDataFrame({"id": gdf["geom_list"], "res": res, "geometry": geoms}, crs="EPSG:4326")
+                # Convert other types to Shapely geometries
+                elif gdf["geom_type"] in ["uprn", "usrn", "postcode"]:
+                    df = pd.DataFrame({gdf["geom_type"]: sorted(gdf["geom_list"])})
+                    df = df.merge(aux_gdf, left_on=gdf["geom_type"], right_on=aux_geom_id, how="left")
+                    gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
                 # Convert OSM way IDs to Shapely geometries
                 elif gdf["geom_type"] == "osm":
                     geoms = OSMUtils.ways_to_geom(gdf["geom_list"], osm_url)
                     gdf = gpd.GeoDataFrame({"way_id": gdf["geom_list"], "geometry": geoms}, crs="EPSG:4326")
-                # Convert other types to Shapely geometries
-                elif gdf["geom_type"] in ["uprn", "usrn", "postcode"]:
-                    # if aux_gdf is None:
-                    #    aux_gdf = pd.read_parquet("https://geoparse.io/tutorials/data/osopenuprn_202507.parquet")
-                    #    aux_geom_id, lat_col, lon_col = aux_gdf.columns
-                    df = pd.DataFrame({gdf["geom_type"]: sorted(gdf["geom_list"])})
-                    df = df.merge(aux_gdf, left_on=gdf["geom_type"], right_on=aux_geom_id, how="left")
-                    gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
 
             # if gdf is a pd.DataFrame convert it to gpd.GeoDataFrame
             elif not isinstance(gdf, gpd.GeoDataFrame):
                 if geom_type in ["geohash", "s2", "h3"]:
                     gdf["geometry"], _ = SpatialIndex.cell_poly(gdf[geom_col].values, cell_type=geom_type)
                     gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
-                elif geom_type == "osm":
-                    gdf["geometry"] = OSMUtils.ways_to_geom(gdf[geom_col].values, osm_url)
-                    gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
                 elif geom_type in ["uprn", "usrn", "postcode"]:
-                    # if aux_gdf is None:
-                    #    aux_gdf = pd.read_parquet("https://geoparse.io/tutorials/data/osopenuprn_202507.parquet")
-                    #    aux_geom_id, lat_col, lon_col = aux_gdf.columns
                     gdf = gdf.sort_values(by=geom_col).reset_index(drop=True)
                     gdf = gdf.merge(aux_gdf, left_on=geom_col, right_on=aux_geom_id, how="left")
                     gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
-                    # gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[lon_col], gdf[lat_col]), crs="EPSG:4326")
-                    # gdf = gdf.drop(columns=[lat_col, lon_col])
+                elif geom_type == "osm":
+                    gdf["geometry"] = OSMUtils.ways_to_geom(gdf[geom_col].values, osm_url)
+                    gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
                 else:  # if geom_type == None, find lat, lon columns
                     if geom_col:  # if geom_col provided
                         x, y = geom_col[1], geom_col[0]
