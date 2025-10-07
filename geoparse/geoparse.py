@@ -1291,7 +1291,9 @@ class SnabbKarta:
     def plp(
         gdf_list: gpd.GeoDataFrame | pd.DataFrame | dict | list[gpd.GeoDataFrame | pd.DataFrame | dict],
         # Geospatial cells, OSM and UPRN
-        geom_col: str | list[str] | None = None,  # e.g. ['northing', 'easting'], 'h3_8', 'osm_id', 'uprn', 'postcode_sec'
+        geom_col: str
+        | list[str]
+        | None = None,  # e.g. ['northing', 'easting'], 'h3_8', 'osm_id', 'uprn',  'postcode', 'postcode_sec'
         geom_type: str | None = None,  #  'h3', 's2', 'geohash', 'osm', 'uprn', 'usrn', 'postcode'
         aux_gdf: pd.DataFrame | gpd.GeoDataFrame | None = None,  # external df containing geometry
         aux_geom_id: str = None,  # geometry column name in aux_gdf
