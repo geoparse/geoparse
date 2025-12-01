@@ -3409,16 +3409,13 @@ class SpatialOps:
         return gdf
 
     @staticmethod
-    def proximity_counts(points_arr, crs=4326, radius=100):
-        # Extract coordinates from Shapely points
-        coords_4326 = np.array([[geom.x, geom.y] for geom in points_arr])
-
+    def proximity_counts(coords, crs=4326, radius=100):
         # Transform coordinates from WGS84 to British National Grid (27700)
         transformer = Transformer.from_crs(crs, 27700, always_xy=True)
-        coords_m = np.array(transformer.transform(coords_4326[:, 0], coords_4326[:, 1])).T
+        coords = np.array(transformer.transform(coords[:, 0], coords[:, 1])).T
 
         # Build KDTree and query neighbors
-        tree = KDTree(coords_m)
+        tree = KDTree(coords)
         indices = tree.query_ball_tree(tree, r=radius)
 
         # Count neighbors excluding self
