@@ -24,7 +24,9 @@ import shapely
 from branca.element import MacroElement, Template
 from folium import plugins
 from lonboard.basemap import CartoBasemap
+from pyproj import Transformer
 from s2 import s2
+from scipy.spatial import KDTree
 from shapely.geometry import GeometryCollection, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon, box
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import transform, unary_union
@@ -3405,6 +3407,21 @@ class SpatialOps:
             gdf = pd.concat(pool.starmap(gpd.overlay, inputs), ignore_index=True)
 
         return gdf
+
+    @staticmethod
+    def proximity_counts(coords, crs=4326, radius=100):
+        # Transform coordinates from WGS84 to British National Grid (27700)
+        transformer = Transformer.from_crs(crs, 27700, always_xy=True)
+        coords = np.array(transformer.transform(coords[:, 0], coords[:, 1])).T
+
+        # Build KDTree and query neighbors
+        tree = KDTree(coords)
+        indices = tree.query_ball_tree(tree, r=radius)
+
+        # Count neighbors excluding self
+        neighbor_counts = pd.Series([len(nbrs) - 1 for nbrs in indices])
+
+        return neighbor_counts
 
     @staticmethod
     def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
