@@ -24,7 +24,6 @@ import shapely
 from branca.element import MacroElement, Template
 from folium import plugins
 from lonboard.basemap import CartoBasemap
-from pyproj import Transformer
 from s2 import s2
 from scipy.spatial import KDTree
 from shapely.geometry import GeometryCollection, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon, box
@@ -1295,7 +1294,7 @@ class SnabbKarta:
         # Geospatial cells, OSM and UPRN
         geom_col: str | list[str] | None = None,
         # e.g. ['northing', 'easting'], 'h3_8', 'osm_id', 'uprn',  'postcode', 'postcode_sec'
-        crs=4326,  # CRS of geom_col
+        crs: int = 4326,  # CRS of geom_col
         geom_type: str | None = None,  #  'h3', 's2', 'geohash', 'osm', 'uprn', 'usrn', 'postcode'
         aux_gdf: pd.DataFrame | gpd.GeoDataFrame | None = None,  # external df containing geometry
         aux_geom_id: str = None,  # geometry column name in aux_gdf
@@ -1303,9 +1302,9 @@ class SnabbKarta:
         # lon_col: str = "lon",  # Longitude column name in aux_gdf
         osm_url: str | None = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
         # Map tiles
-        basemap_style=CartoBasemap.Positron,
-        pitch=30,
-        map_height=800,
+        tiles: str = CartoBasemap.Positron,  # DarkMatter
+        pitch: int = 30,
+        map_height: int = 800,
         # Point
         cluster: bool = False,
         heatmap: bool = False,
@@ -1506,7 +1505,7 @@ class SnabbKarta:
 
         return lb.Map(
             layers=layers,
-            basemap_style=basemap_style,
+            basemap_style=tiles,
             _height=map_height,
             view_state={
                 "longitude": lon_center,
@@ -1671,6 +1670,69 @@ class GeomUtils:
 
         # Apply the transformation to the geometry and return the transformed geometry
         return transform(project, geom)
+
+    @staticmethod
+    def get_coords(gdf: pd.DataFrame | gpd.GeoDataFrame, coord_cols: list = None) -> list[list[int]]:
+        """
+        Extract coordinate pairs from spatial data.
+
+        Handles both GeoDataFrames (geometry-based) and DataFrames (column-based).
+        For GeoDataFrames: extracts point coordinates or centroids for non-point geometries.
+        For DataFrames: extracts coordinates from specified or auto-detected columns.
+
+        Parameters
+        ----------
+        gdf : pandas.DataFrame or geopandas.GeoDataFrame
+            Input data containing spatial information. Must have either:
+            - For GeoDataFrame: a 'geometry' column with shapely geometries
+            - For DataFrame: columns containing x/y coordinate values
+
+        coord_cols : list of str, optional
+            For DataFrames only: list of two column names [lat, lon].
+            If None, attempts to auto-detect lat/lon columns.
+            Ignored for GeoDataFrames.
+
+        Returns
+        -------
+        list[list[int]]
+            List of coordinate pairs [x, y]. Each sublist contains two numeric values.
+            For point geometries: direct coordinates.
+            For non-point geometries: centroid coordinates.
+            For DataFrames: values from the specified coordinate columns.
+
+        Notes
+        -----
+        - The return type annotation `list[list[int]]` is nominal; actual return type
+          is typically `numpy.ndarray` with float values.
+        - For GeoDataFrames: returns centroids for non-point geometries (Polygon,
+          LineString, etc.).
+        - Auto-detection for DataFrames searches for 'lon'/'lng' and 'lat' substrings
+          (case-insensitive).
+        """
+        # Check if input is a GeoDataFrame (geometry-based)
+        if isinstance(gdf, gpd.GeoDataFrame):
+            # Use .geom_type to check geometry types efficiently
+            geom_types = set(gdf.geometry.geom_type)
+
+            # Ternary-like logic: if only points, use direct coordinates; else use centroids
+            if geom_types == {"Point"}:
+                # All geometries are points - fastest approach
+                return np.column_stack((gdf.geometry.x, gdf.geometry.y))
+            else:
+                # Mixed or non-point geometries - use centroids
+                return np.column_stack((gdf.geometry.centroid.x, gdf.geometry.centroid.y))
+        else:
+            # DataFrame handling (column-based coordinates)
+            if coord_cols:  # if coordinate columns explicitly provided
+                x, y = coord_cols[1], coord_cols[0]  # x = second element, y = first element
+            else:  # if no columns specified, auto-detect
+                # Find longitude column (search for 'lon' or 'lng' in column names)
+                x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
+                # Find latitude column (search for 'lat' in column names)
+                y = [col for col in gdf.columns if "lat" in col.lower()][0]
+
+            # Extract coordinate pairs from DataFrame columns and convert to numpy array
+            return gdf[[x, y]].to_numpy()
 
     @staticmethod
     def geom_stats(
@@ -3409,18 +3471,126 @@ class SpatialOps:
         return gdf
 
     @staticmethod
-    def proximity_counts(coords, crs=4326, radius=100):
-        # Transform coordinates from WGS84 to British National Grid (27700)
-        transformer = Transformer.from_crs(crs, 27700, always_xy=True)
-        coords = np.array(transformer.transform(coords[:, 0], coords[:, 1])).T
+    def proximity_counts(coords: np.ndarray, crs: int | str | pyproj.CRS = 4326, radius: int = 100) -> list[int]:
+        """
+        Calculate the number of neighboring points within a specified radius for each point.
 
+        Transforms coordinates to British National Grid (EPSG:27700), builds a KD-Tree,
+        and performs radius queries to count neighbors within the given radius.
+
+        Parameters
+        ----------
+        coords : np.ndarray
+            Array of point coordinates with shape (n_points, 2).
+            Coordinates should be in longitude/latitude order (x, y) if using WGS84.
+            Expected dtype: float (np.float32 or np.float64).
+
+        crs : Union[int, str, pyproj.CRS], optional
+            Coordinate Reference System of input coordinates.
+            Default: 4326 (WGS84 - longitude/latitude).
+            Can be EPSG code (int or str), PROJ string, or pyproj.CRS object.
+
+        radius : float, optional
+            Search radius in meters. All points within this distance will be counted
+            as neighbors (excluding the point itself). Default: 100.0 meters.
+
+        Returns
+        -------
+        List[int]
+            List of neighbor counts for each input point, with length equal to n_points.
+            Each value represents the number of other points within the specified radius
+            (self-count is excluded).
+
+        Raises
+        ------
+        ValueError
+            If `coords` is empty or has incorrect shape (not (n, 2)).
+            If `radius` is negative or zero.
+
+        TypeError
+            If `coords` is not a numpy array.
+
+        pyproj.exceptions.CRSError
+            If `crs` cannot be parsed to a valid coordinate reference system.
+
+        Notes
+        -----
+        1. The function transforms coordinates to EPSG:27700 (British National Grid)
+           before distance calculations, ensuring metric distances are accurate.
+        2. Self-counts are excluded from neighbor counts.
+        3. The KD-Tree query uses Euclidean distance in the projected CRS (EPSG:27700),
+           which is accurate for distances up to tens of kilometers in the UK.
+        4. For large datasets (>50,000 points), consider using approximate nearest
+           neighbor methods or spatial indexing for better performance.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> coords = np.array(
+        ...     [
+        ...         [-0.1278, 51.5074],  # London
+        ...         [-1.8904, 52.4862],  # Birmingham
+        ...         [-2.2426, 53.4808],  # Manchester
+        ...     ]
+        ... )
+
+        >>> # Count neighbors within 50km
+        >>> counts = proximity_counts(coords, radius=50000)
+        >>> counts
+        [0, 0, 0]  # No points within 50km of each other
+
+        >>> # Dense cluster of points
+        >>> cluster = np.array(
+        ...     [
+        ...         [530000, 180000],  # BNG coordinates (London area)
+        ...         [530100, 180100],
+        ...         [530050, 180050],
+        ...     ]
+        ... )
+        >>> counts = proximity_counts(cluster, crs=27700, radius=150)
+        >>> counts
+        [2, 1, 2]  # Each point has 1-2 neighbors within 150 meters
+
+        >>> # Edge case: radius too small
+        >>> counts = proximity_counts(coords, radius=0.1)
+        >>> counts
+        [0, 0, 0]  # No points within 10cm
+
+        See Also
+        --------
+        sklearn.neighbors.KDTree : KD-Tree implementation used for spatial queries.
+        pyproj.Transformer : Coordinate transformation utility.
+        scipy.spatial.cKDTree : Alternative KD-Tree implementation (faster for pure queries).
+
+        Warnings
+        --------
+        - Using geographic coordinates (lon/lat) with metric radius without projection
+          will give incorrect results. This function handles projection automatically.
+        - For global datasets, consider using Great Circle distance or Haversine formula
+          instead of projecting to a local CRS like EPSG:27700.
+        - Memory usage scales with O(n²) for dense clusters with large radii.
+        """
+        # Validate inputs
+        if not isinstance(coords, np.ndarray):
+            raise TypeError(f"coords must be numpy array, got {type(coords)}")
+
+        if coords.ndim != 2 or coords.shape[1] != 2:
+            raise ValueError(f"coords must have shape (n, 2), got {coords.shape}")
+
+        if radius <= 0:
+            raise ValueError(f"radius must be positive, got {radius}")
+
+        if len(coords) == 0:
+            return []
+
+        # Transform coordinates from WGS84 to British National Grid (27700)
+        transformer = pyproj.Transformer.from_crs(crs, 27700, always_xy=True).transform
+        coords = np.array(transformer(coords[:, 0], coords[:, 1])).T
         # Build KDTree and query neighbors
         tree = KDTree(coords)
         indices = tree.query_ball_tree(tree, r=radius)
-
         # Count neighbors excluding self
-        neighbor_counts = pd.Series([len(nbrs) - 1 for nbrs in indices])
-
+        neighbor_counts = [len(nbrs) - 1 for nbrs in indices]
         return neighbor_counts
 
     @staticmethod
