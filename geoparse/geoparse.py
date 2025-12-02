@@ -1673,6 +1673,43 @@ class GeomUtils:
 
     @staticmethod
     def get_coords(gdf: pd.DataFrame | gpd.GeoDataFrame, coord_cols: list = None) -> list[list[int]]:
+        """
+        Extract coordinate pairs from spatial data.
+
+        Handles both GeoDataFrames (geometry-based) and DataFrames (column-based).
+        For GeoDataFrames: extracts point coordinates or centroids for non-point geometries.
+        For DataFrames: extracts coordinates from specified or auto-detected columns.
+
+        Parameters
+        ----------
+        gdf : pandas.DataFrame or geopandas.GeoDataFrame
+            Input data containing spatial information. Must have either:
+            - For GeoDataFrame: a 'geometry' column with shapely geometries
+            - For DataFrame: columns containing x/y coordinate values
+
+        coord_cols : list of str, optional
+            For DataFrames only: list of two column names [lat, lon].
+            If None, attempts to auto-detect lat/lon columns.
+            Ignored for GeoDataFrames.
+
+        Returns
+        -------
+        list[list[int]]
+            List of coordinate pairs [x, y]. Each sublist contains two numeric values.
+            For point geometries: direct coordinates.
+            For non-point geometries: centroid coordinates.
+            For DataFrames: values from the specified coordinate columns.
+
+        Notes
+        -----
+        - The return type annotation `list[list[int]]` is nominal; actual return type
+          is typically `numpy.ndarray` with float values.
+        - For GeoDataFrames: returns centroids for non-point geometries (Polygon,
+          LineString, etc.).
+        - Auto-detection for DataFrames searches for 'lon'/'lng' and 'lat' substrings
+          (case-insensitive).
+        """
+        # Check if input is a GeoDataFrame (geometry-based)
         if isinstance(gdf, gpd.GeoDataFrame):
             # Use .geom_type to check geometry types efficiently
             geom_types = set(gdf.geometry.geom_type)
@@ -1685,12 +1722,16 @@ class GeomUtils:
                 # Mixed or non-point geometries - use centroids
                 return np.column_stack((gdf.geometry.centroid.x, gdf.geometry.centroid.y))
         else:
-            if coord_cols:  # if geom_col provided
-                x, y = coord_cols[1], coord_cols[0]
-            else:  # if geom_col = None determine lat, lon columns
+            # DataFrame handling (column-based coordinates)
+            if coord_cols:  # if coordinate columns explicitly provided
+                x, y = coord_cols[1], coord_cols[0]  # x = second element, y = first element
+            else:  # if no columns specified, auto-detect
+                # Find longitude column (search for 'lon' or 'lng' in column names)
                 x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
+                # Find latitude column (search for 'lat' in column names)
                 y = [col for col in gdf.columns if "lat" in col.lower()][0]
 
+            # Extract coordinate pairs from DataFrame columns and convert to numpy array
             return gdf[[x, y]].to_numpy()
 
     @staticmethod
