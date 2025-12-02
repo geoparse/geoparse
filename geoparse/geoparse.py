@@ -1672,6 +1672,28 @@ class GeomUtils:
         return transform(project, geom)
 
     @staticmethod
+    def get_coords(gdf: pd.DataFrame | gpd.GeoDataFrame, coord_cols: list = None) -> list[list[int]]:
+        if isinstance(gdf, gpd.GeoDataFrame):
+            # Use .geom_type to check geometry types efficiently
+            geom_types = set(gdf.geometry.geom_type)
+
+            # Ternary-like logic: if only points, use direct coordinates; else use centroids
+            if geom_types == {"Point"}:
+                # All geometries are points - fastest approach
+                return np.column_stack((gdf.geometry.x, gdf.geometry.y))
+            else:
+                # Mixed or non-point geometries - use centroids
+                return np.column_stack((gdf.geometry.centroid.x, gdf.geometry.centroid.y))
+        else:
+            if coord_cols:  # if geom_col provided
+                x, y = coord_cols[1], coord_cols[0]
+            else:  # if geom_col = None determine lat, lon columns
+                x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
+                y = [col for col in gdf.columns if "lat" in col.lower()][0]
+
+            return gdf[[x, y]].to_numpy()
+
+    @staticmethod
     def geom_stats(
         geom: Polygon | MultiPolygon | None = None, projection: str | None = None, unit: str = "m"
     ) -> list[int | float] | None:
