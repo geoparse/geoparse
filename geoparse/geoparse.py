@@ -23,7 +23,7 @@ import requests
 import shapely
 from branca.element import MacroElement, Template
 from folium import plugins
-from lonboard.basemap import CartoBasemap
+from lonboard.basemap import CartoStyle
 from s2 import s2
 from scipy.spatial import KDTree
 from shapely.geometry import GeometryCollection, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon, box
@@ -1302,7 +1302,7 @@ class SnabbKarta:
         # lon_col: str = "lon",  # Longitude column name in aux_gdf
         osm_url: str | None = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
         # Map tiles
-        tiles: str = CartoBasemap.Positron,  # DarkMatter
+        tiles: str = CartoStyle.Positron,  # DarkMatter
         pitch: int = 30,
         map_height: int = 800,
         # Point
@@ -1506,7 +1506,7 @@ class SnabbKarta:
         return lb.Map(
             layers=layers,
             basemap_style=tiles,
-            _height=map_height,
+            height=map_height,
             view_state={
                 "longitude": lon_center,
                 "latitude": lat_center,
