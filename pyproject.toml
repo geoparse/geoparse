@@ -20,8 +20,8 @@ dependencies = [
     "geopandas>=1.0.1",
     "matplotlib>=3.10.0",
     "lonboard>=0.13.0",
-    "fsspec",
-    "aiohttp",
+    "fsspec>=2025.12.0",
+    "aiohttp>=3.13.0",
     "folium>=0.14.0",
     "pygeohash>=1.2.0",
     "s2>=0.1.9",
@@ -29,7 +29,7 @@ dependencies = [
     "jupyterlab>=4.0.5",
 ]
 [tool.uv]
-exclude-newer = "2025-12-05T00:00:00Z"
+exclude-newer = "2025-12-06T00:00:00Z"
 dev-dependencies = [
     "ruff>=0.6.9",
     "pytest>=8.3.3",
