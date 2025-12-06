@@ -17,19 +17,19 @@ requires-python = ">=3.11,<4.0"
 dependencies = [
     "pyarrow>=22.0.0",
     "scipy>=1.16.0",
-    "geopandas>=1.0.1",
+    "geopandas>=1.1.0",
     "matplotlib>=3.10.0",
     "lonboard>=0.13.0",
     "fsspec>=2025.12.0",
     "aiohttp>=3.13.0",
-    "folium>=0.14.0",
+    "folium>=0.20.0",
     "pygeohash>=1.2.0",
     "s2>=0.1.9",
-    "h3>=4.0.0",
+    "h3>=4.3.0",
     "jupyterlab>=4.0.5",
 ]
 [tool.uv]
-exclude-newer = "2025-12-06T00:00:00Z"
+exclude-newer = "2025-12-07T00:00:00Z"
 dev-dependencies = [
     "ruff>=0.6.9",
     "pytest>=8.3.3",
