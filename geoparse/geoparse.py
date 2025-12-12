@@ -1724,7 +1724,7 @@ class GeomUtils:
         else:
             # DataFrame handling (column-based coordinates)
             if coord_cols:  # if coordinate columns explicitly provided
-                x, y = coord_cols[1], coord_cols[0]  # x = second element, y = first element
+                x, y = coord_cols[1], coord_cols[0]  # x = second element (longitude), y = first element (latitude)
             else:  # if no columns specified, auto-detect
                 # Find longitude column (search for 'lon' or 'lng' in column names)
                 x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
@@ -3471,7 +3471,7 @@ class SpatialOps:
         return gdf
 
     @staticmethod
-    def proximity_counts(coords: np.ndarray, crs: int | str | pyproj.CRS = 4326, radius: int = 100) -> list[int]:
+    def proximity_counts(coords: np.ndarray, coords_crs: int | str | pyproj.CRS = 4326, radius: int = 100) -> list[int]:
         """
         Calculate the number of neighboring points within a specified radius for each point.
 
@@ -3485,7 +3485,7 @@ class SpatialOps:
             Coordinates should be in longitude/latitude order (x, y) if using WGS84.
             Expected dtype: float (np.float32 or np.float64).
 
-        crs : Union[int, str, pyproj.CRS], optional
+        coords_crs : Union[int, str, pyproj.CRS], optional
             Coordinate Reference System of input coordinates.
             Default: 4326 (WGS84 - longitude/latitude).
             Can be EPSG code (int or str), PROJ string, or pyproj.CRS object.
@@ -3511,7 +3511,7 @@ class SpatialOps:
             If `coords` is not a numpy array.
 
         pyproj.exceptions.CRSError
-            If `crs` cannot be parsed to a valid coordinate reference system.
+            If `coords_crs` cannot be parsed to a valid coordinate reference system.
 
         Notes
         -----
@@ -3547,7 +3547,7 @@ class SpatialOps:
         ...         [530050, 180050],
         ...     ]
         ... )
-        >>> counts = proximity_counts(cluster, crs=27700, radius=150)
+        >>> counts = proximity_counts(cluster, coords_crs=27700, radius=150)
         >>> counts
         [2, 1, 2]  # Each point has 1-2 neighbors within 150 meters
 
@@ -3584,7 +3584,7 @@ class SpatialOps:
             return []
 
         # Transform coordinates from WGS84 to British National Grid (27700)
-        transformer = pyproj.Transformer.from_crs(crs, 27700, always_xy=True).transform
+        transformer = pyproj.Transformer.from_crs(coords_crs, 27700, always_xy=True).transform
         coords = np.array(transformer(coords[:, 0], coords[:, 1])).T
         # Build KDTree and query neighbors
         tree = KDTree(coords)
