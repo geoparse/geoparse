@@ -2696,13 +2696,17 @@ class SpatialIndex:
         """
         if cell_type == "geohash":
             return [pygeohash.encode(lat, lon, res) for lat, lon in zip(lats, lons)]
-        elif cell_type == "s2":
-            return [s2.geo_to_s2(lat, lon, res) for lat, lon in zip(lats, lons)]  # string
-        elif cell_type == "s2_int":
+        elif cell_type == "s2":  # string
+            return [
+                s2.geo_to_s2(lat, lon, res) if lat is not math.isnan(lat) and not math.isnan(lon) else None
+                for lat, lon in zip(lats, lons)
+            ]
+        # return [s2.geo_to_s2(lat, lon, res) for lat, lon in zip(lats, lons)]  # string
+        elif cell_type == "s2_int":  # int data type requires less memory
             return [
                 int(s2.geo_to_s2(lat, lon, res), 16) if lat is not math.isnan(lat) and not math.isnan(lon) else None
                 for lat, lon in zip(lats, lons)
-            ]  # int data type requires less memory
+            ]
         elif cell_type == "h3":
             return [
                 h3.latlng_to_cell(lat, lon, res) if lat is not math.isnan(lat) and not math.isnan(lon) else None
