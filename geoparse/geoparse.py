@@ -1347,10 +1347,7 @@ class SnabbKarta:
                 # Convert geospatial cells to Shapely geometries
                 if data["geom_type"] in ["geohash", "s2", "h3"]:
                     cells = data["geom_list"]
-
-                    # Remove None
-                    cells = [cell for cell in cells if cell is not None]
-
+                    cells = [cell for cell in cells if cell is not None]  # Remove None from the list
                     geoms, res = SpatialIndex.cell_poly(cells, cell_type=data["geom_type"])
                     gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
                 # Convert other types to Shapely geometries
