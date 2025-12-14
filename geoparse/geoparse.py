@@ -1345,7 +1345,7 @@ class SnabbKarta:
             # if gdf is a dict convert it to gpd.GeoDataFrame
             if isinstance(data, dict):  # keys: geom_type, geom_list
                 # Convert geospatial cells to Shapely geometries
-                if data["geom_type"] in ["geohash", "s2", "h3"]:
+                if data["geom_type"] in ["geohash", "s2", "s2_int", "h3"]:
                     cells = data["geom_list"]
                     cells = [cell for cell in cells if cell is not None]  # Remove None from the list
                     geoms, res = SpatialIndex.cell_poly(cells, cell_type=data["geom_type"])
@@ -3195,13 +3195,14 @@ class SpatialIndex:
         - H3: Uses hexagonal grid cells.
         - S2: Uses spherical grid cells.
         """
+        # Check for valid cell_type
+        if cell_type not in {"geohash", "h3", "s2", "s2_int"}:
+            raise ValueError(f"Invalid cell_type '{cell_type}'. Accepted values are: 'geohash', 'h3', 's2' and 's2_int'.")
 
         # Remove None values
         cells = [cell for cell in cells if cell is not None]
-
-        # Check for valid cell_type
-        if cell_type not in {"geohash", "h3", "s2"}:
-            raise ValueError(f"Invalid cell_type '{cell_type}'. Accepted values are: 'geohash', 'h3', 's2'.")
+        if cell_type == "s2_int":
+            cells = [hex(cell)[2:] for cell in cells]
 
         # Determine resolution level based on cell type
         res = [
@@ -3217,10 +3218,10 @@ class SpatialIndex:
         geoms = [
             SpatialIndex.geohash_to_poly(cell)
             if cell_type == "geohash"
-            else Polygon(s2.s2_to_geo_boundary(cell, geo_json_conformant=True))
-            if cell_type == "s2"
             # Shapely expects (lng, lat) format, so we reverse the coordinates returned by cell_to_boundary
             else Polygon([(lng, lat) for lat, lng in h3.cell_to_boundary(cell)])
+            if cell_type == "h3"
+            else Polygon(s2.s2_to_geo_boundary(cell, geo_json_conformant=True))
             for cell in cells
         ]
 
