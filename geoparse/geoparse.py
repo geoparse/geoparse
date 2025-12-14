@@ -1290,7 +1290,7 @@ class SnabbKarta:
 
     @staticmethod
     def plp(
-        gdf_list: gpd.GeoDataFrame | pd.DataFrame | dict | list[gpd.GeoDataFrame | pd.DataFrame | dict],
+        data_list: gpd.GeoDataFrame | pd.DataFrame | dict | list[gpd.GeoDataFrame | pd.DataFrame | dict],
         # Geospatial cells, OSM and UPRN
         geom_col: str | list[str] | None = None,
         # e.g. ['northing', 'easting'], 'h3_8', 'osm_id', 'uprn',  'postcode', 'postcode_sec'
@@ -1334,49 +1334,49 @@ class SnabbKarta:
         geohash_inner: bool = False,
         compact: bool = False,
     ) -> lb.Map:
-        # Ensure `gdf_list` is always a list (of gpd.GeoDataFrames, df.DataFrames or dict)
-        if not isinstance(gdf_list, list):
-            gdf_list = [gdf_list]
+        # Ensure `data_list` is always a list (of gpd.GeoDataFrames, df.DataFrames or dict)
+        if not isinstance(data_list, list):
+            data_list = [data_list]
 
         # Iterate through each DataFrame or GeoDataFrame in the list to add layers to the map
         minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
         layers = []
-        for gdf in gdf_list:
+        for data in data_list:
             # if gdf is a dict convert it to gpd.GeoDataFrame
-            if isinstance(gdf, dict):  # keys: geom_type, geom_list
+            if isinstance(data, dict):  # keys: geom_type, geom_list
                 # Convert geospatial cells to Shapely geometries
-                if gdf["geom_type"] in ["geohash", "s2", "h3"]:
-                    geoms, res = SpatialIndex.cell_poly(gdf["geom_list"], cell_type=gdf["geom_type"])
-                    gdf = gpd.GeoDataFrame({"id": gdf["geom_list"], "res": res, "geometry": geoms}, crs="EPSG:4326")
+                if data["geom_type"] in ["geohash", "s2", "h3"]:
+                    geoms, res = SpatialIndex.cell_poly(data["geom_list"], cell_type=data["geom_type"])
+                    gdf = gpd.GeoDataFrame({"id": data["geom_list"], "res": res, "geometry": geoms}, crs="EPSG:4326")
                 # Convert other types to Shapely geometries
-                elif gdf["geom_type"] in ["uprn", "usrn", "postcode"]:
-                    df = pd.DataFrame({gdf["geom_type"]: sorted(gdf["geom_list"])})
-                    df = df.merge(aux_gdf, left_on=gdf["geom_type"], right_on=aux_geom_id, how="left")
-                    gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
-                # Convert OSM way IDs to Shapely geometries
-                elif gdf["geom_type"] == "osm":
-                    geoms = OSMUtils.ways_to_geom(gdf["geom_list"], osm_url)
-                    gdf = gpd.GeoDataFrame({"way_id": gdf["geom_list"], "geometry": geoms}, crs="EPSG:4326")
+            #        elif gdf["geom_type"] in ["uprn", "usrn", "postcode"]:
+            #            df = pd.DataFrame({gdf["geom_type"]: sorted(gdf["geom_list"])})
+            #            df = df.merge(aux_gdf, left_on=gdf["geom_type"], right_on=aux_geom_id, how="left")
+            #            gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
+            #        # Convert OSM way IDs to Shapely geometries
+            #        elif gdf["geom_type"] == "osm":
+            #            geoms = OSMUtils.ways_to_geom(gdf["geom_list"], osm_url)
+            #            gdf = gpd.GeoDataFrame({"way_id": gdf["geom_list"], "geometry": geoms}, crs="EPSG:4326")
 
-            # if gdf is a pd.DataFrame convert it to gpd.GeoDataFrame
-            elif not isinstance(gdf, gpd.GeoDataFrame):
-                if geom_type in ["geohash", "s2", "h3"]:
-                    gdf["geometry"], _ = SpatialIndex.cell_poly(gdf[geom_col].values, cell_type=geom_type)
-                    gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
-                elif geom_type in ["uprn", "usrn", "postcode"]:
-                    gdf = gdf.sort_values(by=geom_col).reset_index(drop=True)
-                    gdf = gdf.merge(aux_gdf, left_on=geom_col, right_on=aux_geom_id, how="left")
-                    gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
-                elif geom_type == "osm":
-                    gdf["geometry"] = OSMUtils.ways_to_geom(gdf[geom_col].values, osm_url)
-                    gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
-                else:  # if geom_type == None, find lat, lon columns
-                    if geom_col:  # if geom_col provided
-                        x, y = geom_col[1], geom_col[0]
-                    else:  # if geom_col = None determine lat, lon columns
-                        x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
-                        y = [col for col in gdf.columns if "lat" in col.lower()][0]
-                    gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[x], gdf[y]), crs=crs).to_crs(4326)
+            #    # if gdf is a pd.DataFrame convert it to gpd.GeoDataFrame
+            #    elif not isinstance(gdf, gpd.GeoDataFrame):
+            #        if geom_type in ["geohash", "s2", "h3"]:
+            #            gdf["geometry"], _ = SpatialIndex.cell_poly(gdf[geom_col].values, cell_type=geom_type)
+            #            gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
+            #        elif geom_type in ["uprn", "usrn", "postcode"]:
+            #            gdf = gdf.sort_values(by=geom_col).reset_index(drop=True)
+            #            gdf = gdf.merge(aux_gdf, left_on=geom_col, right_on=aux_geom_id, how="left")
+            #            gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
+            #        elif geom_type == "osm":
+            #            gdf["geometry"] = OSMUtils.ways_to_geom(gdf[geom_col].values, osm_url)
+            #            gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
+            #        else:  # if geom_type == None, find lat, lon columns
+            #            if geom_col:  # if geom_col provided
+            #                x, y = geom_col[1], geom_col[0]
+            #            else:  # if geom_col = None determine lat, lon columns
+            #                x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
+            #                y = [col for col in gdf.columns if "lat" in col.lower()][0]
+            #            gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[x], gdf[y]), crs=crs).to_crs(4326)
             # Update overall bounding box
             gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
             minlat, minlon = min(minlat, gminlat), min(minlon, gminlon)  # minlat: total minlat
@@ -1484,7 +1484,7 @@ class SnabbKarta:
                     h3_layer = SnabbKarta._create_poly_layer(cdf, fill_color="green")
                     layers.append(h3_layer)
             # for geom in gdf.geometry.type.unique():
-        # for gdf in gdf_list:
+        # for gdf in data_list:
 
         # Create a base map using the bounding box
         sw = [minlat, minlon]  # South West (bottom left corner)
