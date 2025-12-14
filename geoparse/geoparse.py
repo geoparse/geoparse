@@ -1346,8 +1346,13 @@ class SnabbKarta:
             if isinstance(data, dict):  # keys: geom_type, geom_list
                 # Convert geospatial cells to Shapely geometries
                 if data["geom_type"] in ["geohash", "s2", "h3"]:
-                    geoms, res = SpatialIndex.cell_poly(data["geom_list"], cell_type=data["geom_type"])
-                    gdf = gpd.GeoDataFrame({"id": data["geom_list"], "res": res, "geometry": geoms}, crs="EPSG:4326")
+                    cells = data["geom_list"]
+
+                    # Remove None
+                    cells = [cell for cell in cells if cell is not None]
+
+                    geoms, res = SpatialIndex.cell_poly(cells, cell_type=data["geom_type"])
+                    gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
                 # Convert other types to Shapely geometries
             #        elif gdf["geom_type"] in ["uprn", "usrn", "postcode"]:
             #            df = pd.DataFrame({gdf["geom_type"]: sorted(gdf["geom_list"])})
@@ -3193,6 +3198,10 @@ class SpatialIndex:
         - H3: Uses hexagonal grid cells.
         - S2: Uses spherical grid cells.
         """
+
+        # Remove None values
+        cells = [cell for cell in cells if cell is not None]
+
         # Check for valid cell_type
         if cell_type not in {"geohash", "h3", "s2"}:
             raise ValueError(f"Invalid cell_type '{cell_type}'. Accepted values are: 'geohash', 'h3', 's2'.")
