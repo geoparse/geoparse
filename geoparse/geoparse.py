@@ -1347,14 +1347,14 @@ class SnabbKarta:
                 # Convert geospatial cells to Shapely geometries
                 if data["geom_type"] in ["geohash", "s2", "s2_int", "h3"]:
                     cells = data["geom_list"]
-                    cells = [cell for cell in cells if cell is not None]  # Remove None from the list
+                    cells = list({cell for cell in cells if cell is not None})  # Remove None and duplicated cells from the list
                     geoms, res = SpatialIndex.cell_poly(cells, cell_type=data["geom_type"])
                     gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
-                # Convert other types to Shapely geometries
-            #        elif gdf["geom_type"] in ["uprn", "usrn", "postcode"]:
-            #            df = pd.DataFrame({gdf["geom_type"]: sorted(gdf["geom_list"])})
-            #            df = df.merge(aux_gdf, left_on=gdf["geom_type"], right_on=aux_geom_id, how="left")
-            #            gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
+                    # Convert other types to Shapely geometries
+                #    elif gdf["geom_type"] in ["uprn", "usrn", "postcode"]:
+                #        df = pd.DataFrame({gdf["geom_type"]: sorted(gdf["geom_list"])})
+                #        df = df.merge(aux_gdf, left_on=gdf["geom_type"], right_on=aux_geom_id, how="left")
+                #        gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
             #        # Convert OSM way IDs to Shapely geometries
             #        elif gdf["geom_type"] == "osm":
             #            geoms = OSMUtils.ways_to_geom(gdf["geom_list"], osm_url)
