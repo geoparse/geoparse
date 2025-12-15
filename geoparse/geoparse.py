@@ -2717,7 +2717,7 @@ class SpatialIndex:
                 for lat, lon in zip(lats, lons)
             ]
         else:
-            raise ValueError(f"Unsupported cell type: {cell_type}. Choose 'geohash', 's2', 's2_int', or 'h3'.")
+            raise ValueError(f"Unsupported cell type: {cell_type}. Choose 'geohash', 's2', 's2_int' or 'h3'.")
 
     @staticmethod
     def poly_cell(
@@ -3196,32 +3196,34 @@ class SpatialIndex:
         - S2: Uses spherical grid cells.
         """
         # Check for valid cell_type
-        if cell_type not in {"geohash", "h3", "s2", "s2_int"}:
+        if cell_type not in {"geohash", "s2", "s2_int", "h3"}:
             raise ValueError(f"Invalid cell_type '{cell_type}'. Accepted values are: 'geohash', 'h3', 's2' and 's2_int'.")
 
-        # Remove None values
-        cells = [cell for cell in cells if cell is not None]
         if cell_type == "s2_int":
-            cells = [hex(cell)[2:] for cell in cells]
-
-        # Determine resolution level based on cell type
-        res = [
-            len(cell)
-            if cell_type == "geohash"
-            else int(cell[1], 16)
-            if cell_type == "h3"
-            else s2.CellId.from_token(cell).level()  # cell = token
-            for cell in cells
-        ]
+            cells = [hex(cell)[2:] if cell is not None else None for cell in cells]
 
         # Create geometry objects based on cell type
         geoms = [
-            SpatialIndex.geohash_to_poly(cell)
+            None
+            if cell is None
+            else SpatialIndex.geohash_to_poly(cell)
             if cell_type == "geohash"
             # Shapely expects (lng, lat) format, so we reverse the coordinates returned by cell_to_boundary
             else Polygon([(lng, lat) for lat, lng in h3.cell_to_boundary(cell)])
             if cell_type == "h3"
             else Polygon(s2.s2_to_geo_boundary(cell, geo_json_conformant=True))
+            for cell in cells
+        ]
+
+        # Determine resolution level based on cell type
+        res = [
+            np.nan
+            if cell is None
+            else len(cell)
+            if cell_type == "geohash"
+            else int(cell[1], 16)
+            if cell_type == "h3"
+            else s2.CellId.from_token(cell).level()
             for cell in cells
         ]
 
