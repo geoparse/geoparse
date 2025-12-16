@@ -1298,10 +1298,10 @@ class SnabbKarta:
         # e.g. ['northing', 'easting'], 'h3_8', 'osm_id', 'uprn',  'postcode', 'postcode_sec'
         crs: int = 4326,  # CRS of geom_col
         geom_type: str | None = None,  #  'h3', 's2', 'geohash', 'osm', 'uprn', 'usrn', 'postcode'
-        aux_gdf: pd.DataFrame | gpd.GeoDataFrame | None = None,  # external df containing geometry
-        aux_geom_id: str = None,  # geometry column name in aux_gdf
-        # lat_col: str = "lat",  # Latitude column name in aux_gdf
-        # lon_col: str = "lon",  # Longitude column name in aux_gdf
+        lookup_gdf: pd.DataFrame | gpd.GeoDataFrame | None = None,  # external df containing geometry
+        lookup_key: str = None,  # geometry column name in lookup_gdf
+        # lat_col: str = "lat",  # Latitude column name in lookup_gdf
+        # lon_col: str = "lon",  # Longitude column name in lookup_gdf
         osm_url: str | None = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
         # Map tiles
         tiles: str = CartoStyle.Positron,  # DarkMatter
@@ -1353,11 +1353,10 @@ class SnabbKarta:
                     geoms, res = SpatialIndex.cell_poly(cells, cell_type=data_type)
                     gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
                     # Convert other types to Shapely geometries
-            #        elif gdf["geom_type"] in ["uprn", "usrn", "postcode"]:
-            #            df = pd.DataFrame({gdf["geom_type"]: sorted(gdf["geom_list"])})
-            #            df = df.merge(aux_gdf, left_on=gdf["geom_type"], right_on=aux_geom_id, how="left")
-            #            gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
-            #        # Convert OSM way IDs to Shapely geometries
+                elif data_type in ["uprn", "usrn", "postcode"]:
+                    df = pd.DataFrame({data_type: sorted(data)})  # Sort data for faster join
+                    gdf = lookup_gdf.merge(df, left_on=lookup_key, right_on=data_type, how="right")
+                    # Convert OSM way IDs to Shapely geometries
             #        elif gdf["geom_type"] == "osm":
             #            geoms = OSMUtils.ways_to_geom(gdf["geom_list"], osm_url)
             #            gdf = gpd.GeoDataFrame({"way_id": gdf["geom_list"], "geometry": geoms}, crs="EPSG:4326")
@@ -1369,7 +1368,7 @@ class SnabbKarta:
             #            gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
             #        elif geom_type in ["uprn", "usrn", "postcode"]:
             #            gdf = gdf.sort_values(by=geom_col).reset_index(drop=True)
-            #            gdf = gdf.merge(aux_gdf, left_on=geom_col, right_on=aux_geom_id, how="left")
+            #            gdf = gdf.merge(lookup_gdf, left_on=geom_col, right_on=lookup_key, how="left")
             #            gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
             #        elif geom_type == "osm":
             #            gdf["geometry"] = OSMUtils.ways_to_geom(gdf[geom_col].values, osm_url)
