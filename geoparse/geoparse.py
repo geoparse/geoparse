@@ -1336,34 +1336,35 @@ class SnabbKarta:
         geohash_inner: bool = False,
         compact: bool = False,
     ) -> lb.Map:
-        # Ensure `data_list` is always a list (of gpd.GeoDataFrames, df.DataFrames or dict)
-        if not isinstance(data_list, list):
-            data_list = [data_list]
-
-        # Iterate through each DataFrame or GeoDataFrame in the list to add layers to the map
         minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
         layers = []
+
+        # Ensure `data_list` is always a list (of gpd.GeoDataFrames, df.DataFrames or dict)
+        data_list = data_list if isinstance(data_list, list) else [data_list]
+        # Iterate through each set, pd.DataFrame or gpd.GeoDataFrame in the list to add layers to the map
         for data in data_list:
-            # if gdf is a dict convert it to gpd.GeoDataFrame
-            if isinstance(data, set):  # keys: geom_type, geom_list
-                data = [item for item in data if item is not None]  # Remove None from the set
+            # if gdf is a set convert it to gpd.GeoDataFrame
+            if isinstance(data, set):  # e.g. set of uprn {1, 26, 27, 30, 31}
+                data = [item for item in data if item is not None]  # Remove None from the set if exists
                 # Convert geospatial cells to Shapely geometries
                 if data_type in ["geohash", "s2", "s2_int", "h3"]:
-                    geoms, res = SpatialIndex.cell_poly(cells=data, cell_type=data_type)
-                    gdf = gpd.GeoDataFrame({"id": data, "res": res, "geometry": geoms}, crs="EPSG:4326")
+                    cells = data
+                    geoms, res = SpatialIndex.cell_poly(cells, cell_type=data_type)
+                    gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
                 # Convert other types to Shapely geometries
                 elif data_type in ["uprn", "usrn", "postcode", "osm"]:
                     df = pd.DataFrame({data_type: sorted(data)})  # Sort data for faster join
                     gdf = lookup_gdf.merge(df, left_on=lookup_key, right_on=data_type, how="right")
-            #    # if gdf is a pd.DataFrame convert it to gpd.GeoDataFrame
-            #    elif not isinstance(gdf, gpd.GeoDataFrame):
-            #        if geom_type in ["geohash", "s2", "h3"]:
-            #            gdf["geometry"], _ = SpatialIndex.cell_poly(gdf[geom_col].values, cell_type=geom_type)
-            #            gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
-            #        elif geom_type in ["uprn", "usrn", "postcode"]:
-            #            gdf = gdf.sort_values(by=geom_col).reset_index(drop=True)
-            #            gdf = gdf.merge(lookup_gdf, left_on=geom_col, right_on=lookup_key, how="left")
-            #            gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
+
+            # if gdf is a pd.DataFrame convert it to gpd.GeoDataFrame
+            elif not isinstance(data, gpd.GeoDataFrame):
+                if geom_type in ["geohash", "s2", "s2_int", "h3"]:
+                    cells = data[geom_col].values
+                    geoms, res = SpatialIndex.cell_poly(cells, cell_type=geom_type)
+                    gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
+            #    elif geom_type in ["uprn", "usrn", "postcode"]:
+            #        df = df.sort_values(by=geom_col).reset_index(drop=True)
+            #        gdf = lookup_gdf.merge(df, left_on=lookup_key, right_on=data_type, how="right")
             #        elif geom_type == "osm":
             #            gdf["geometry"] = OSMUtils.ways_to_geom(gdf[geom_col].values, osm_url)
             #            gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
