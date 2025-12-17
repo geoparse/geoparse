@@ -1291,13 +1291,12 @@ class SnabbKarta:
     @staticmethod
     def plp(
         data_list: gpd.GeoDataFrame | pd.DataFrame | set | list[gpd.GeoDataFrame | pd.DataFrame | set],
-        data_type: str = None,  # Used only when `data_list` is a set.
+        geom_type: str | None = None,  #  'h3', 's2', 'geohash', 'osm', 'uprn', 'usrn', 'postcode'
         # Supported types: geospatial cell IDs (geohash, s2, h3),
         # OSM ID, UPRN, USRN, and postcode.
         geom_col: str | list[str] | None = None,
         # e.g. ['northing', 'easting'], 'h3_8', 'osm_id', 'uprn',  'postcode', 'postcode_sec'
         crs: int = 4326,  # CRS of geom_col
-        geom_type: str | None = None,  #  'h3', 's2', 'geohash', 'osm', 'uprn', 'usrn', 'postcode'
         lookup_gdf: pd.DataFrame | gpd.GeoDataFrame | None = None,  # external df containing geometry
         lookup_key: str = None,  # geometry column name in lookup_gdf
         # lat_col: str = "lat",  # Latitude column name in lookup_gdf
@@ -1343,21 +1342,12 @@ class SnabbKarta:
         data_list = data_list if isinstance(data_list, list) else [data_list]
         # Iterate through each set, pd.DataFrame or gpd.GeoDataFrame in the list to add layers to the map
         for data in data_list:
-            # if gdf is a set convert it to gpd.GeoDataFrame
-            if isinstance(data, set):  # e.g. set of uprn {1, 26, 27, 30, 31}
-                data = [item for item in data if item is not None]  # Remove None from the set if exists
-                # Convert geospatial cells to Shapely geometries
-                if data_type in ["geohash", "s2", "s2_int", "h3"]:
-                    cells = data
-                    geoms, res = SpatialIndex.cell_poly(cells, cell_type=data_type)
-                    gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
-                # Convert other types to Shapely geometries
-                elif data_type in ["uprn", "usrn", "postcode", "osm"]:
-                    df = pd.DataFrame({data_type: sorted(data)})  # Sort data for faster join
-                    gdf = lookup_gdf.merge(df, left_on=lookup_key, right_on=data_type, how="right")
+            # if data is a gpd.GeoDataFrame, simply copy it
+            if isinstance(data, gpd.GeoDataFrame):
+                gdf = data.copy()
 
-            # if gdf is a pd.DataFrame convert it to gpd.GeoDataFrame
-            elif not isinstance(data, gpd.GeoDataFrame):
+            # if data is a pd.DataFrame convert it to gpd.GeoDataFrame
+            elif isinstance(data, pd.DataFrame):
                 df = data.dropna(subset=geom_col)
                 if geom_type in ["geohash", "s2", "s2_int", "h3"]:
                     cells = df[geom_col].values
@@ -1374,9 +1364,18 @@ class SnabbKarta:
                         y = [col for col in df.columns if "lat" in col.lower()][0]
                     gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df[x], df[y]), crs=crs).to_crs(4326)
 
-            # if gdf is a gpd.GeoDataFrame
-            elif isinstance(data, gpd.GeoDataFrame):
-                gdf = data.copy()
+            # if data is a set convert it to gpd.GeoDataFrame
+            elif isinstance(data, set):  # e.g. set of uprn {1, 26, 27, 30, 31}
+                data = [item for item in data if item is not None]  # Remove None from the set if exists
+                # Convert geospatial cells to Shapely geometries
+                if geom_type in ["geohash", "s2", "s2_int", "h3"]:
+                    cells = data
+                    geoms, res = SpatialIndex.cell_poly(cells, cell_type=geom_type)
+                    gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
+                # Convert other types to Shapely geometries
+                elif geom_type in ["uprn", "usrn", "postcode", "osm"]:
+                    df = pd.DataFrame({geom_type: sorted(data)})  # Sort data for faster join
+                    gdf = lookup_gdf.merge(df, left_on=lookup_key, right_on=geom_type, how="right")
 
             # Update overall bounding box
             gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
