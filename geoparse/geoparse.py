@@ -1379,6 +1379,10 @@ class SnabbKarta:
                     df = pd.DataFrame({geom_type: sorted(data)})  # Sort data for faster join
                     gdf = lookup_gdf.merge(df, left_on=lookup_key, right_on=geom_type, how="right")
 
+            # Unsupported input type
+            else:
+                raise TypeError("Invalid input type: data must be gpd.GeoDataFrame, pd.DataFrame or a set")
+
             # Update overall bounding box
             gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
             minlat, minlon = min(minlat, gminlat), min(minlon, gminlon)  # minlat: total minlat
