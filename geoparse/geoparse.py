@@ -1346,17 +1346,19 @@ class SnabbKarta:
             if isinstance(data, gpd.GeoDataFrame):
                 gdf = data.copy()
 
-            # if data is a pd.DataFrame convert it to gpd.GeoDataFrame
+            # Convert pd.DataFrame to gpd.GeoDataFrame
             elif isinstance(data, pd.DataFrame):
-                df = data.dropna(subset=geom_col)
                 if geom_type in ["geohash", "s2", "s2_int", "h3"]:
+                    df = data.dropna(subset=geom_col)
                     cells = df[geom_col].values
                     geoms, res = SpatialIndex.cell_poly(cells, cell_type=geom_type)
                     gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
                 elif geom_type in ["uprn", "usrn", "postcode", "osm"]:
+                    df = data.dropna(subset=geom_col)
                     df = df.sort_values(by=geom_col).reset_index(drop=True)
                     gdf = lookup_gdf.merge(df, left_on=lookup_key, right_on=geom_col, how="right")
                 else:  # if geom_type == None, find lat, lon columns
+                    df = data.copy()
                     if geom_col:  # if geom_col provided
                         x, y = geom_col[1], geom_col[0]
                     else:  # if geom_col = None determine lat, lon columns
@@ -1364,7 +1366,7 @@ class SnabbKarta:
                         y = [col for col in df.columns if "lat" in col.lower()][0]
                     gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df[x], df[y]), crs=crs).to_crs(4326)
 
-            # if data is a set convert it to gpd.GeoDataFrame
+            # Convert set to gpd.GeoDataFrame
             elif isinstance(data, set):  # e.g. set of uprn {1, 26, 27, 30, 31}
                 data = [item for item in data if item is not None]  # Remove None from the set if exists
                 # Convert geospatial cells to Shapely geometries
