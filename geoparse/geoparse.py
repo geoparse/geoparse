@@ -1358,23 +1358,26 @@ class SnabbKarta:
 
             # if gdf is a pd.DataFrame convert it to gpd.GeoDataFrame
             elif not isinstance(data, gpd.GeoDataFrame):
+                df = data.dropna(subset=geom_col)
                 if geom_type in ["geohash", "s2", "s2_int", "h3"]:
-                    cells = data[geom_col].values
+                    cells = df[geom_col].values
                     geoms, res = SpatialIndex.cell_poly(cells, cell_type=geom_type)
                     gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
-            #    elif geom_type in ["uprn", "usrn", "postcode"]:
-            #        df = df.sort_values(by=geom_col).reset_index(drop=True)
-            #        gdf = lookup_gdf.merge(df, left_on=lookup_key, right_on=data_type, how="right")
-            #        elif geom_type == "osm":
-            #            gdf["geometry"] = OSMUtils.ways_to_geom(gdf[geom_col].values, osm_url)
-            #            gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
-            #        else:  # if geom_type == None, find lat, lon columns
-            #            if geom_col:  # if geom_col provided
-            #                x, y = geom_col[1], geom_col[0]
-            #            else:  # if geom_col = None determine lat, lon columns
-            #                x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
-            #                y = [col for col in gdf.columns if "lat" in col.lower()][0]
-            #            gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[x], gdf[y]), crs=crs).to_crs(4326)
+                elif geom_type in ["uprn", "usrn", "postcode", "osm"]:
+                    df = df.sort_values(by=geom_col).reset_index(drop=True)
+                    gdf = lookup_gdf.merge(df, left_on=lookup_key, right_on=geom_col, how="right")
+                else:  # if geom_type == None, find lat, lon columns
+                    if geom_col:  # if geom_col provided
+                        x, y = geom_col[1], geom_col[0]
+                    else:  # if geom_col = None determine lat, lon columns
+                        x = [col for col in df.columns if "lon" in col.lower() or "lng" in col.lower()][0]
+                        y = [col for col in df.columns if "lat" in col.lower()][0]
+                    gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df[x], df[y]), crs=crs).to_crs(4326)
+
+            # if gdf is a gpd.GeoDataFrame
+            elif isinstance(data, gpd.GeoDataFrame):
+                gdf = data.copy()
+
             # Update overall bounding box
             gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
             minlat, minlon = min(minlat, gminlat), min(minlon, gminlon)  # minlat: total minlat
