@@ -1290,16 +1290,18 @@ class SnabbKarta:
 
     @staticmethod
     def plp(
-        gdf_list: gpd.GeoDataFrame | pd.DataFrame | dict | list[gpd.GeoDataFrame | pd.DataFrame | dict],
-        # Geospatial cells, OSM and UPRN
+        data_list: gpd.GeoDataFrame | pd.DataFrame | set | list[gpd.GeoDataFrame | pd.DataFrame | set],
+        data_type: str = None,  # Used only when `data_list` is a set.
+        # Supported types: geospatial cell IDs (geohash, s2, h3),
+        # OSM ID, UPRN, USRN, and postcode.
         geom_col: str | list[str] | None = None,
         # e.g. ['northing', 'easting'], 'h3_8', 'osm_id', 'uprn',  'postcode', 'postcode_sec'
         crs: int = 4326,  # CRS of geom_col
         geom_type: str | None = None,  #  'h3', 's2', 'geohash', 'osm', 'uprn', 'usrn', 'postcode'
-        aux_gdf: pd.DataFrame | gpd.GeoDataFrame | None = None,  # external df containing geometry
-        aux_geom_id: str = None,  # geometry column name in aux_gdf
-        # lat_col: str = "lat",  # Latitude column name in aux_gdf
-        # lon_col: str = "lon",  # Longitude column name in aux_gdf
+        lookup_gdf: pd.DataFrame | gpd.GeoDataFrame | None = None,  # external df containing geometry
+        lookup_key: str = None,  # geometry column name in lookup_gdf
+        # lat_col: str = "lat",  # Latitude column name in lookup_gdf
+        # lon_col: str = "lon",  # Longitude column name in lookup_gdf
         osm_url: str | None = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
         # Map tiles
         tiles: str = CartoStyle.Positron,  # DarkMatter
@@ -1334,49 +1336,48 @@ class SnabbKarta:
         geohash_inner: bool = False,
         compact: bool = False,
     ) -> lb.Map:
-        # Ensure `gdf_list` is always a list (of gpd.GeoDataFrames, df.DataFrames or dict)
-        if not isinstance(gdf_list, list):
-            gdf_list = [gdf_list]
-
-        # Iterate through each DataFrame or GeoDataFrame in the list to add layers to the map
         minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
         layers = []
-        for gdf in gdf_list:
-            # if gdf is a dict convert it to gpd.GeoDataFrame
-            if isinstance(gdf, dict):  # keys: geom_type, geom_list
+
+        # Ensure `data_list` is always a list (of gpd.GeoDataFrames, df.DataFrames or dict)
+        data_list = data_list if isinstance(data_list, list) else [data_list]
+        # Iterate through each set, pd.DataFrame or gpd.GeoDataFrame in the list to add layers to the map
+        for data in data_list:
+            # if gdf is a set convert it to gpd.GeoDataFrame
+            if isinstance(data, set):  # e.g. set of uprn {1, 26, 27, 30, 31}
+                data = [item for item in data if item is not None]  # Remove None from the set if exists
                 # Convert geospatial cells to Shapely geometries
-                if gdf["geom_type"] in ["geohash", "s2", "h3"]:
-                    geoms, res = SpatialIndex.cell_poly(gdf["geom_list"], cell_type=gdf["geom_type"])
-                    gdf = gpd.GeoDataFrame({"id": gdf["geom_list"], "res": res, "geometry": geoms}, crs="EPSG:4326")
+                if data_type in ["geohash", "s2", "s2_int", "h3"]:
+                    cells = data
+                    geoms, res = SpatialIndex.cell_poly(cells, cell_type=data_type)
+                    gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
                 # Convert other types to Shapely geometries
-                elif gdf["geom_type"] in ["uprn", "usrn", "postcode"]:
-                    df = pd.DataFrame({gdf["geom_type"]: sorted(gdf["geom_list"])})
-                    df = df.merge(aux_gdf, left_on=gdf["geom_type"], right_on=aux_geom_id, how="left")
-                    gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
-                # Convert OSM way IDs to Shapely geometries
-                elif gdf["geom_type"] == "osm":
-                    geoms = OSMUtils.ways_to_geom(gdf["geom_list"], osm_url)
-                    gdf = gpd.GeoDataFrame({"way_id": gdf["geom_list"], "geometry": geoms}, crs="EPSG:4326")
+                elif data_type in ["uprn", "usrn", "postcode", "osm"]:
+                    df = pd.DataFrame({data_type: sorted(data)})  # Sort data for faster join
+                    gdf = lookup_gdf.merge(df, left_on=lookup_key, right_on=data_type, how="right")
 
             # if gdf is a pd.DataFrame convert it to gpd.GeoDataFrame
-            elif not isinstance(gdf, gpd.GeoDataFrame):
-                if geom_type in ["geohash", "s2", "h3"]:
-                    gdf["geometry"], _ = SpatialIndex.cell_poly(gdf[geom_col].values, cell_type=geom_type)
-                    gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
-                elif geom_type in ["uprn", "usrn", "postcode"]:
-                    gdf = gdf.sort_values(by=geom_col).reset_index(drop=True)
-                    gdf = gdf.merge(aux_gdf, left_on=geom_col, right_on=aux_geom_id, how="left")
-                    gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
-                elif geom_type == "osm":
-                    gdf["geometry"] = OSMUtils.ways_to_geom(gdf[geom_col].values, osm_url)
-                    gdf = gpd.GeoDataFrame(gdf, geometry="geometry", crs="EPSG:4326")
+            elif not isinstance(data, gpd.GeoDataFrame):
+                df = data.dropna(subset=geom_col)
+                if geom_type in ["geohash", "s2", "s2_int", "h3"]:
+                    cells = df[geom_col].values
+                    geoms, res = SpatialIndex.cell_poly(cells, cell_type=geom_type)
+                    gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
+                elif geom_type in ["uprn", "usrn", "postcode", "osm"]:
+                    df = df.sort_values(by=geom_col).reset_index(drop=True)
+                    gdf = lookup_gdf.merge(df, left_on=lookup_key, right_on=geom_col, how="right")
                 else:  # if geom_type == None, find lat, lon columns
                     if geom_col:  # if geom_col provided
                         x, y = geom_col[1], geom_col[0]
                     else:  # if geom_col = None determine lat, lon columns
-                        x = [col for col in gdf.columns if "lon" in col.lower() or "lng" in col.lower()][0]
-                        y = [col for col in gdf.columns if "lat" in col.lower()][0]
-                    gdf = gpd.GeoDataFrame(gdf, geometry=gpd.points_from_xy(gdf[x], gdf[y]), crs=crs).to_crs(4326)
+                        x = [col for col in df.columns if "lon" in col.lower() or "lng" in col.lower()][0]
+                        y = [col for col in df.columns if "lat" in col.lower()][0]
+                    gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df[x], df[y]), crs=crs).to_crs(4326)
+
+            # if gdf is a gpd.GeoDataFrame
+            elif isinstance(data, gpd.GeoDataFrame):
+                gdf = data.copy()
+
             # Update overall bounding box
             gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
             minlat, minlon = min(minlat, gminlat), min(minlon, gminlon)  # minlat: total minlat
@@ -1484,7 +1485,7 @@ class SnabbKarta:
                     h3_layer = SnabbKarta._create_poly_layer(cdf, fill_color="green")
                     layers.append(h3_layer)
             # for geom in gdf.geometry.type.unique():
-        # for gdf in gdf_list:
+        # for gdf in data_list:
 
         # Create a base map using the bounding box
         sw = [minlat, minlon]  # South West (bottom left corner)
@@ -2695,15 +2696,27 @@ class SpatialIndex:
         ['9q8yy', '9qh0b']
         """
         if cell_type == "geohash":
-            return [pygeohash.encode(lat, lon, res) for lat, lon in zip(lats, lons)]
-        elif cell_type == "s2":
-            return [s2.geo_to_s2(lat, lon, res) for lat, lon in zip(lats, lons)]  # string
-        elif cell_type == "s2_int":
-            return [int(s2.geo_to_s2(lat, lon, res), 16) for lat, lon in zip(lats, lons)]  # int data type requires less memory
+            return [
+                pygeohash.encode(lat, lon, res) if lat is not math.isnan(lat) and not math.isnan(lon) else None
+                for lat, lon in zip(lats, lons)
+            ]
+        elif cell_type == "s2":  # string
+            return [
+                s2.geo_to_s2(lat, lon, res) if lat is not math.isnan(lat) and not math.isnan(lon) else None
+                for lat, lon in zip(lats, lons)
+            ]
+        elif cell_type == "s2_int":  # int data type requires less memory
+            return [
+                int(s2.geo_to_s2(lat, lon, res), 16) if lat is not math.isnan(lat) and not math.isnan(lon) else None
+                for lat, lon in zip(lats, lons)
+            ]
         elif cell_type == "h3":
-            return [h3.latlng_to_cell(lat, lon, res) for lat, lon in zip(lats, lons)]
+            return [
+                h3.latlng_to_cell(lat, lon, res) if lat is not math.isnan(lat) and not math.isnan(lon) else None
+                for lat, lon in zip(lats, lons)
+            ]
         else:
-            raise ValueError(f"Unsupported cell type: {cell_type}. Choose 'geohash', 's2', 's2_int', or 'h3'.")
+            raise ValueError(f"Unsupported cell type: {cell_type}. Choose 'geohash', 's2', 's2_int' or 'h3'.")
 
     @staticmethod
     def poly_cell(
@@ -3182,27 +3195,34 @@ class SpatialIndex:
         - S2: Uses spherical grid cells.
         """
         # Check for valid cell_type
-        if cell_type not in {"geohash", "h3", "s2"}:
-            raise ValueError(f"Invalid cell_type '{cell_type}'. Accepted values are: 'geohash', 'h3', 's2'.")
+        if cell_type not in {"geohash", "s2", "s2_int", "h3"}:
+            raise ValueError(f"Invalid cell_type '{cell_type}'. Accepted values are: 'geohash', 'h3', 's2' and 's2_int'.")
 
-        # Determine resolution level based on cell type
-        res = [
-            len(cell)
-            if cell_type == "geohash"
-            else int(cell[1], 16)
-            if cell_type == "h3"
-            else s2.CellId.from_token(cell).level()  # cell = token
-            for cell in cells
-        ]
+        if cell_type == "s2_int":
+            cells = [hex(cell)[2:] if cell is not None else None for cell in cells]
 
         # Create geometry objects based on cell type
         geoms = [
-            SpatialIndex.geohash_to_poly(cell)
+            None
+            if cell is None
+            else SpatialIndex.geohash_to_poly(cell)
             if cell_type == "geohash"
-            else Polygon(s2.s2_to_geo_boundary(cell, geo_json_conformant=True))
-            if cell_type == "s2"
             # Shapely expects (lng, lat) format, so we reverse the coordinates returned by cell_to_boundary
             else Polygon([(lng, lat) for lat, lng in h3.cell_to_boundary(cell)])
+            if cell_type == "h3"
+            else Polygon(s2.s2_to_geo_boundary(cell, geo_json_conformant=True))
+            for cell in cells
+        ]
+
+        # Determine resolution level based on cell type
+        res = [
+            np.nan
+            if cell is None
+            else len(cell)
+            if cell_type == "geohash"
+            else int(cell[1], 16)
+            if cell_type == "h3"
+            else s2.CellId.from_token(cell).level()
             for cell in cells
         ]
 
