@@ -1,6 +1,6 @@
 [project]
 name = "geoparse"
-version = "0.5.3"
+version = "0.6.0"
 description = "A collection of Python functions for performing geospatial analysis and creating visualizations. "
 authors = [{name = "Abbas Kiasari", email = "kiasari@gmail.com"}]
 license = {file = "LICENSE"}
@@ -29,7 +29,7 @@ dependencies = [
     "jupyterlab>=4.0.5",
 ]
 [tool.uv]
-exclude-newer = "2025-12-11T00:00:00Z"
+exclude-newer = "2025-12-18T00:00:00Z"
 dev-dependencies = [
     "ruff>=0.6.9",
     "pytest>=8.3.3",
