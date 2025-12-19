@@ -1342,7 +1342,7 @@ class SnabbKarta:
         data_list = data_list if isinstance(data_list, list) else [data_list]
         # Iterate through each set, pd.DataFrame or gpd.GeoDataFrame in the list to add layers to the map
         for data in data_list:
-            gdf = GeomUtils.data_to_gdf(data, geom_type, geom_col, crs, lookup_gdf, lookup_key)
+            gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, crs, lookup_gdf, lookup_key)
             # Update overall bounding box
             gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
             minlat, minlon = min(minlat, gminlat), min(minlon, gminlon)  # minlat: total minlat
@@ -1542,7 +1542,7 @@ class GeomUtils:
     """
 
     @staticmethod
-    def data_to_gdf(
+    def data_to_geoms(
         data: gpd.GeoDataFrame | pd.DataFrame | set,
         geom_type: str | None = None,  #  'h3', 's2', 'geohash', 'osm', 'uprn', 'usrn', 'postcode'
         # Supported types: geospatial cell IDs (geohash, s2, h3),
