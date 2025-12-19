@@ -1296,7 +1296,7 @@ class SnabbKarta:
         # OSM ID, UPRN, USRN, and postcode.
         geom_col: str | list[str] | None = None,
         # e.g. ['northing', 'easting'], 'h3_8', 'osm_id', 'uprn',  'postcode', 'postcode_sec'
-        data_crs: int = 4326,  # CRS of geom_col
+        data_crs: int = 4326,  # CRS of data
         lookup_gdf: pd.DataFrame | gpd.GeoDataFrame | None = None,  # external df containing geometry
         lookup_key: str = None,  # geometry column name in lookup_gdf
         # lat_col: str = "lat",  # Latitude column name in lookup_gdf
@@ -1549,7 +1549,7 @@ class GeomUtils:
         # OSM ID, UPRN, USRN, and postcode.
         geom_col: str | list[str] | None = None,
         # e.g. ['northing', 'easting'], 'h3_8', 'osm_id', 'uprn',  'postcode', 'postcode_sec'
-        data_crs: int = 4326,  # CRS of geom_col
+        data_crs: int = 4326,  # CRS of data
         lookup_gdf: pd.DataFrame | gpd.GeoDataFrame | None = None,  # external df containing geometry
         lookup_key: str = None,  # geometry column name in lookup_gdf
         # lat_col: str = "lat",  # Latitude column name in lookup_gdf
