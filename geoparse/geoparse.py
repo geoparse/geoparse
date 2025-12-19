@@ -1303,6 +1303,7 @@ class SnabbKarta:
         # lon_col: str = "lon",  # Longitude column name in lookup_gdf
         osm_url: str | None = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
     ) -> gpd.GeoDataFrame:
+        # if data is a gpd.GeoDataFrame, simply copy it
         if isinstance(data, gpd.GeoDataFrame):
             gdf = data.copy()
             return gdf
@@ -1399,8 +1400,6 @@ class SnabbKarta:
         data_list = data_list if isinstance(data_list, list) else [data_list]
         # Iterate through each set, pd.DataFrame or gpd.GeoDataFrame in the list to add layers to the map
         for data in data_list:
-            # if data is a gpd.GeoDataFrame, simply copy it
-
             gdf = SnabbKarta.data_to_gdf(data, geom_type, geom_col, crs, lookup_gdf, lookup_key)
             # Update overall bounding box
             gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
