@@ -1289,6 +1289,63 @@ class SnabbKarta:
         )
 
     @staticmethod
+    def data_to_gdf(
+        data: gpd.GeoDataFrame | pd.DataFrame | set,
+        geom_type: str | None = None,  #  'h3', 's2', 'geohash', 'osm', 'uprn', 'usrn', 'postcode'
+        # Supported types: geospatial cell IDs (geohash, s2, h3),
+        # OSM ID, UPRN, USRN, and postcode.
+        geom_col: str | list[str] | None = None,
+        # e.g. ['northing', 'easting'], 'h3_8', 'osm_id', 'uprn',  'postcode', 'postcode_sec'
+        crs: int = 4326,  # CRS of geom_col
+        lookup_gdf: pd.DataFrame | gpd.GeoDataFrame | None = None,  # external df containing geometry
+        lookup_key: str = None,  # geometry column name in lookup_gdf
+        # lat_col: str = "lat",  # Latitude column name in lookup_gdf
+        # lon_col: str = "lon",  # Longitude column name in lookup_gdf
+        osm_url: str | None = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
+    ) -> gpd.GeoDataFrame:
+        if isinstance(data, gpd.GeoDataFrame):
+            gdf = data.copy()
+            return gdf
+
+        # Convert pd.DataFrame to gpd.GeoDataFrame
+        elif isinstance(data, pd.DataFrame):
+            if geom_type in ["geohash", "s2", "s2_int", "h3"]:
+                df = data.dropna(subset=geom_col)
+                cells = df[geom_col].values
+                geoms, res = SpatialIndex.cell_poly(cells, cell_type=geom_type)
+                gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
+            elif geom_type in ["uprn", "usrn", "postcode", "osm"]:
+                df = data.dropna(subset=geom_col)
+                df = df.sort_values(by=geom_col).reset_index(drop=True)
+                gdf = lookup_gdf.merge(df, left_on=lookup_key, right_on=geom_col, how="right")
+            else:  # if geom_type == None, find lat, lon columns
+                df = data.copy()
+                if geom_col:  # if geom_col provided
+                    x, y = geom_col[1], geom_col[0]
+                else:  # if geom_col = None determine lat, lon columns
+                    x = [col for col in df.columns if "lon" in col.lower() or "lng" in col.lower()][0]
+                    y = [col for col in df.columns if "lat" in col.lower()][0]
+                gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df[x], df[y]), crs=crs).to_crs(4326)
+            return gdf
+
+        # Convert set to gpd.GeoDataFrame
+        elif isinstance(data, set):  # e.g. set of uprn {1, 26, 27, 30, 31}
+            data = [item for item in data if item is not None]  # Remove None from the set if exists
+            # Convert geospatial cells to Shapely geometries
+            if geom_type in ["geohash", "s2", "s2_int", "h3"]:
+                cells = data
+                geoms, res = SpatialIndex.cell_poly(cells, cell_type=geom_type)
+                gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
+            # Convert other types to Shapely geometries
+            elif geom_type in ["uprn", "usrn", "postcode", "osm"]:
+                df = pd.DataFrame({geom_type: sorted(data)})  # Sort data for faster join
+                gdf = lookup_gdf.merge(df, left_on=lookup_key, right_on=geom_type, how="right")
+            return gdf
+        # Unsupported input type
+        else:
+            raise TypeError("Invalid input type: data must be gpd.GeoDataFrame, pd.DataFrame or a set")
+
+    @staticmethod
     def plp(
         data_list: gpd.GeoDataFrame | pd.DataFrame | set | list[gpd.GeoDataFrame | pd.DataFrame | set],
         geom_type: str | None = None,  #  'h3', 's2', 'geohash', 'osm', 'uprn', 'usrn', 'postcode'
@@ -1343,46 +1400,8 @@ class SnabbKarta:
         # Iterate through each set, pd.DataFrame or gpd.GeoDataFrame in the list to add layers to the map
         for data in data_list:
             # if data is a gpd.GeoDataFrame, simply copy it
-            if isinstance(data, gpd.GeoDataFrame):
-                gdf = data.copy()
 
-            # Convert pd.DataFrame to gpd.GeoDataFrame
-            elif isinstance(data, pd.DataFrame):
-                if geom_type in ["geohash", "s2", "s2_int", "h3"]:
-                    df = data.dropna(subset=geom_col)
-                    cells = df[geom_col].values
-                    geoms, res = SpatialIndex.cell_poly(cells, cell_type=geom_type)
-                    gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
-                elif geom_type in ["uprn", "usrn", "postcode", "osm"]:
-                    df = data.dropna(subset=geom_col)
-                    df = df.sort_values(by=geom_col).reset_index(drop=True)
-                    gdf = lookup_gdf.merge(df, left_on=lookup_key, right_on=geom_col, how="right")
-                else:  # if geom_type == None, find lat, lon columns
-                    df = data.copy()
-                    if geom_col:  # if geom_col provided
-                        x, y = geom_col[1], geom_col[0]
-                    else:  # if geom_col = None determine lat, lon columns
-                        x = [col for col in df.columns if "lon" in col.lower() or "lng" in col.lower()][0]
-                        y = [col for col in df.columns if "lat" in col.lower()][0]
-                    gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df[x], df[y]), crs=crs).to_crs(4326)
-
-            # Convert set to gpd.GeoDataFrame
-            elif isinstance(data, set):  # e.g. set of uprn {1, 26, 27, 30, 31}
-                data = [item for item in data if item is not None]  # Remove None from the set if exists
-                # Convert geospatial cells to Shapely geometries
-                if geom_type in ["geohash", "s2", "s2_int", "h3"]:
-                    cells = data
-                    geoms, res = SpatialIndex.cell_poly(cells, cell_type=geom_type)
-                    gdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
-                # Convert other types to Shapely geometries
-                elif geom_type in ["uprn", "usrn", "postcode", "osm"]:
-                    df = pd.DataFrame({geom_type: sorted(data)})  # Sort data for faster join
-                    gdf = lookup_gdf.merge(df, left_on=lookup_key, right_on=geom_type, how="right")
-
-            # Unsupported input type
-            else:
-                raise TypeError("Invalid input type: data must be gpd.GeoDataFrame, pd.DataFrame or a set")
-
+            gdf = SnabbKarta.data_to_gdf(data, geom_type, geom_col, crs, lookup_gdf, lookup_key)
             # Update overall bounding box
             gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
             minlat, minlon = min(minlat, gminlat), min(minlon, gminlon)  # minlat: total minlat
