@@ -1296,7 +1296,7 @@ class SnabbKarta:
         # OSM ID, UPRN, USRN, and postcode.
         geom_col: str | list[str] | None = None,
         # e.g. ['northing', 'easting'], 'h3_8', 'osm_id', 'uprn',  'postcode', 'postcode_sec'
-        crs: int = 4326,  # CRS of geom_col
+        data_crs: int = 4326,  # CRS of data
         lookup_gdf: pd.DataFrame | gpd.GeoDataFrame | None = None,  # external df containing geometry
         lookup_key: str = None,  # geometry column name in lookup_gdf
         # lat_col: str = "lat",  # Latitude column name in lookup_gdf
@@ -1342,7 +1342,7 @@ class SnabbKarta:
         data_list = data_list if isinstance(data_list, list) else [data_list]
         # Iterate through each set, pd.DataFrame or gpd.GeoDataFrame in the list to add layers to the map
         for data in data_list:
-            gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, crs, lookup_gdf, lookup_key)
+            gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
             # Update overall bounding box
             gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
             minlat, minlon = min(minlat, gminlat), min(minlon, gminlon)  # minlat: total minlat
@@ -1549,7 +1549,7 @@ class GeomUtils:
         # OSM ID, UPRN, USRN, and postcode.
         geom_col: str | list[str] | None = None,
         # e.g. ['northing', 'easting'], 'h3_8', 'osm_id', 'uprn',  'postcode', 'postcode_sec'
-        crs: int = 4326,  # CRS of geom_col
+        data_crs: int = 4326,  # CRS of data
         lookup_gdf: pd.DataFrame | gpd.GeoDataFrame | None = None,  # external df containing geometry
         lookup_key: str = None,  # geometry column name in lookup_gdf
         # lat_col: str = "lat",  # Latitude column name in lookup_gdf
@@ -1579,7 +1579,7 @@ class GeomUtils:
                 else:  # if geom_col = None determine lat, lon columns
                     x = [col for col in df.columns if "lon" in col.lower() or "lng" in col.lower()][0]
                     y = [col for col in df.columns if "lat" in col.lower()][0]
-                gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df[x], df[y]), crs=crs).to_crs(4326)
+                gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df[x], df[y]), crs=data_crs).to_crs(4326)
             return gdf
 
         # Convert set to gpd.GeoDataFrame
