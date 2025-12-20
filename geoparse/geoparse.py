@@ -1351,7 +1351,7 @@ class SnabbKarta:
             # Create layers
             for geom in gdf.geometry.type.unique():
                 sdf = gdf[gdf.geometry.type == geom]  # subset gdf
-                if geom == "Point":
+                if geom in ("Point", "MultiPoint"):
                     layers.append(
                         SnabbKarta._create_point_layer(
                             sdf,
@@ -1366,6 +1366,12 @@ class SnabbKarta:
                     layers.append(SnabbKarta._create_line_layer(sdf, line_color=line_color))
                 elif geom in ("Polygon", "MultiPolygon"):
                     layers.append(SnabbKarta._create_poly_layer(sdf, fill_color=fill_color))
+                else:
+                    raise ValueError(
+                        f"Unsupported geometry type: {geom}. "
+                        f"Supported types are: 'Point', 'MultiPoint', 'LineString', "
+                        f"'MultiLineString', 'Polygon', 'MultiPolygon'"
+                    )
 
                 # Show centroids of the geometry if `centroid=True`
                 if centroid:
