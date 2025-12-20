@@ -1289,6 +1289,40 @@ class SnabbKarta:
         )
 
     @staticmethod
+    def _create_layer(
+        gdf,
+        geom_type,
+        point_color: str = None,
+        point_opacity: float = None,
+        point_radius: int | str = None,
+        line_color: str = None,
+        fill_color: str = None,
+        speed_field: str = None,
+        speed_limit_field: str = None,
+    ):
+        """Factory function to create appropriate layer based on geometry type."""
+        if geom_type in {"Point", "MultiPoint"}:
+            return SnabbKarta._create_point_layer(
+                gdf,
+                color=point_color,
+                opacity=point_opacity,
+                speed_field=speed_field,
+                speed_limit_field=speed_limit_field,
+                get_radius=point_radius,
+            )
+        elif geom_type in {"LineString", "MultiLineString"}:
+            return SnabbKarta._create_line_layer(gdf, line_color=line_color)
+        elif geom_type in {"Polygon", "MultiPolygon"}:
+            return SnabbKarta._create_poly_layer(gdf, fill_color=fill_color)
+        else:
+            raise ValueError(
+                f"Unsupported geometry type: {geom_type}. "
+                f"Supported types are: 'Point', 'MultiPoint', "
+                f"LineString', 'MultiLineString', "
+                f"'Polygon', 'MultiPolygon'"
+            )
+
+    @staticmethod
     def plp(
         data_list: gpd.GeoDataFrame | pd.DataFrame | set | list[gpd.GeoDataFrame | pd.DataFrame | set],
         geom_type: str | None = None,  #  'h3', 's2', 'geohash', 'osm', 'uprn', 'usrn', 'postcode'
@@ -1311,19 +1345,20 @@ class SnabbKarta:
         heatmap: bool = False,
         point_color: str = "blue",
         point_opacity: float = 1,
-        speed_field: str = "speed",
-        speed_limit_field: str = "speedlimit",
         point_radius: int | str = 1,
         radius_min_pixels: int = 1,
         radius_max_pixels: int = 10,
         buffer_radius: int = 0,
         ring_inner_radius: int = 0,
         ring_outer_radius: int = 0,
+        # Vehicle speed and applicable speed limit fields from telematics data
+        speed_field: str = "speed",
+        speed_limit_field: str = "speedlimit",
         # LineString
         line_color: str = "blue",
         line_opacity: float = 0.5,
         # Polygon
-        centroid: bool = False,  # if True it shows centroids of polygons on the map.
+        centroid: bool = False,  # if True it shows centroids of polygons on the map
         fill_color: str = "red",
         highlight_color: str = "green",
         fill_opacity: float = 0.25,
@@ -1337,8 +1372,7 @@ class SnabbKarta:
     ) -> lb.Map:
         minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
         layers = []
-
-        # Ensure `data_list` is always a list (of gpd.GeoDataFrames, df.DataFrames or dict)
+        # Ensure `data_list` is always a list (of gpd.GeoDataFrames, df.DataFrames or set)
         data_list = data_list if isinstance(data_list, list) else [data_list]
         # Iterate through each set, pd.DataFrame or gpd.GeoDataFrame in the list to add layers to the map
         for data in data_list:
@@ -1350,28 +1384,20 @@ class SnabbKarta:
 
             # Create layers
             for geom in gdf.geometry.type.unique():
-                sdf = gdf[gdf.geometry.type == geom]  # subset gdf
-                if geom in ("Point", "MultiPoint"):
-                    layers.append(
-                        SnabbKarta._create_point_layer(
-                            sdf,
-                            color=point_color,
-                            opacity=point_opacity,
-                            speed_field=speed_field,
-                            speed_limit_field=speed_limit_field,
-                            get_radius=point_radius,
-                        )
+                gdf_subset = gdf[gdf.geometry.type == geom]
+                layers.append(
+                    SnabbKarta._create_layer(
+                        gdf_subset,
+                        geom,
+                        point_color,
+                        point_opacity,
+                        point_radius,
+                        line_color,
+                        fill_color,
+                        speed_field,
+                        speed_limit_field,
                     )
-                elif geom in ("LineString", "MultiLineString"):
-                    layers.append(SnabbKarta._create_line_layer(sdf, line_color=line_color))
-                elif geom in ("Polygon", "MultiPolygon"):
-                    layers.append(SnabbKarta._create_poly_layer(sdf, fill_color=fill_color))
-                else:
-                    raise ValueError(
-                        f"Unsupported geometry type: {geom}. "
-                        f"Supported types are: 'Point', 'MultiPoint', 'LineString', "
-                        f"'MultiLineString', 'Polygon', 'MultiPolygon'"
-                    )
+                )
 
                 # Show centroids of the geometry if `centroid=True`
                 if centroid:
