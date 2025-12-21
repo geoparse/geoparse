@@ -1428,61 +1428,20 @@ class SnabbKarta:
                     ring_layer = SnabbKarta._create_poly_layer(bgdf)
                     layers.append(ring_layer)
 
-                # Geohash visualization if `geohash_res > 0`
-                if geohash_res > 0:  # inner=False doesn't work if compact=True
-                    # Create a polygon for bounding box if input is not a polygon
-                    if geom in ("Polygon", "MultiPolygon"):
-                        cdf = gdf[["geometry"]]
-                    else:
-                        # Get the concave hull with a ratio parameter (0-1)
-                        # Smaller ratio = tighter fit, larger ratio = more convex
-                        tight_polygon = shapely.concave_hull(gdf.geometry.unary_union, ratio=0.1)
-                        cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
+                if geohash_res > 0 or s2_res > -1 or h3_res > -1:
+                    # Cell visualization configurations
+                    cell_layers = [
+                        ("geohash", geohash_res, lambda x: x > 0, {"color": "green"}),
+                        ("s2", s2_res, lambda x: x > -1, {"color": "blue"}),
+                        ("h3", h3_res, lambda x: x > -1, {"color": "red", "force_full_cover": force_full_cover}),
+                    ]
 
-                    # Convert geometries to geohash cells and their geometries
-                    cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type="geohash", res=geohash_res, compact=compact)
-                    geoms, res = SpatialIndex.cell_poly(cells, cell_type="geohash")
-                    cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
-
-                    geohash_layer = SnabbKarta._create_poly_layer(cdf, fill_color="green")
-                    layers.append(geohash_layer)
-
-                # S2 cell visualization if `s2_res > -1`
-                if s2_res > -1:
-                    # Create a polygon for bounding box if input is not a polygon
-                    if geom in ("Polygon", "MultiPolygon"):
-                        cdf = gdf[["geometry"]]
-                    else:
-                        tight_polygon = shapely.concave_hull(gdf.geometry.unary_union, ratio=0.1)
-                        cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
-
-                    # Convert geometries to S2 cells and their geometries
-                    cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type="s2", res=s2_res, compact=compact)
-                    geoms, res = SpatialIndex.cell_poly(cells, cell_type="s2")
-                    cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
-
-                    s2_layer = SnabbKarta._create_poly_layer(cdf, fill_color="green")
-                    layers.append(s2_layer)
-
-                # H3 cell visualization if `h3_res > -1`
-                if h3_res > -1:
-                    if geom in ("Polygon", "MultiPolygon"):
-                        cdf = gdf[["geometry"]]
-                    else:
-                        tight_polygon = shapely.concave_hull(gdf.geometry.unary_union, ratio=0.1)
-                        cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
-
-                    # Convert geometries to H3 cells and their Shapely hexagons
-                    cells, _ = SpatialIndex.ppoly_cell(
-                        cdf, cell_type="h3", res=h3_res, force_full_cover=force_full_cover, compact=compact
-                    )
-                    geoms, res = SpatialIndex.cell_poly(cells, cell_type="h3")
-                    cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
-
-                    h3_layer = SnabbKarta._create_poly_layer(cdf, fill_color="green")
-                    layers.append(h3_layer)
+                    for cell_type, res, condition, kwargs in cell_layers:
+                        if condition(res):
+                            cell_layer = CellUtils._create_cell_layer(gdf_subset, geom, cell_type, res, compact, **kwargs)
+                            layers.append(cell_layer)
             # for geom in gdf.geometry.type.unique():
-        # for gdf in data_list:
+        # for data in data_list:
 
         # Create a base map using the bounding box
         sw = [minlat, minlon]  # South West (bottom left corner)
@@ -2066,6 +2025,35 @@ class CellUtils:
     - Uncompaction allows for detailed analysis by expanding cells into finer resolutions.
     - H3 cell statistics are useful for understanding the spatial distribution and coverage of a geometry.
     """
+
+    @staticmethod
+    def _create_cell_layer(
+        gdf: gpd.GeoDataFrame,
+        geom_type: BaseGeometry,
+        cell_type: str,
+        resolution: int,
+        compact: bool,
+        force_full_cover: bool,
+        color: str,
+    ):
+        """Create a cell visualization layer (geohash, s2, h3)."""
+        # Create polygon for bounding box if input is not a polygon
+        if geom_type in ("Polygon", "MultiPolygon"):
+            cdf = gdf[["geometry"]]
+        else:
+            tight_polygon = shapely.concave_hull(gdf.geometry.unary_union, ratio=0.1)
+            cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
+
+        # Convert to cells and their geometries
+        kwargs = {"cell_type": cell_type, "res": resolution, "compact": compact}
+        if cell_type == "h3":
+            kwargs["force_full_cover"] = force_full_cover
+
+        cells, _ = SpatialIndex.ppoly_cell(cdf, **kwargs)
+        geoms, res = SpatialIndex.cell_poly(cells, cell_type=cell_type)
+
+        cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
+        return SnabbKarta._create_poly_layer(cdf, fill_color=color)
 
     @staticmethod
     def compact_cells(cells: list, cell_type: str) -> list:
