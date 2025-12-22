@@ -450,7 +450,6 @@ class Karta:
         s2_res: int = -1,
         h3_res: int = -1,
         force_full_cover: bool = True,
-        geohash_inner: bool = False,
         compact: bool = False,
         # Cells and OSM objects
         cells: list[str] | None = None,
@@ -559,9 +558,6 @@ class Karta:
         h3_res : int, default -1
             Resolution for creating H3-based polygonal layers. Set to -1 to disable.
 
-        geohash_inner : bool, default False
-            If True, shows only inner geohash cells. Does not work if `compact` is set to True.
-
         compact : bool, default False
             If True, creates compact representation of geohash, S2, or H3 cells.
 
@@ -609,7 +605,6 @@ class Karta:
                     geohash_res=geohash_res,
                     s2_res=s2_res,
                     h3_res=h3_res,
-                    geohash_inner=geohash_inner,
                     compact=compact,
                     poly_popup={"way_id": "way_id"},
                     fill_color="red",
@@ -1367,7 +1362,6 @@ class SnabbKarta:
         s2_res: int = -1,
         h3_res: int = -1,
         force_full_cover: bool = True,
-        geohash_inner: bool = False,
         compact: bool = False,
     ) -> lb.Map:
         minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
