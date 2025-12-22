@@ -1291,7 +1291,6 @@ class SnabbKarta:
     @staticmethod
     def _create_layer(
         gdf,
-        geom_type,
         point_color: str = None,
         point_opacity: float = None,
         point_radius: int | str = None,
@@ -1301,6 +1300,7 @@ class SnabbKarta:
         speed_limit_field: str = None,
     ):
         """Factory function to create appropriate layer based on geometry type."""
+        geom_type = gdf.geometry.type.unique()[0]
         if geom_type in {"Point", "MultiPoint"}:
             return SnabbKarta._create_point_layer(
                 gdf,
@@ -1377,18 +1377,12 @@ class SnabbKarta:
         # Iterate through each set, pd.DataFrame or gpd.GeoDataFrame in the list to add layers to the map
         for data in data_list:
             gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
-            # Update overall bounding box
-            gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
-            minlat, minlon = min(minlat, gminlat), min(minlon, gminlon)  # minlat: total minlat
-            maxlat, maxlon = max(maxlat, gmaxlat), max(maxlon, gmaxlon)
-
             # Create layers
             for geom in gdf.geometry.type.unique():
                 gdf_subset = gdf[gdf.geometry.type == geom]
                 layers.append(
                     SnabbKarta._create_layer(
                         gdf_subset,
-                        geom,
                         point_color,
                         point_opacity,
                         point_radius,
@@ -1398,6 +1392,18 @@ class SnabbKarta:
                         speed_limit_field,
                     )
                 )
+
+                if geohash_res > 0 or s2_res > -1 or h3_res > -1:
+                    # Cell visualization configurations
+                    cell_layers = [
+                        ("geohash", geohash_res, lambda x: x > 0),
+                        ("s2", s2_res, lambda x: x > -1),
+                        ("h3", h3_res, lambda x: x > -1),
+                    ]
+                    for cell_type, res, condition in cell_layers:
+                        if condition(res):
+                            cell_layer = CellUtils._create_cell_layer(gdf_subset, cell_type, res, force_full_cover, compact)
+                            layers.append(cell_layer)
 
                 # Show centroids of the geometry if `centroid=True`
                 if centroid:
@@ -1428,21 +1434,10 @@ class SnabbKarta:
                     ring_layer = SnabbKarta._create_poly_layer(bgdf)
                     layers.append(ring_layer)
 
-                if geohash_res > 0 or s2_res > -1 or h3_res > -1:
-                    # Cell visualization configurations
-                    cell_layers = [
-                        ("geohash", geohash_res, lambda x: x > 0, {"color": "green"}),
-                        ("s2", s2_res, lambda x: x > -1, {"color": "blue"}),
-                        ("h3", h3_res, lambda x: x > -1, {"color": "red", "force_full_cover": force_full_cover}),
-                    ]
-
-                    for cell_type, res, condition, kwargs in cell_layers:
-                        if condition(res):
-                            cell_layer = CellUtils._create_cell_layer(gdf_subset, geom, cell_type, res, compact, **kwargs)
-                            layers.append(cell_layer)
-            # for geom in gdf.geometry.type.unique():
-        # for data in data_list:
-
+            # Update overall bounding box
+            gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
+            minlat, minlon = min(minlat, gminlat), min(minlon, gminlon)  # minlat: total minlat
+            maxlat, maxlon = max(maxlat, gmaxlat), max(maxlon, gmaxlon)
         # Create a base map using the bounding box
         sw = [minlat, minlon]  # South West (bottom left corner)
         ne = [maxlat, maxlon]  # North East (top right corner)
@@ -2029,31 +2024,24 @@ class CellUtils:
     @staticmethod
     def _create_cell_layer(
         gdf: gpd.GeoDataFrame,
-        geom_type: BaseGeometry,
         cell_type: str,
         resolution: int,
-        compact: bool,
         force_full_cover: bool,
-        color: str,
+        compact: bool,
     ):
         """Create a cell visualization layer (geohash, s2, h3)."""
         # Create polygon for bounding box if input is not a polygon
-        if geom_type in ("Polygon", "MultiPolygon"):
+        if gdf.geometry.type.unique()[0] in ("Polygon", "MultiPolygon"):
             cdf = gdf[["geometry"]]
         else:
             tight_polygon = shapely.concave_hull(gdf.geometry.unary_union, ratio=0.1)
             cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
 
-        # Convert to cells and their geometries
-        kwargs = {"cell_type": cell_type, "res": resolution, "compact": compact}
-        if cell_type == "h3":
-            kwargs["force_full_cover"] = force_full_cover
-
-        cells, _ = SpatialIndex.ppoly_cell(cdf, **kwargs)
+        cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type, resolution, force_full_cover, compact)
         geoms, res = SpatialIndex.cell_poly(cells, cell_type=cell_type)
 
         cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
-        return SnabbKarta._create_poly_layer(cdf, fill_color=color)
+        return SnabbKarta._create_poly_layer(cdf, fill_color="green")
 
     @staticmethod
     def compact_cells(cells: list, cell_type: str) -> list:
