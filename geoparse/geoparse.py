@@ -450,7 +450,6 @@ class Karta:
         s2_res: int = -1,
         h3_res: int = -1,
         force_full_cover: bool = True,
-        geohash_inner: bool = False,
         compact: bool = False,
         # Cells and OSM objects
         cells: list[str] | None = None,
@@ -559,9 +558,6 @@ class Karta:
         h3_res : int, default -1
             Resolution for creating H3-based polygonal layers. Set to -1 to disable.
 
-        geohash_inner : bool, default False
-            If True, shows only inner geohash cells. Does not work if `compact` is set to True.
-
         compact : bool, default False
             If True, creates compact representation of geohash, S2, or H3 cells.
 
@@ -609,7 +605,6 @@ class Karta:
                     geohash_res=geohash_res,
                     s2_res=s2_res,
                     h3_res=h3_res,
-                    geohash_inner=geohash_inner,
                     compact=compact,
                     poly_popup={"way_id": "way_id"},
                     fill_color="red",
@@ -1289,6 +1284,62 @@ class SnabbKarta:
         )
 
     @staticmethod
+    def _add_buffer_layer(
+        gdf: gpd.GeoDataFrame,
+        r_max: int,
+        r_min: int = 0,
+    ) -> lb.PolygonLayer:
+        """Create and add buffer or ring layers to a map.
+
+        This function creates either a simple buffer layer or a ring/donut layer
+        by applying geometric buffer operations and reprojecting to WGS84 (EPSG:4326).
+
+        Parameters
+        ----------
+        gdf : geopandas.GeoDataFrame
+            Input GeoDataFrame containing geometries to buffer.
+        r_max : int
+            Buffer radius in meters for the outer boundary.
+            For 'buffer' type, this is the buffer distance.
+            For 'ring' type, this is the outer radius.
+        r_min : int, optional
+            Inner radius for rings in meters.
+            Default is 0.
+
+        Returns
+        -------
+        object
+            lb.PolygonLayer
+
+        Notes
+        -----
+        - The function automatically detects the appropriate projected CRS
+          for meter-based buffer operations using `GeomUtils.find_proj()`.
+        - All geometries are converted to WGS84 (EPSG:4326) before returning.
+
+        Examples
+        --------
+        >>> # Create a simple buffer layer with 1000m radius
+        >>> buffer_layer = _add_buffer_layer(gdf, 1000)
+        >>>
+        >>> # Create a ring with outer radius 2000m and inner radius 1500m
+        >>> ring_layer = _add_buffer_layer(gdf, 2000, 1500)
+        """
+
+        if r_min >= r_max:
+            raise ValueError("r_min must be less than r_max")
+
+        crs = GeomUtils.find_proj(gdf.geometry.to_list()[0])
+        gdf = gdf[["geometry"]].to_crs(crs)  # projected gdf
+
+        if r_min == 0:  # buffer
+            gdf["geometry"] = gdf.buffer(r_max).to_crs("EPSG:4326")
+        else:  # ring
+            gdf["geometry"] = gdf.buffer(r_max).difference(gdf.buffer(r_min)).to_crs("EPSG:4326")
+
+        return SnabbKarta._create_poly_layer(gdf)
+
+    @staticmethod
     def _create_layer(
         gdf,
         point_color: str = None,
@@ -1348,9 +1399,9 @@ class SnabbKarta:
         point_radius: int | str = 1,
         radius_min_pixels: int = 1,
         radius_max_pixels: int = 10,
-        buffer_radius: int = 0,
-        ring_inner_radius: int = 0,
-        ring_outer_radius: int = 0,
+        # Buffer and ring radius parameters (in meters)
+        r_max: int = 0,
+        r_min: int = 0,
         # Vehicle speed and applicable speed limit fields from telematics data
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
@@ -1367,7 +1418,6 @@ class SnabbKarta:
         s2_res: int = -1,
         h3_res: int = -1,
         force_full_cover: bool = True,
-        geohash_inner: bool = False,
         compact: bool = False,
     ) -> lb.Map:
         minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
@@ -1405,34 +1455,15 @@ class SnabbKarta:
                             cell_layer = CellUtils._create_cell_layer(gdf_subset, cell_type, res, force_full_cover, compact)
                             layers.append(cell_layer)
 
-                # Show centroids of the geometry if `centroid=True`
+                # Display centroids of the geometry
                 if centroid:
                     cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs=gdf.crs)  # centroid df
                     centroid_layer = SnabbKarta._create_point_layer(cdf, get_radius=1000)
                     layers.append(centroid_layer)
 
-                # Create a buffer layer if `buffer_radius > 0`
-                if buffer_radius > 0:
-                    bgdf = gdf[["geometry"]]  # buffered gdf: Create a copy of the GeoDataFrame to modify geometries
-                    # Apply buffer to geometries using the specified radius in meters
-                    bgdf["geometry"] = bgdf.to_crs(GeomUtils.find_proj(geom)).buffer(buffer_radius).to_crs("EPSG:4326")
-                    # Add the buffer layer to the map
-                    buffer_layer = SnabbKarta._create_poly_layer(bgdf)
-                    layers.append(buffer_layer)
-
-                # Create ring layer if `ring_outer_radius > 0`
-                if ring_outer_radius > 0:
-                    bgdf = gdf[["geometry"]]  # buffered gdf: Create a copy of the GeoDataFrame to modify geometries
-                    # Create ring shapes by applying an outer and inner buffer, subtracting the inner from the outer
-                    bgdf["geometry"] = (
-                        bgdf.to_crs(GeomUtils.find_proj(geom))
-                        .buffer(ring_outer_radius)
-                        .difference(bgdf.to_crs(GeomUtils.find_proj(geom)).buffer(ring_inner_radius))
-                        .to_crs("EPSG:4326")
-                    )  # radius in meters
-                    # Add the ring-shaped geometries to the map as polygons
-                    ring_layer = SnabbKarta._create_poly_layer(bgdf)
-                    layers.append(ring_layer)
+                # Create a buffer or ring layer
+                if r_max > 0:
+                    layers.append(SnabbKarta._add_buffer_layer(gdf, r_max, r_min))
 
             # Update overall bounding box
             gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
