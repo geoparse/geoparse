@@ -1485,7 +1485,8 @@ class SnabbKarta:
 
                 # Create a buffer or ring layer
                 if r_max > 0:
-                    layers.append(SnabbKarta._add_buffer_layer(gdf, r_max, r_min))
+                    buffer_layer = SnabbKarta._add_buffer_layer(gdf, r_max, r_min)
+                    layers.append(buffer_layer)
 
             # Update overall bounding box
             gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
