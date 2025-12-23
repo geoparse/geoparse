@@ -1284,7 +1284,7 @@ class SnabbKarta:
         )
 
     @staticmethod
-    def _create_cell_layer(
+    def _add_cell_layer(
         gdf: gpd.GeoDataFrame,
         cell_type: str,
         resolution: int,
@@ -1474,7 +1474,7 @@ class SnabbKarta:
                     ]
                     for cell_type, res, condition in cell_layers:
                         if condition(res):
-                            cell_layer = SnabbKarta._create_cell_layer(gdf_subset, cell_type, res, force_full_cover, compact)
+                            cell_layer = SnabbKarta._add_cell_layer(gdf_subset, cell_type, res, force_full_cover, compact)
                             layers.append(cell_layer)
 
                 # Display centroids of the geometry
