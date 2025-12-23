@@ -1318,7 +1318,7 @@ class SnabbKarta:
             )
 
     @staticmethod
-    def _add_cell_layer(
+    def _add_cell_layers(
         gdf: gpd.GeoDataFrame,
         geohash_res: int = 0,
         s2_res: int = -1,
@@ -1351,7 +1351,7 @@ class SnabbKarta:
         List[lb.PolygonLayer]
             List of created cell layers.
         """
-        layers = []
+        cell_layers = []
 
         # Cell visualization configurations
         cell_configs = [
@@ -1375,9 +1375,9 @@ class SnabbKarta:
                 cdf = gpd.GeoDataFrame({"id": cells, "res": res_values, "geometry": geoms}, crs="EPSG:4326")
 
                 cell_layer = SnabbKarta._create_poly_layer(cdf, fill_color="green")
-                layers.append(cell_layer)
+                cell_layers.append(cell_layer)
 
-        return layers
+        return cell_layers
 
     @staticmethod
     def _add_buffer_layer(
@@ -1506,7 +1506,9 @@ class SnabbKarta:
                 )
 
                 if geohash_res > 0 or s2_res > -1 or h3_res > -1:
-                    cell_layers = SnabbKarta._add_cell_layer(gdf_subset, geohash_res, s2_res, h3_res, force_full_cover, compact)
+                    cell_layers = SnabbKarta._add_cell_layers(
+                        gdf_subset, geohash_res, s2_res, h3_res, force_full_cover, compact
+                    )
                     layers.extend(cell_layers)
 
                 # Display centroids of the geometry
@@ -1521,7 +1523,7 @@ class SnabbKarta:
                     layers.append(buffer_layer)
 
             # Update overall bounding box
-            gminlon, gminlat, gmaxlon, gmaxlat = gdf_subset.total_bounds  # gminlon: gdf minlon
+            gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
             minlat, minlon = min(minlat, gminlat), min(minlon, gminlon)  # minlat: total minlat
             maxlat, maxlon = max(maxlat, gmaxlat), max(maxlon, gmaxlon)
         # Create a base map using the bounding box
