@@ -1284,6 +1284,40 @@ class SnabbKarta:
         )
 
     @staticmethod
+    def _create_plp_layer(
+        gdf,
+        point_color: str = None,
+        point_opacity: float = None,
+        point_radius: int | str = None,
+        line_color: str = None,
+        fill_color: str = None,
+        speed_field: str = None,
+        speed_limit_field: str = None,
+    ):
+        """Factory function to create appropriate layer based on geometry type."""
+        geom_type = gdf.geometry.type[0]
+        if geom_type in {"Point", "MultiPoint"}:
+            return SnabbKarta._create_point_layer(
+                gdf,
+                color=point_color,
+                opacity=point_opacity,
+                speed_field=speed_field,
+                speed_limit_field=speed_limit_field,
+                get_radius=point_radius,
+            )
+        elif geom_type in {"LineString", "MultiLineString"}:
+            return SnabbKarta._create_line_layer(gdf, line_color=line_color)
+        elif geom_type in {"Polygon", "MultiPolygon"}:
+            return SnabbKarta._create_poly_layer(gdf, fill_color=fill_color)
+        else:
+            raise ValueError(
+                f"Unsupported geometry type: {geom_type}. "
+                f"Supported types are: 'Point', 'MultiPoint', "
+                f"LineString', 'MultiLineString', "
+                f"'Polygon', 'MultiPolygon'"
+            )
+
+    @staticmethod
     def _add_cell_layer(
         gdf: gpd.GeoDataFrame,
         cell_type: str,
@@ -1362,40 +1396,6 @@ class SnabbKarta:
         return SnabbKarta._create_poly_layer(gdf)
 
     @staticmethod
-    def _create_layer(
-        gdf,
-        point_color: str = None,
-        point_opacity: float = None,
-        point_radius: int | str = None,
-        line_color: str = None,
-        fill_color: str = None,
-        speed_field: str = None,
-        speed_limit_field: str = None,
-    ):
-        """Factory function to create appropriate layer based on geometry type."""
-        geom_type = gdf.geometry.type[0]
-        if geom_type in {"Point", "MultiPoint"}:
-            return SnabbKarta._create_point_layer(
-                gdf,
-                color=point_color,
-                opacity=point_opacity,
-                speed_field=speed_field,
-                speed_limit_field=speed_limit_field,
-                get_radius=point_radius,
-            )
-        elif geom_type in {"LineString", "MultiLineString"}:
-            return SnabbKarta._create_line_layer(gdf, line_color=line_color)
-        elif geom_type in {"Polygon", "MultiPolygon"}:
-            return SnabbKarta._create_poly_layer(gdf, fill_color=fill_color)
-        else:
-            raise ValueError(
-                f"Unsupported geometry type: {geom_type}. "
-                f"Supported types are: 'Point', 'MultiPoint', "
-                f"LineString', 'MultiLineString', "
-                f"'Polygon', 'MultiPolygon'"
-            )
-
-    @staticmethod
     def plp(
         data_list: gpd.GeoDataFrame | pd.DataFrame | set | list[gpd.GeoDataFrame | pd.DataFrame | set],
         geom_type: str | None = None,  #  'h3', 's2', 'geohash', 'osm', 'uprn', 'usrn', 'postcode'
@@ -1453,7 +1453,7 @@ class SnabbKarta:
             for geom in gdf.geometry.type.unique():
                 gdf_subset = gdf[gdf.geometry.type == geom]
                 layers.append(
-                    SnabbKarta._create_layer(
+                    SnabbKarta._create_plp_layer(
                         gdf_subset,
                         point_color,
                         point_opacity,
