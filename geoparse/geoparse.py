@@ -1284,6 +1284,28 @@ class SnabbKarta:
         )
 
     @staticmethod
+    def _create_cell_layer(
+        gdf: gpd.GeoDataFrame,
+        cell_type: str,
+        resolution: int,
+        force_full_cover: bool,
+        compact: bool,
+    ) -> lb.PolygonLayer:
+        """Create a cell visualization layer (geohash, s2, h3)."""
+        # Create polygon for bounding box if input is not a polygon
+        if gdf.geometry.type[0] in ("Polygon", "MultiPolygon"):
+            cdf = gdf[["geometry"]]
+        else:
+            tight_polygon = shapely.concave_hull(gdf.geometry.unary_union, ratio=0.1)
+            cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
+
+        cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type, resolution, force_full_cover, compact)
+        geoms, res = SpatialIndex.cell_poly(cells, cell_type=cell_type)
+
+        cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
+        return SnabbKarta._create_poly_layer(cdf, fill_color="green")
+
+    @staticmethod
     def _add_buffer_layer(
         gdf: gpd.GeoDataFrame,
         r_max: int,
@@ -1351,7 +1373,7 @@ class SnabbKarta:
         speed_limit_field: str = None,
     ):
         """Factory function to create appropriate layer based on geometry type."""
-        geom_type = gdf.geometry.type.unique()[0]
+        geom_type = gdf.geometry.type[0]
         if geom_type in {"Point", "MultiPoint"}:
             return SnabbKarta._create_point_layer(
                 gdf,
@@ -1399,12 +1421,6 @@ class SnabbKarta:
         point_radius: int | str = 1,
         radius_min_pixels: int = 1,
         radius_max_pixels: int = 10,
-        # Buffer and ring radius parameters (in meters)
-        r_max: int = 0,
-        r_min: int = 0,
-        # Vehicle speed and applicable speed limit fields from telematics data
-        speed_field: str = "speed",
-        speed_limit_field: str = "speedlimit",
         # LineString
         line_color: str = "blue",
         line_opacity: float = 0.5,
@@ -1419,6 +1435,12 @@ class SnabbKarta:
         h3_res: int = -1,
         force_full_cover: bool = True,
         compact: bool = False,
+        # Buffer and ring radius parameters (in meters)
+        r_max: int = 0,
+        r_min: int = 0,
+        # Vehicle speed and applicable speed limit fields from telematics data
+        speed_field: str = "speed",
+        speed_limit_field: str = "speedlimit",
     ) -> lb.Map:
         minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
         layers = []
@@ -1452,7 +1474,7 @@ class SnabbKarta:
                     ]
                     for cell_type, res, condition in cell_layers:
                         if condition(res):
-                            cell_layer = CellUtils._create_cell_layer(gdf_subset, cell_type, res, force_full_cover, compact)
+                            cell_layer = SnabbKarta._create_cell_layer(gdf_subset, cell_type, res, force_full_cover, compact)
                             layers.append(cell_layer)
 
                 # Display centroids of the geometry
@@ -2051,28 +2073,6 @@ class CellUtils:
     - Uncompaction allows for detailed analysis by expanding cells into finer resolutions.
     - H3 cell statistics are useful for understanding the spatial distribution and coverage of a geometry.
     """
-
-    @staticmethod
-    def _create_cell_layer(
-        gdf: gpd.GeoDataFrame,
-        cell_type: str,
-        resolution: int,
-        force_full_cover: bool,
-        compact: bool,
-    ):
-        """Create a cell visualization layer (geohash, s2, h3)."""
-        # Create polygon for bounding box if input is not a polygon
-        if gdf.geometry.type.unique()[0] in ("Polygon", "MultiPolygon"):
-            cdf = gdf[["geometry"]]
-        else:
-            tight_polygon = shapely.concave_hull(gdf.geometry.unary_union, ratio=0.1)
-            cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
-
-        cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type, resolution, force_full_cover, compact)
-        geoms, res = SpatialIndex.cell_poly(cells, cell_type=cell_type)
-
-        cdf = gpd.GeoDataFrame({"id": cells, "res": res, "geometry": geoms}, crs="EPSG:4326")
-        return SnabbKarta._create_poly_layer(cdf, fill_color="green")
 
     @staticmethod
     def compact_cells(cells: list, cell_type: str) -> list:
