@@ -1295,7 +1295,7 @@ class SnabbKarta:
         speed_limit_field: str = None,
     ):
         """Factory function to create appropriate layer based on geometry type."""
-        geom_type = gdf.geometry.type[0]
+        geom_type = gdf.geometry.type.to_list()[0]
         if geom_type in {"Point", "MultiPoint"}:
             return SnabbKarta._create_point_layer(
                 gdf,
@@ -1504,7 +1504,7 @@ class SnabbKarta:
                         speed_limit_field,
                     )
                 )
-
+                # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
                 if geohash_res > 0 or s2_res > -1 or h3_res > -1:
                     cell_layers = SnabbKarta._add_cell_layers(
                         gdf_subset, geohash_res, s2_res, h3_res, force_full_cover, compact
