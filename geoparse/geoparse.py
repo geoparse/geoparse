@@ -1125,6 +1125,326 @@ class Karta:
         )
 
 
+class Karta2:
+    @staticmethod
+    def _get_color(col: int | float | str) -> list:
+        """
+        Generates a consistent color based on input value.
+        Returns as [R, G, B] list for deck.gl compatibility.
+        """
+        palette = [
+            [255, 0, 0],  # red
+            [0, 128, 0],  # green
+            [0, 0, 255],  # blue
+            [255, 255, 0],  # yellow
+            [128, 0, 128],  # purple
+            [255, 165, 0],  # orange
+            [255, 192, 203],  # pink
+            [165, 42, 42],  # brown
+            [128, 128, 128],  # gray
+            [255, 215, 0],  # gold
+            [0, 255, 255],  # cyan
+            [255, 0, 255],  # magenta
+            [0, 255, 0],  # lime
+            [0, 0, 128],  # navy
+            [0, 128, 128],  # teal
+        ]
+
+        if col is None or (isinstance(col, float) and math.isnan(col)):
+            return [0, 0, 0]
+
+        if isinstance(col, (int, float)):
+            idx = int(col) % len(palette)
+        else:
+            col = str(col)
+            col = re.sub(r"[\W_]+", "", col)
+            idx = int(col, 36) % len(palette)
+
+        return palette[idx]
+
+    @staticmethod
+    def _get_speed_colors(speeds, speed_limits, opacity):
+        # Create result array filled with default values (black)
+        result = np.full((len(speeds), 4), [0, 0, 0, opacity], dtype=np.uint8)
+
+        # Create masks for each condition
+        invalid_mask = pd.isna(speed_limits) | (speed_limits <= 0)
+        within_limit_mask = ~invalid_mask & (speeds <= speed_limits)
+        green_mask = ~invalid_mask & (speeds < 1.1 * speed_limits) & (speeds > speed_limits)
+        yellow_mask = ~invalid_mask & (speeds < 1.2 * speed_limits) & (speeds >= 1.1 * speed_limits)
+        orange_mask = ~invalid_mask & (speeds < 1.3 * speed_limits) & (speeds >= 1.2 * speed_limits)
+        red_mask = ~invalid_mask & (speeds < 1.4 * speed_limits) & (speeds >= 1.3 * speed_limits)
+
+        # Apply colors based on masks (all values as uint8)
+        result[invalid_mask] = [128, 0, 128, opacity]  # purple
+        result[within_limit_mask] = [0, 0, 255, opacity]  # blue
+        result[green_mask] = [0, 255, 0, opacity]  # green
+        result[yellow_mask] = [255, 255, 0, opacity]  # yellow
+        result[orange_mask] = [255, 165, 0, opacity]  # orange
+        result[red_mask] = [255, 0, 0, opacity]  # red
+
+        return result
+
+    @staticmethod
+    def _create_plp_layer(
+        gdf,
+        point_color: str = None,
+        point_opacity: float = None,
+        point_radius: int | str = None,
+        line_color: str = None,
+        fill_color: str = None,
+        speed_field: str = None,
+        speed_limit_field: str = None,
+    ):
+        karta = folium.Map(tiles="cartodbpositron")
+        folium.GeoJson(
+            gdf,
+            marker=folium.Circle(radius=40, fill_color=point_color, fill_opacity=point_opacity, color=point_color, weight=10),
+        ).add_to(karta)
+        karta.fit_bounds(karta.get_bounds())
+
+    @staticmethod
+    def _add_cell_layers(
+        gdf: gpd.GeoDataFrame,
+        geohash_res: int = 0,
+        s2_res: int = -1,
+        h3_res: int = -1,
+        force_full_cover: bool = False,
+        compact: bool = False,
+    ) -> list[lb.PolygonLayer]:
+        """Create cell visualization layers for specified resolutions.
+
+        Creates geohash, s2, and/or h3 cell layers based on which resolutions
+        are specified with valid values.
+
+        Parameters
+        ----------
+        gdf : geopandas.GeoDataFrame
+            Input GeoDataFrame containing geometries.
+        geohash_res : int, default=0
+            Geohash resolution (0 = no layer).
+        s2_res : int, default=-1
+            S2 cell resolution (-1 = no layer).
+        h3_res : int, default=-1
+            H3 cell resolution (-1 = no layer).
+        force_full_cover : bool, default=False
+            Whether to force full coverage of the bounding box.
+        compact : bool, default=False
+            Whether to use compact cell representation.
+
+        Returns
+        -------
+        List[lb.PolygonLayer]
+            List of created cell layers.
+        """
+        cell_layers = []
+
+        # Cell visualization configurations
+        cell_configs = [
+            ("geohash", geohash_res, lambda x: x > 0),
+            ("s2", s2_res, lambda x: x > -1),
+            ("h3", h3_res, lambda x: x > -1),
+        ]
+
+        # Clean indices for filtered selections e.g. gdf[gdf.city=='London']
+        gdf = gdf.reset_index(drop=True)
+        for cell_type, res, condition in cell_configs:
+            if condition(res):
+                # Create polygon for bounding box if input is not a polygon
+                if gdf.geometry.type[0] in ("Polygon", "MultiPolygon"):
+                    cdf = gdf[["geometry"]]
+                else:  # Create convex hull polygon for points and lines
+                    # Apply tiny buffer to avoid degenerate geometries from collinear points
+                    tight_polygon = shapely.convex_hull(gdf.geometry.unary_union).buffer(0.0000001)
+                    cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
+                cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type, res, force_full_cover, compact)
+                geoms, res_values = SpatialIndex.cell_poly(cells, cell_type=cell_type)
+
+                cdf = gpd.GeoDataFrame({"id": cells, "res": res_values, "geometry": geoms}, crs="EPSG:4326")
+
+                cell_layer = SnabbKarta._create_poly_layer(cdf, fill_color="green")
+                cell_layers.append(cell_layer)
+
+        return cell_layers
+
+    @staticmethod
+    def _add_buffer_layer(
+        gdf: gpd.GeoDataFrame,
+        buffer_r_max: int,
+        buffer_r_min: int = 0,
+    ) -> lb.PolygonLayer:
+        """Create and add buffer or ring layers to a map.
+
+        This function creates either a simple buffer layer or a ring/donut layer
+        by applying geometric buffer operations and reprojecting to WGS84 (EPSG:4326).
+
+        Parameters
+        ----------
+        gdf : geopandas.GeoDataFrame
+            Input GeoDataFrame containing geometries to buffer.
+        buffer_r_max : int
+            Buffer radius in meters for the outer boundary.
+            For 'buffer' type, this is the buffer distance.
+            For 'ring' type, this is the outer radius.
+        buffer_r_min : int, optional
+            Inner radius for rings in meters.
+            Default is 0.
+
+        Returns
+        -------
+        object
+            lb.PolygonLayer
+
+        Notes
+        -----
+        - The function automatically detects the appropriate projected CRS
+          for meter-based buffer operations using `GeomUtils.find_proj()`.
+        - All geometries are converted to WGS84 (EPSG:4326) before returning.
+
+        Examples
+        --------
+        >>> # Create a simple buffer layer with 1000m radius
+        >>> buffer_layer = _add_buffer_layer(gdf, 1000)
+        >>>
+        >>> # Create a ring with outer radius 2000m and inner radius 1500m
+        >>> ring_layer = _add_buffer_layer(gdf, 2000, 1500)
+        """
+
+        if buffer_r_min >= buffer_r_max:
+            raise ValueError("buffer_r_min must be less than buffer_r_max")
+
+        crs = GeomUtils.find_proj(gdf.geometry.to_list()[0])
+        gdf = gdf[["geometry"]].to_crs(crs)  # projected gdf
+
+        if buffer_r_min == 0:  # buffer
+            gdf["geometry"] = gdf.buffer(buffer_r_max).to_crs("EPSG:4326")
+        else:  # ring
+            gdf["geometry"] = gdf.buffer(buffer_r_max).difference(gdf.buffer(buffer_r_min)).to_crs("EPSG:4326")
+
+        return SnabbKarta._create_poly_layer(gdf)
+
+    @staticmethod
+    def plp(
+        data_list: gpd.GeoDataFrame | pd.DataFrame | set | list[gpd.GeoDataFrame | pd.DataFrame | set],
+        geom_type: str | None = None,  #  'h3', 's2', 'geohash', 'osm', 'uprn', 'usrn', 'postcode'
+        # Supported types: geospatial cell IDs (geohash, s2, h3),
+        # OSM ID, UPRN, USRN, and postcode.
+        geom_col: str | list[str] | None = None,
+        # e.g. ['northing', 'easting'], 'h3_8', 'osm_id', 'uprn',  'postcode', 'postcode_sec'
+        data_crs: int = 4326,  # CRS of data
+        lookup_gdf: pd.DataFrame | gpd.GeoDataFrame | None = None,  # external df containing geometry
+        lookup_key: str = None,  # geometry column name in lookup_gdf
+        # lat_col: str = "lat",  # Latitude column name in lookup_gdf
+        # lon_col: str = "lon",  # Longitude column name in lookup_gdf
+        osm_url: str | None = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
+        # Map tiles
+        tiles: str = CartoStyle.Positron,  # DarkMatter
+        pitch: int = 30,
+        map_height: int = 800,
+        # Point
+        cluster: bool = False,
+        heatmap: bool = False,
+        point_color: str = "blue",
+        point_opacity: float = 1,
+        point_radius: int | str = 1,
+        radius_min_pixels: int = 1,
+        radius_max_pixels: int = 10,
+        # LineString
+        line_color: str = "blue",
+        line_opacity: float = 0.5,
+        # Polygon
+        centroid: bool = False,  # if True it shows centroids of polygons on the map
+        fill_color: str = "red",
+        highlight_color: str = "green",
+        fill_opacity: float = 0.25,
+        highlight_opacity: float = 0.5,
+        geohash_res: int = 0,
+        s2_res: int = -1,
+        h3_res: int = -1,
+        force_full_cover: bool = True,
+        compact: bool = False,
+        # Buffer and ring radius parameters (in meters)
+        buffer_r_max: int = 0,
+        buffer_r_min: int = 0,
+        # Vehicle speed and applicable speed limit fields from telematics data
+        speed_field: str = "speed",
+        speed_limit_field: str = "speedlimit",
+    ) -> lb.Map:
+        minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
+        layers = []
+        # Ensure `data_list` is always a list (of gpd.GeoDataFrames, df.DataFrames or set)
+        data_list = data_list if isinstance(data_list, list) else [data_list]
+        # Iterate through each set, pd.DataFrame or gpd.GeoDataFrame in the list to add layers to the map
+        for data in data_list:
+            gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
+            # Create layers
+            for geom in gdf.geometry.type.unique():
+                gdf_subset = gdf[gdf.geometry.type == geom]
+                layers.append(
+                    SnabbKarta._create_plp_layer(
+                        gdf_subset,
+                        point_color,
+                        point_opacity,
+                        point_radius,
+                        line_color,
+                        fill_color,
+                        speed_field,
+                        speed_limit_field,
+                    )
+                )
+                # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
+                if geohash_res > 0 or s2_res > -1 or h3_res > -1:
+                    cell_layers = SnabbKarta._add_cell_layers(
+                        gdf_subset, geohash_res, s2_res, h3_res, force_full_cover, compact
+                    )
+                    layers.extend(cell_layers)
+
+                # Display centroids of the geometry
+                if centroid:
+                    cdf = gpd.GeoDataFrame({"geometry": gdf_subset.centroid}, crs=gdf_subset.crs)  # centroid df
+                    centroid_layer = SnabbKarta._create_point_layer(cdf, get_radius=1000)
+                    layers.append(centroid_layer)
+
+                # Create a buffer or ring layer
+                if buffer_r_max > 0:
+                    buffer_layer = SnabbKarta._add_buffer_layer(gdf_subset, buffer_r_max, buffer_r_min)
+                    layers.append(buffer_layer)
+
+            # Update overall bounding box
+            gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
+            minlat, minlon = min(minlat, gminlat), min(minlon, gminlon)  # minlat: total minlat
+            maxlat, maxlon = max(maxlat, gmaxlat), max(maxlon, gmaxlon)
+        # Create a base map using the bounding box
+        sw = [minlat, minlon]  # South West (bottom left corner)
+        ne = [maxlat, maxlon]  # North East (top right corner)
+
+        # Calculate center and zoom if not provided
+        lat_center, lon_center = (sw[0] + ne[0]) / 2, (sw[1] + ne[1]) / 2
+        max_length = max(ne[0] - sw[0], ne[1] - sw[1])  # max(delta_lat, delta_lon)
+        # Adjust zoom baseline depending on map extent
+        if max_length < 0:  # if no data available, show lat, lon = (0, 0)
+            zoom = 5
+        elif max_length == 0:  # if only one point available, set the zoom level to 20
+            zoom = 20
+        elif max_length > 5:  # large area (e.g. whole UK)
+            zoom = 12 - math.log(max_length * 2, 1.5)
+        else:  # smaller area (e.g. London)
+            zoom = 11 - math.log(max_length * 2, 1.5)
+
+        return lb.Map(
+            layers=layers,
+            basemap_style=tiles,
+            height=map_height,
+            view_state={
+                "longitude": lon_center,
+                "latitude": lat_center,
+                "zoom": zoom,
+                "pitch": pitch,
+                "bearing": 0,
+            },
+        )
+
+
 class SnabbKarta:
     @staticmethod
     def _get_color(col: int | float | str) -> list:
