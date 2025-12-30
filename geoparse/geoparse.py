@@ -1127,7 +1127,7 @@ class Karta:
 
 class Karta2:
     @staticmethod
-    def _base_map(sw: list, ne: list) -> folium.Map:
+    def _base_map() -> folium.Map:
         """
         Creates a base map with multiple tile layers and fits the map to the specified bounding box.
 
@@ -1191,9 +1191,6 @@ class Karta2:
         # Add each tile layer to the map
         for item in tiles:
             folium.TileLayer(item, name=tiles[item], max_zoom=21).add_to(karta)
-
-        # Fit the map's view to the bounding box defined by the southwest and northeast coordinates
-        karta.fit_bounds([sw, ne])
 
         return karta
 
@@ -1405,80 +1402,57 @@ class Karta2:
         # Vehicle speed and applicable speed limit fields from telematics data
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
-    ) -> lb.Map:
-        minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
-        layers = []
+    ) -> folium.Map:
         # Ensure `data_list` is always a list (of gpd.GeoDataFrames, df.DataFrames or set)
         data_list = data_list if isinstance(data_list, list) else [data_list]
+
+        # Create a base map
+        karta = Karta2._base_map()  # Initialize folium map with the bounding box
+
         # Iterate through each set, pd.DataFrame or gpd.GeoDataFrame in the list to add layers to the map
         for data in data_list:
             gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
             # Create layers
-            for geom in gdf.geometry.type.unique():
-                gdf_subset = gdf[gdf.geometry.type == geom]
-                layers.append(
-                    SnabbKarta._create_plp_layer(
-                        gdf_subset,
-                        point_color,
-                        point_opacity,
-                        point_radius,
-                        line_color,
-                        fill_color,
-                        speed_field,
-                        speed_limit_field,
-                    )
-                )
-                # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
-                if geohash_res > 0 or s2_res > -1 or h3_res > -1:
-                    cell_layers = SnabbKarta._add_cell_layers(
-                        gdf_subset, geohash_res, s2_res, h3_res, force_full_cover, compact
-                    )
-                    layers.extend(cell_layers)
+            group_polygon = folium.FeatureGroup(name="Polygon")
+            Karta2._create_plp_layer(
+                gdf,
+                karta=group_polygon,
+                #    fill_color,
+                #    highlight_color,
+                #    fill_opacity,
+                #    highlight_opacity,
+                #    line_width,
+                #    popup_dict,
+                # point_color,
+                # point_opacity,
+                # point_radius,
+                # line_color,
+                # fill_color,
+                # speed_field,
+                # speed_limit_field,
+            )
+            group_polygon.add_to(karta)
+            # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
+            #            if geohash_res > 0 or s2_res > -1 or h3_res > -1:
+            #                cell_layers = SnabbKarta._add_cell_layers(
+            #                    gdf, geohash_res, s2_res, h3_res, force_full_cover, compact
+            #                )
+            #                layers.extend(cell_layers)
+            #
+            #            # Display centroids of the geometry
+            #            if centroid:
+            #                cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs=gdf.crs)  # centroid df
+            #                centroid_layer = SnabbKarta._create_point_layer(cdf, get_radius=1000)
+            #                layers.append(centroid_layer)
+            #
+            #            # Create a buffer or ring layer
+            #            if buffer_r_max > 0:
+            #                buffer_layer = SnabbKarta._add_buffer_layer(gdf, buffer_r_max, buffer_r_min)
+            #                layers.append(buffer_layer)
 
-                # Display centroids of the geometry
-                if centroid:
-                    cdf = gpd.GeoDataFrame({"geometry": gdf_subset.centroid}, crs=gdf_subset.crs)  # centroid df
-                    centroid_layer = SnabbKarta._create_point_layer(cdf, get_radius=1000)
-                    layers.append(centroid_layer)
-
-                # Create a buffer or ring layer
-                if buffer_r_max > 0:
-                    buffer_layer = SnabbKarta._add_buffer_layer(gdf_subset, buffer_r_max, buffer_r_min)
-                    layers.append(buffer_layer)
-
-            # Update overall bounding box
-            gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
-            minlat, minlon = min(minlat, gminlat), min(minlon, gminlon)  # minlat: total minlat
-            maxlat, maxlon = max(maxlat, gmaxlat), max(maxlon, gmaxlon)
-        # Create a base map using the bounding box
-        sw = [minlat, minlon]  # South West (bottom left corner)
-        ne = [maxlat, maxlon]  # North East (top right corner)
-
-        # Calculate center and zoom if not provided
-        lat_center, lon_center = (sw[0] + ne[0]) / 2, (sw[1] + ne[1]) / 2
-        max_length = max(ne[0] - sw[0], ne[1] - sw[1])  # max(delta_lat, delta_lon)
-        # Adjust zoom baseline depending on map extent
-        if max_length < 0:  # if no data available, show lat, lon = (0, 0)
-            zoom = 5
-        elif max_length == 0:  # if only one point available, set the zoom level to 20
-            zoom = 20
-        elif max_length > 5:  # large area (e.g. whole UK)
-            zoom = 12 - math.log(max_length * 2, 1.5)
-        else:  # smaller area (e.g. London)
-            zoom = 11 - math.log(max_length * 2, 1.5)
-
-        return lb.Map(
-            layers=layers,
-            basemap_style=tiles,
-            height=map_height,
-            view_state={
-                "longitude": lon_center,
-                "latitude": lat_center,
-                "zoom": zoom,
-                "pitch": pitch,
-                "bearing": 0,
-            },
-        )
+            karta.fit_bounds(karta.get_bounds())
+            folium.LayerControl(collapsed=False).add_to(karta)
+            return karta
 
     @staticmethod
     def choropleth(mdf: gpd.GeoDataFrame, columns: list, legend: str, bins: list = None, palette: str = "YlOrRd") -> folium.Map:
