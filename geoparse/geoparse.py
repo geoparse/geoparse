@@ -1276,7 +1276,7 @@ class Karta2:
         return palette[idx]
 
     @staticmethod
-    def _add_plp_layer(
+    def _create_plp_layer(
         gdf: gpd.GeoDataFrame,
         karta: folium.Map,
         fill_color: str = "red",
@@ -1450,9 +1450,9 @@ class Karta2:
             #                buffer_layer = SnabbKarta._add_buffer_layer(gdf, buffer_r_max, buffer_r_min)
             #                layers.append(buffer_layer)
 
-            karta.fit_bounds(karta.get_bounds())
-            folium.LayerControl(collapsed=False).add_to(karta)
-            return karta
+        karta.fit_bounds(karta.get_bounds())
+        folium.LayerControl(collapsed=False).add_to(karta)
+        return karta
 
     @staticmethod
     def choropleth(mdf: gpd.GeoDataFrame, columns: list, legend: str, bins: list = None, palette: str = "YlOrRd") -> folium.Map:
