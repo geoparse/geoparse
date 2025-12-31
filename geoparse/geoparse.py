@@ -1279,11 +1279,12 @@ class Karta2:
     def _create_plp_layer(
         gdf: gpd.GeoDataFrame,
         karta: folium.Map,
-        fill_color: str = "red",
-        highlight_color: str = "green",
-        fill_opacity: float = 0.25,
-        highlight_opacity: float = 0.5,
+        point_color: str = "blue",
+        point_radius: int = 5,  # in pixels
+        line_color: str = "blue",
         line_width: float = 0.3,
+        poly_fill_color: str = "red",
+        poly_highlight_color: str = "green",
         popup_dict: dict = None,
     ) -> None:
         """
@@ -1329,19 +1330,19 @@ class Karta2:
         # Style function to apply to the polygon
         def style_function(x):
             return {
-                "fillColor": fill_color,
+                "fillColor": poly_fill_color,
                 "color": "black",  # Border color
-                "fillOpacity": fill_opacity,
-                "weight": line_width,
+                "fillOpacity": 0.25,
+                "weight": 0.3,
             }
 
         # Highlight style function when the polygon is hovered over
         def highlight_function(x):
             return {
-                "fillColor": highlight_color,  # fill_color,
+                "fillColor": poly_highlight_color,  # fill_color,
                 "color": "black",  # Border color
-                "fillOpacity": highlight_opacity,
-                "weight": line_width,
+                "fillOpacity": 0.5,
+                "weight": 0.3,
             }
 
         # Create a popup if a popup dictionary is provided
@@ -1350,7 +1351,12 @@ class Karta2:
         # Create a Folium GeoJson object from gpd.GeoDatFrame
         folium.GeoJson(
             gdf,
-            marker=folium.Circle(radius=40, fill_color="blue", fill_opacity=0.5, color="blue", weight=10),
+            marker=folium.CircleMarker(
+                radius=point_radius,  # in pixels
+                fill_color=point_color,
+                fill_opacity=1,
+                weight=0,  # point border width
+            ),
         ).add_to(karta)
 
         # gjson = folium.GeoJson(data=gjson, style_function=style_function, highlight_function=highlight_function, tooltip=popup)
@@ -1375,13 +1381,13 @@ class Karta2:
         pitch: int = 30,
         map_height: int = 800,
         # Point
-        cluster: bool = False,
-        heatmap: bool = False,
         point_color: str = "blue",
         point_opacity: float = 1,
         point_radius: int | str = 1,
         radius_min_pixels: int = 1,
         radius_max_pixels: int = 10,
+        heatmap: bool = False,
+        cluster: bool = False,
         # LineString
         line_color: str = "blue",
         line_opacity: float = 0.5,
