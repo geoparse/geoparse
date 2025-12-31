@@ -1279,12 +1279,12 @@ class Karta2:
     def _create_plp_layer(
         gdf: gpd.GeoDataFrame,
         karta: folium.Map,
-        point_color: str = "blue",
-        point_radius: int = 5,  # in pixels
-        line_color: str = "blue",
-        line_width: float = 0.3,
-        poly_fill_color: str = "red",
-        poly_highlight_color: str = "green",
+        point_color: str,
+        point_radius: int,  # in pixels
+        line_color: str,
+        line_width: float,
+        poly_fill_color,
+        poly_highlight_color,
         popup_dict: dict = None,
     ) -> None:
         """
@@ -1376,27 +1376,20 @@ class Karta2:
         # lat_col: str = "lat",  # Latitude column name in lookup_gdf
         # lon_col: str = "lon",  # Longitude column name in lookup_gdf
         osm_url: str | None = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
-        # Map tiles
-        tiles: str = CartoStyle.Positron,  # DarkMatter
-        pitch: int = 30,
-        map_height: int = 800,
         # Point
         point_color: str = "blue",
-        point_opacity: float = 1,
-        point_radius: int | str = 1,
-        radius_min_pixels: int = 1,
-        radius_max_pixels: int = 10,
+        point_radius: int | str = 5,
         heatmap: bool = False,
         cluster: bool = False,
         # LineString
         line_color: str = "blue",
+        line_width: float = 0.3,
         line_opacity: float = 0.5,
         # Polygon
+        poly_fill_color: str = "red",
+        poly_highlight_color: str = "green",
         centroid: bool = False,  # if True it shows centroids of polygons on the map
-        fill_color: str = "red",
-        highlight_color: str = "green",
-        fill_opacity: float = 0.25,
-        highlight_opacity: float = 0.5,
+        # Cell
         geohash_res: int = 0,
         s2_res: int = -1,
         h3_res: int = -1,
@@ -1423,19 +1416,15 @@ class Karta2:
             Karta2._create_plp_layer(
                 gdf,
                 karta=group_polygon,
-                #    fill_color,
-                #    highlight_color,
-                #    fill_opacity,
-                #    highlight_opacity,
-                #    line_width,
-                #    popup_dict,
-                # point_color,
-                # point_opacity,
-                # point_radius,
-                # line_color,
-                # fill_color,
+                poly_fill_color=poly_fill_color,
+                poly_highlight_color=poly_highlight_color,
+                point_color=point_color,
+                point_radius=point_radius,
+                line_color=line_color,
+                line_width=line_width,
                 # speed_field,
                 # speed_limit_field,
+                #    popup_dict,
             )
             group_polygon.add_to(karta)
             # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
@@ -1952,11 +1941,12 @@ class SnabbKarta:
         line_color: str = "blue",
         line_opacity: float = 0.5,
         # Polygon
-        centroid: bool = False,  # if True it shows centroids of polygons on the map
         fill_color: str = "red",
         highlight_color: str = "green",
         fill_opacity: float = 0.25,
         highlight_opacity: float = 0.5,
+        centroid: bool = False,  # if True it shows centroids of polygons on the map
+        # Cell
         geohash_res: int = 0,
         s2_res: int = -1,
         h3_res: int = -1,
