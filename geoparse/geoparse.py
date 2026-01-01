@@ -1346,9 +1346,16 @@ class Karta2:
                 "weight": 1,
             }
 
-        # Create a popup if a popup dictionary is provided
-        #    "".join(f"{item}: <b>{row[popup_dict[item]]}</b><br>" for item in popup_dict) if popup_dict else None
+        # Create tooltip and popup if a popup dictionary is provided
+        popup = folium.GeoJsonPopup(
+            fields=list(popup_dict.values()),
+            aliases=list(popup_dict.keys()),
+        )
 
+        tooltip = folium.GeoJsonTooltip(
+            fields=list(popup_dict.values()),
+            aliases=list(popup_dict.keys()),
+        )
         # Create a Folium GeoJson object from gpd.GeoDatFrame
         folium.GeoJson(
             gdf,
@@ -1356,10 +1363,12 @@ class Karta2:
                 radius=point_radius,  # in meters
                 fill_color=point_color,
                 fill_opacity=point_opacity,
-                weight=0,  # point border width
+                weight=0,  # Point border thickness in pixels (0 = no border)
             ),
             style_function=style_function,
             highlight_function=highlight_function,
+            tooltip=tooltip,
+            popup=popup,
         ).add_to(karta)
 
         # gjson = folium.GeoJson(data=gjson, style_function=style_function, highlight_function=highlight_function, tooltip=popup)
@@ -1405,6 +1414,7 @@ class Karta2:
         # Vehicle speed and applicable speed limit fields from telematics data
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
+        popup_dict: dict = None,
     ) -> folium.Map:
         # Ensure `data_list` is always a list (of gpd.GeoDataFrames, df.DataFrames or set)
         data_list = data_list if isinstance(data_list, list) else [data_list]
@@ -1429,7 +1439,7 @@ class Karta2:
                 line_width=line_width,
                 # speed_field,
                 # speed_limit_field,
-                #    popup_dict,
+                popup_dict=popup_dict,
             )
             group_polygon.add_to(karta)
             # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
