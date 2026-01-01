@@ -1280,7 +1280,8 @@ class Karta2:
         gdf: gpd.GeoDataFrame,
         karta: folium.Map,
         point_color: str,
-        point_radius: int,  # in pixels
+        point_radius: int,  # in meters
+        point_opacity: float,
         line_color: str,
         line_width: float,
         poly_fill_color,
@@ -1351,10 +1352,10 @@ class Karta2:
         # Create a Folium GeoJson object from gpd.GeoDatFrame
         folium.GeoJson(
             gdf,
-            marker=folium.CircleMarker(
-                radius=point_radius,  # in pixels
+            marker=folium.Circle(
+                radius=point_radius,  # in meters
                 fill_color=point_color,
-                fill_opacity=1,
+                fill_opacity=point_opacity,
                 weight=0,  # point border width
             ),
         ).add_to(karta)
@@ -1379,6 +1380,7 @@ class Karta2:
         # Point
         point_color: str = "blue",
         point_radius: int | str = 5,
+        point_opacity: float = 1.0,
         heatmap: bool = False,
         cluster: bool = False,
         # LineString
@@ -1420,6 +1422,7 @@ class Karta2:
                 poly_highlight_color=poly_highlight_color,
                 point_color=point_color,
                 point_radius=point_radius,
+                point_opacity=point_opacity,
                 line_color=line_color,
                 line_width=line_width,
                 # speed_field,
