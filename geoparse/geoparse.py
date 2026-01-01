@@ -1334,7 +1334,7 @@ class Karta2:
                 "fillColor": poly_fill_color,
                 "color": "black",  # Border color
                 "fillOpacity": 0.25,
-                "weight": 0.3,
+                "weight": 0.33,
             }
 
         # Highlight style function when the polygon is hovered over
@@ -1343,7 +1343,7 @@ class Karta2:
                 "fillColor": poly_highlight_color,  # fill_color,
                 "color": "black",  # Border color
                 "fillOpacity": 0.5,
-                "weight": 0.3,
+                "weight": 1,
             }
 
         # Create a popup if a popup dictionary is provided
@@ -1358,6 +1358,8 @@ class Karta2:
                 fill_opacity=point_opacity,
                 weight=0,  # point border width
             ),
+            style_function=style_function,
+            highlight_function=highlight_function,
         ).add_to(karta)
 
         # gjson = folium.GeoJson(data=gjson, style_function=style_function, highlight_function=highlight_function, tooltip=popup)
