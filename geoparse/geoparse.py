@@ -1284,9 +1284,9 @@ class Karta2:
         point_opacity: float,
         line_color: str,
         line_width: float,
-        poly_fill_color,
-        poly_highlight_color,
-        popup_dict: dict = None,
+        poly_fill_color: str,
+        poly_highlight_color: str,
+        popup_dict: dict,
     ) -> None:
         """
         Adds a polygon to a Folium map based on the specified parameters and data in the provided row.
@@ -1329,33 +1329,47 @@ class Karta2:
         #    fill_color = Karta._select_color(row[fill_color]) if fill_color in row.index else fill_color
 
         # Style function to apply to the polygon
-        def style_function(x):
-            return {
-                "fillColor": poly_fill_color,
-                "color": "black",  # Border color
-                "fillOpacity": 0.25,
-                "weight": 0.33,
-            }
+        def style_function(feature):
+            geom_type = feature["geometry"]["type"]
+            if geom_type in ["Polygon", "MultiPolygon"]:
+                # Style for polygons only
+                return {
+                    "fillColor": poly_fill_color,
+                    "color": "black",  # Border color
+                    "fillOpacity": 0.25,
+                    "weight": 0.33,
+                }
+            else:
+                return {}
 
         # Highlight style function when the polygon is hovered over
-        def highlight_function(x):
-            return {
-                "fillColor": poly_highlight_color,  # fill_color,
-                "color": "black",  # Border color
-                "fillOpacity": 0.5,
-                "weight": 1,
-            }
+        def highlight_function(feature):
+            geom_type = feature["geometry"]["type"]
+            if geom_type == "Polygon" or geom_type == "MultiPolygon":
+                # Style for polygons only
+                return {
+                    "fillColor": poly_highlight_color,  # fill_color,
+                    "color": "black",  # Border color
+                    "fillOpacity": 0.5,
+                    "weight": 1,
+                }
+            else:
+                return {}
 
         # Create tooltip and popup if a popup dictionary is provided
-        popup = folium.GeoJsonPopup(
-            fields=list(popup_dict.values()),
-            aliases=list(popup_dict.keys()),
-        )
+        if popup_dict:
+            popup = folium.GeoJsonPopup(
+                fields=list(popup_dict.values()),
+                aliases=list(popup_dict.keys()),
+            )
 
-        tooltip = folium.GeoJsonTooltip(
-            fields=list(popup_dict.values()),
-            aliases=list(popup_dict.keys()),
-        )
+            tooltip = folium.GeoJsonTooltip(
+                fields=list(popup_dict.values()),
+                aliases=list(popup_dict.keys()),
+            )
+        else:
+            tooltip = None
+            popup = None
         # Create a Folium GeoJson object from gpd.GeoDatFrame
         folium.GeoJson(
             gdf,
@@ -1370,9 +1384,6 @@ class Karta2:
             tooltip=tooltip,
             popup=popup,
         ).add_to(karta)
-
-        # gjson = folium.GeoJson(data=gjson, style_function=style_function, highlight_function=highlight_function, tooltip=popup)
-        # gjson.add_to(karta)
 
     @staticmethod
     def plp(
