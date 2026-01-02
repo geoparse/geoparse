@@ -1125,6 +1125,517 @@ class Karta:
         )
 
 
+class Karta2:
+    @staticmethod
+    def _base_map() -> folium.Map:
+        """
+        Creates a base map with multiple tile layers and fits the map to the specified bounding box.
+
+        This function initializes a Folium map object with multiple tile layers, including:
+        - `Bright Mode` (CartoDB Positron)
+        - `Dark Mode` (CartoDB Dark Matter)
+        - `Satellite` (Esri World Imagery)
+        - `OpenStreetMap` (OSM)
+
+        It then fits the map's view to the bounding box defined by the southwest (`sw`) and northeast (`ne`) coordinates.
+
+        Parameters
+        ----------
+        sw : list
+            The southwest coordinate [latitude, longitude] of the bounding box to fit the map view.
+
+        ne : list
+            The northeast coordinate [latitude, longitude] of the bounding box to fit the map view.
+
+        Returns
+        -------
+        folium.Map
+            A Folium map object with multiple tile layers and the view fitted to the provided bounding box.
+
+        Examples
+        --------
+        >>> sw = [51.2652, -0.5426]  # Southwest coordinate (London, UK)
+        >>> ne = [51.7225, 0.2824]  # Northeast coordinate (London, UK)
+        >>> karta = Karta._base_map(sw, ne)
+        >>> karta.save("map.html")  # Save the map to an HTML file
+        """
+        # Initialize the base map without any default tiles
+        karta = folium.Map(tiles=None)
+
+        # Add OpenStreetMap (OSM) tile layer
+        folium.TileLayer("openstreetmap", name="OSM", max_zoom=19).add_to(karta)
+
+        # Add a satellite tile layer (Esri World Imagery)
+        folium.TileLayer(
+            name="Satellite",
+            attr='© <a href="https://www.esri.com/en-us/legal/overview">Esri</a>',
+            tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+            overlay=False,
+            control=True,
+            max_zoom=19,
+        ).add_to(karta)
+
+        # Add OpenTopoMap as a tile layer
+        folium.TileLayer(
+            tiles="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+            attr='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://opentopomap.org/">OpenTopoMap</a>',
+            name="Outdoors",
+        ).add_to(karta)
+
+        # Dictionary of tile layers to be added
+        tiles = {
+            "cartodbdark_matter": "Dark",
+            "cartodbpositron": "Light",
+        }
+
+        # Add each tile layer to the map
+        for item in tiles:
+            folium.TileLayer(item, name=tiles[item], max_zoom=21).add_to(karta)
+
+        return karta
+
+    @staticmethod
+    def _select_color(col: int | float | str, head: int | None = None, tail: int | None = None) -> str:
+        """
+        Generates a consistent color based on the input column value by mapping it to a predefined color palette.
+
+        This function uses a set color palette and maps the given column value to a color. If the column value is a string,
+        a substring can be selected using `head` and `tail` indices, and it will be converted to a numerical index. If the
+        column value is an integer, it will directly be mapped to a color using modulo arithmetic.
+
+        Parameters
+        ----------
+        col : int, float or str
+            The column value to be mapped to a color. It can be either a number or a string.
+            - If a number, it is directly used for color mapping.
+            - If a string, it will be cleaned of non-alphanumeric characters, and a substring defined by `head` and `tail`
+              can be selected for mapping.
+
+        head : int, optional
+            The starting index of the substring to be used for color mapping if `col` is a string. Default is None.
+
+        tail : int, optional
+            The ending index of the substring to be used for color mapping if `col` is a string. Default is None.
+
+        Returns
+        -------
+        str
+            A hexadecimal color code selected from the predefined palette corresponding to the input column value.
+
+
+        Examples
+        --------
+        >>> Karta._select_color("Category1")
+        '#e6194b'  # Red color from the palette
+
+        >>> Karta._select_color(5)
+        '#3cb44b'  # Green color from the palette
+
+        >>> Karta._select_color("Example", head=0, tail=3)
+        '#e12348'  # Bright Red from the palette
+        """
+        # Predefined color palette
+        palette = [
+            "#e6194b",  # red
+            "#4363d8",  # blue
+            "#3cb44b",  # green
+            "#800000",  # maroon (dark red)
+            "#008080",  # teal (dark green)
+            "#000080",  # navy (dark blue)
+            "#f58231",  # orange
+            "#911eb4",  # purple
+            "#808000",  # olive
+            "#9a6324",  # brown
+            "#f032e6",  # magenta
+            "#dfb119",  # dark yellow
+            "#42d4f4",  # cyan
+            "#808080",  # grey
+            "#e12348",  # Bright Red
+            "#dc2c46",  # Strong Red
+            "#d73644",  # Vivid Red
+            "#cd4a40",  # Deep Red
+            "#c8543e",  # Intense Red
+            "#c25e3c",  # Fire Red
+            "#bd683a",  # Scarlet
+            "#b77238",  # Fiery Orange
+            "#b27c36",  # Tangerine
+            "#ad8634",  # Burnt Orange
+        ]
+
+        # Handle NaN (return black)
+        if col is None or (isinstance(col, float) and math.isnan(col)):
+            return "#000000"
+
+        if isinstance(col, (int, float)):  # Check for both int and float
+            idx = int(col) % len(palette)  # Get color index using modulo arithmetic
+        else:
+            col = str(col)  # Convert to string
+            col = re.sub(r"[\W_]+", "", col)  # Remove non-alphanumeric characters
+            idx = int(col[head:tail], 36) % len(palette)  # Convert substring to a number base 36 (36 = 10 digits + 26 letters)
+
+        return palette[idx]
+
+    @staticmethod
+    def _create_plp_layer(
+        gdf: gpd.GeoDataFrame,
+        karta: folium.Map,
+        point_color: str,
+        point_radius: int,  # in meters
+        point_opacity: float,
+        line_color: str,
+        line_width: int,  # in pixels
+        poly_fill_color: str,
+        poly_highlight_color: str,
+        popup_dict: dict,
+    ) -> None:
+        """
+        Adds a polygon to a Folium map based on the specified parameters and data in the provided row.
+
+        This function creates a polygon (GeoJson) object for the specified row's geometry and adds it to the Folium map (`karta`).
+        It allows customization of fill color, line width, and popups. The function also defines style and highlight properties
+        for the polygon.
+
+        Parameters
+        ----------
+        row : pd.Series
+            A row of data containing a 'geometry' attribute that defines the polygon shape.
+
+        karta : folium.Map
+            A Folium map object to which the polygon will be added.
+
+        fill_color : str
+            Column name to determine the fill color of the polygon. If the column is present in the row, the color is extracted
+            using the `_select_color` function.
+
+        line_width : int
+            The width of the border (outline) of the polygon.
+
+        popup_dict : dict, optional
+            A dictionary where keys are labels and values are column names in the row. This dictionary is used to create an
+            HTML popup with the specified labels and values for the polygon (default is None).
+
+        Returns
+        -------
+        None
+            The function modifies the Folium map in place and does not return anything.
+
+        Examples
+        --------
+        >>> row = pd.Series({"geometry": Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]), "fill_color": "blue"})
+        >>> karta = folium.Map(location=[0.5, 0.5], zoom_start=10)
+        >>> Karta._add_poly(row, karta, "fill_color", line_width=2)
+        """
+        # Determine fill color if specified column is present
+        #    fill_color = Karta._select_color(row[fill_color]) if fill_color in row.index else fill_color
+
+        # Style function to apply to the polygon
+        def style_function(feature):
+            geom_type = feature["geometry"]["type"]
+            if geom_type in ["Polygon", "MultiPolygon"]:
+                # Style for polygons only
+                return {
+                    "fillColor": poly_fill_color,
+                    "color": "black",  # Border color
+                    "fillOpacity": 0.25,
+                    "weight": 0.33,
+                }
+            elif geom_type in ["LineString", "MultiLineString"]:
+                return {
+                    "color": line_color,
+                    "weight": line_width,
+                }
+
+            else:
+                return {}
+
+        # Highlight style function when the polygon is hovered over
+        def highlight_function(feature):
+            geom_type = feature["geometry"]["type"]
+            if geom_type in ["Polygon", "MultiPolygon"]:
+                # Style for polygons only
+                return {
+                    "fillColor": poly_highlight_color,
+                    "color": "black",  # Border color
+                    "fillOpacity": 0.5,
+                    "weight": 1,
+                }
+            elif geom_type in ["LineString", "MultiLineString"]:
+                return {
+                    "color": "red",
+                    "weight": 2 * line_width,
+                }
+
+            else:
+                return {}
+
+        # Create tooltip and popup if a popup dictionary is provided
+        if popup_dict:
+            popup = folium.GeoJsonPopup(
+                fields=list(popup_dict.values()),
+                aliases=list(popup_dict.keys()),
+            )
+
+            tooltip = folium.GeoJsonTooltip(
+                fields=list(popup_dict.values()),
+                aliases=list(popup_dict.keys()),
+            )
+        else:
+            tooltip = None
+            popup = None
+        # Create a Folium GeoJson object from gpd.GeoDatFrame
+        folium.GeoJson(
+            gdf,
+            marker=folium.Circle(
+                radius=point_radius,  # in meters
+                fill_color=point_color,
+                fill_opacity=point_opacity,
+                weight=0,  # Point border thickness in pixels (0 = no border)
+            ),
+            style_function=style_function,
+            highlight_function=highlight_function,
+            tooltip=tooltip,
+            popup=popup,
+        ).add_to(karta)
+
+    @staticmethod
+    def plp(
+        data_list: gpd.GeoDataFrame | pd.DataFrame | set | list[gpd.GeoDataFrame | pd.DataFrame | set],
+        geom_type: str | None = None,  #  'h3', 's2', 'geohash', 'osm', 'uprn', 'usrn', 'postcode'
+        # Supported types: geospatial cell IDs (geohash, s2, h3),
+        # OSM ID, UPRN, USRN, and postcode.
+        geom_col: str | list[str] | None = None,
+        # e.g. ['northing', 'easting'], 'h3_8', 'osm_id', 'uprn',  'postcode', 'postcode_sec'
+        data_crs: int = 4326,  # CRS of data
+        lookup_gdf: pd.DataFrame | gpd.GeoDataFrame | None = None,  # external df containing geometry
+        lookup_key: str = None,  # geometry column name in lookup_gdf
+        # lat_col: str = "lat",  # Latitude column name in lookup_gdf
+        # lon_col: str = "lon",  # Longitude column name in lookup_gdf
+        osm_url: str | None = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
+        # Point
+        point_color: str = "blue",
+        point_radius: int | str = 5,
+        point_opacity: float = 1.0,
+        heatmap: bool = False,
+        cluster: bool = False,
+        # LineString
+        line_color: str = "blue",
+        line_width: int = 3,  # in pixels
+        # Polygon
+        poly_fill_color: str = "red",
+        poly_highlight_color: str = "green",
+        centroid: bool = False,  # if True it shows centroids of polygons on the map
+        # Cell
+        geohash_res: int = 0,
+        s2_res: int = -1,
+        h3_res: int = -1,
+        force_full_cover: bool = True,
+        compact: bool = False,
+        # Buffer and ring radius parameters (in meters)
+        buffer_r_max: int = 0,
+        buffer_r_min: int = 0,
+        # Vehicle speed and applicable speed limit fields from telematics data
+        speed_field: str = "speed",
+        speed_limit_field: str = "speedlimit",
+        popup_dict: dict = None,
+    ) -> folium.Map:
+        # Ensure `data_list` is always a list (of gpd.GeoDataFrames, df.DataFrames or set)
+        data_list = data_list if isinstance(data_list, list) else [data_list]
+
+        # Create a base map
+        karta = Karta2._base_map()  # Initialize folium map with the bounding box
+
+        # Iterate through each set, pd.DataFrame or gpd.GeoDataFrame in the list to add layers to the map
+        for data in data_list:
+            gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
+            # Create layers
+            group_polygon = folium.FeatureGroup(name="Polygon")
+            Karta2._create_plp_layer(
+                gdf,
+                karta=group_polygon,
+                poly_fill_color=poly_fill_color,
+                poly_highlight_color=poly_highlight_color,
+                point_color=point_color,
+                point_radius=point_radius,
+                point_opacity=point_opacity,
+                line_color=line_color,
+                line_width=line_width,
+                # speed_field,
+                # speed_limit_field,
+                popup_dict=popup_dict,
+            )
+            group_polygon.add_to(karta)
+            # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
+            #            if geohash_res > 0 or s2_res > -1 or h3_res > -1:
+            #                cell_layers = SnabbKarta._add_cell_layers(
+            #                    gdf, geohash_res, s2_res, h3_res, force_full_cover, compact
+            #                )
+            #                layers.extend(cell_layers)
+            #
+            #            # Display centroids of the geometry
+            #            if centroid:
+            #                cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs=gdf.crs)  # centroid df
+            #                centroid_layer = SnabbKarta._create_point_layer(cdf, get_radius=1000)
+            #                layers.append(centroid_layer)
+            #
+            #            # Create a buffer or ring layer
+            #            if buffer_r_max > 0:
+            #                buffer_layer = SnabbKarta._add_buffer_layer(gdf, buffer_r_max, buffer_r_min)
+            #                layers.append(buffer_layer)
+
+        karta.fit_bounds(karta.get_bounds())
+        folium.LayerControl(collapsed=False).add_to(karta)
+        return karta
+
+    @staticmethod
+    def choropleth(mdf: gpd.GeoDataFrame, columns: list, legend: str, bins: list = None, palette: str = "YlOrRd") -> folium.Map:
+        """
+        Creates a choropleth map using the given GeoDataFrame and specified parameters.
+
+        This function generates a Folium choropleth map layer by visualizing the data from a GeoDataFrame using color gradients
+        to represent different data values across geographic areas.
+
+        Parameters
+        ----------
+        mdf : geopandas.GeoDataFrame
+            The GeoDataFrame containing multipolygon geometries and data attributes to be visualized.
+        columns : list of str
+            A list of two elements:
+                - columns[0] : str
+                    The column name in `mdf` that contains unique identifiers for each region.
+                - columns[1] : str
+                    The column name in `mdf` containing the data values to be visualized.
+        legend : str
+            The title for the legend, which describes what is represented on the map.
+
+        bins : list of float, optional
+            A list of numerical values that define the value intervals for the choropleth color categories.
+            By default, the bins correspond to quantiles at [0, 0.25, 0.5, 0.75, 0.98, 1.0].
+        palette : str, optional
+            The color palette to be used for the choropleth (default is "YlOrRd").
+
+        Returns
+        -------
+        folium.Map
+            The Folium map object containing the choropleth layer.
+
+        Examples
+        --------
+        >>> choropleth(
+                mdf,
+                ['region_id', 'population'],
+                bins=[0, 100, 500, 1000, 5000],
+                legend="Population by Region",
+                palette="YlOrRd",
+            )
+        """
+        # Extract the bounding coordinates of the GeoDataFrame
+        minlon, minlat, maxlon, maxlat = mdf.total_bounds  # Get the total bounds of the GeoDataFrame
+        sw = [minlat, minlon]  # South-west corner
+        ne = [maxlat, maxlon]  # North-east corner
+        karta = Karta._base_map(sw, ne)  # Create a base map using the bounding coordinates
+
+        if bins is None:
+            bins = np.quantile(mdf[columns[1]].dropna(), [0, 0.25, 0.5, 0.75, 0.98, 1])
+        # Create a choropleth layer based on the GeoDataFrame
+        choropleth = folium.Choropleth(
+            geo_data=mdf,  # The GeoDataFrame containing geographic data
+            name="Choropleth",  # Name of the layer for display in layer control
+            data=mdf,  # The data source for values to be represented
+            columns=columns,  # [unique_identifier_column, data_value_column] for matching regions with data
+            key_on="feature.properties." + columns[0],  # Key to match GeoDataFrame regions with the data
+            legend_name=legend,  # Description of the data being visualized
+            bins=bins,  # Value ranges for choropleth colors
+            fill_color=palette,  # Color scheme for the choropleth
+            fill_opacity=0.5,  # Transparency level of filled regions
+            line_opacity=0.25,  # Transparency level of borders between regions
+            smooth_factor=0,  # Level of smoothing applied to the edges of regions
+            highlight=True,  # Enable or disable highlighting of regions on hover
+        ).add_to(karta)  # Add the choropleth layer to the map
+
+        # Add a tooltip to display the attribute values for each region when hovered over
+        folium.features.GeoJsonTooltip(fields=columns).add_to(choropleth.geojson)
+
+        # Add layer control to the map
+        folium.LayerControl(collapsed=False).add_to(karta)
+
+        # Return the Folium map object containing the choropleth layer
+        return karta
+
+    @staticmethod
+    def joint_choropleth(
+        mdf: gpd.GeoDataFrame,
+        gdf: gpd.GeoDataFrame,
+        poly_id: str,
+        legend: str,
+        bins: list = None,
+        palette: str = "YlOrRd",
+        cell_type: str = None,
+        res: int = None,
+    ) -> folium.Map:
+        """
+        Creates a joint choropleth map by counting point features (gdf) within polygons (mdf).
+
+        This function generates a Folium choropleth map showing the count of point features
+        from gdf that fall within each polygon of mdf. Optionally converts mdf to spatial
+        cells (geohash, S2, or H3) before counting.
+
+        Parameters
+        ----------
+        mdf : gpd.GeoDataFrame
+            GeoDataFrame containing polygon geometries to aggregate points into.
+        gdf : gpd.GeoDataFrame
+            GeoDataFrame containing geometry features to count within polygons.
+        poly_id : str
+            Column name in mdf containing unique polygon identifiers.
+        legend : str
+            Title for the choropleth legend.
+        bins : list, optional
+            Value intervals for choropleth color categories.
+            By default, the bins correspond to quantiles at [0, 0.25, 0.5, 0.75, 0.98, 1.0].
+        palette : str, optional
+            Color palette name (default: "YlOrRd").
+        cell_type : str, optional
+            Spatial index type ("geohash", "s2", or "h3") to convert mdf polygons into.
+        res : int, optional
+            Resolution level for spatial indexing if cell_type is specified.
+
+        Returns
+        -------
+        folium.Map
+            Folium map object with choropleth layer.
+
+        Examples
+        --------
+        >>> joint_choropleth(
+               neighborhoods,  # Polygon GeoDataFrame
+               restaurants,    # Point GeoDataFrame
+               poly_id="neighborhood_id",
+               legend="Restaurant Count",
+               cell_type="h3",
+               res=8
+           )
+        """
+        if cell_type is not None:
+            cell_list, _ = SpatialIndex.ppoly_cell(mdf, cell_type=cell_type, res=res)
+            cells, _ = SpatialIndex.pcell_poly(cell_list, cell_type=cell_type)
+            mdf = gpd.GeoDataFrame({poly_id: cell_list}, geometry=cells, crs="EPSG:4326")
+
+        gdf = gpd.sjoin(gdf[["geometry"]], mdf[[poly_id, "geometry"]], predicate="within")
+        del gdf["index_right"]
+
+        mdf = pd.merge(mdf, gdf[poly_id].value_counts().reset_index(), on=poly_id, how="left")
+
+        if bins is None:
+            bins = np.quantile(mdf["count"].dropna(), [0, 0.25, 0.5, 0.75, 0.98, 1])
+        return Karta.choropleth(
+            mdf,
+            columns=[poly_id, "count"],
+            bins=bins,
+            legend=legend,
+            palette=palette,
+        )
+
+
 class SnabbKarta:
     @staticmethod
     def _get_color(col: int | float | str) -> list:
@@ -1467,11 +1978,12 @@ class SnabbKarta:
         line_color: str = "blue",
         line_opacity: float = 0.5,
         # Polygon
-        centroid: bool = False,  # if True it shows centroids of polygons on the map
         fill_color: str = "red",
         highlight_color: str = "green",
         fill_opacity: float = 0.25,
         highlight_opacity: float = 0.5,
+        centroid: bool = False,  # if True it shows centroids of polygons on the map
+        # Cell
         geohash_res: int = 0,
         s2_res: int = -1,
         h3_res: int = -1,
