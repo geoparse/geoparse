@@ -1283,7 +1283,7 @@ class Karta2:
         point_radius: int,  # in meters
         point_opacity: float,
         line_color: str,
-        line_width: float,
+        line_width: int,  # in pixels
         poly_fill_color: str,
         poly_highlight_color: str,
         popup_dict: dict,
@@ -1339,20 +1339,32 @@ class Karta2:
                     "fillOpacity": 0.25,
                     "weight": 0.33,
                 }
+            elif geom_type in ["LineString", "MultiLineString"]:
+                return {
+                    "color": line_color,
+                    "weight": line_width,
+                }
+
             else:
                 return {}
 
         # Highlight style function when the polygon is hovered over
         def highlight_function(feature):
             geom_type = feature["geometry"]["type"]
-            if geom_type == "Polygon" or geom_type == "MultiPolygon":
+            if geom_type in ["Polygon", "MultiPolygon"]:
                 # Style for polygons only
                 return {
-                    "fillColor": poly_highlight_color,  # fill_color,
+                    "fillColor": poly_highlight_color,
                     "color": "black",  # Border color
                     "fillOpacity": 0.5,
                     "weight": 1,
                 }
+            elif geom_type in ["LineString", "MultiLineString"]:
+                return {
+                    "color": "red",
+                    "weight": 2 * line_width,
+                }
+
             else:
                 return {}
 
@@ -1407,8 +1419,7 @@ class Karta2:
         cluster: bool = False,
         # LineString
         line_color: str = "blue",
-        line_width: float = 0.3,
-        line_opacity: float = 0.5,
+        line_width: int = 3,  # in pixels
         # Polygon
         poly_fill_color: str = "red",
         poly_highlight_color: str = "green",
