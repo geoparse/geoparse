@@ -1345,8 +1345,8 @@ class Karta2:
             tooltip = None
             popup = None
 
-        # Create and return a Folium GeoJson object from gpd.GeoDataFrame (without adding to map)
-        geojson_layer = folium.GeoJson(
+        # Create and return a Folium GeoJson object from gpd.GeoDataFrame
+        plp_layer = folium.GeoJson(
             gdf,
             marker=folium.Circle(
                 radius=point_radius,  # in meters
@@ -1359,7 +1359,7 @@ class Karta2:
             tooltip=tooltip,
             popup=popup,
         )
-        return geojson_layer
+        return plp_layer
 
     @staticmethod
     def _add_cell_layers(
@@ -1397,7 +1397,7 @@ class Karta2:
 
         Notes
         -----
-        This method now returns GeoJson layers without adding them to a map.
+        This method now returns GeoJson layers.
         """
         # Cell visualization configurations
         cell_configs = [
