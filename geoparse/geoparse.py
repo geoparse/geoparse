@@ -1431,9 +1431,10 @@ class Karta2:
     @staticmethod
     def _add_buffer_layer(
         gdf: gpd.GeoDataFrame,
+        karta: folium.Map,
         buffer_r_max: int,
         buffer_r_min: int = 0,
-    ) -> lb.PolygonLayer:
+    ) -> None:
         """Create and add buffer or ring layers to a map.
 
         This function creates either a simple buffer layer or a ring/donut layer
@@ -1482,7 +1483,9 @@ class Karta2:
         else:  # ring
             gdf["geometry"] = gdf.buffer(buffer_r_max).difference(gdf.buffer(buffer_r_min)).to_crs("EPSG:4326")
 
-        return SnabbKarta._create_poly_layer(gdf)
+        Karta2._create_plp_layer(gdf, karta)
+
+        return
 
     @staticmethod
     def plp(
@@ -1587,9 +1590,15 @@ class Karta2:
                 group_centroid.add_to(karta)
 
             # Create a buffer or ring layer
-            # if buffer_r_max > 0:
-            #   buffer_layer = SnabbKarta._add_buffer_layer(gdf, buffer_r_max, buffer_r_min)
-            #  layers.append(buffer_layer)
+            if buffer_r_max > 0:
+                group_buffer = folium.FeatureGroup(name="Buffer")
+                Karta2._add_buffer_layer(
+                    gdf,
+                    karta=group_buffer,
+                    buffer_r_max=buffer_r_max,
+                    buffer_r_min=buffer_r_min,
+                )
+                group_buffer.add_to(karta)
 
         karta.fit_bounds(karta.get_bounds())
         folium.LayerControl(collapsed=False).add_to(karta)
