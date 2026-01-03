@@ -1621,53 +1621,31 @@ class Karta2:
 
             # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
             if geohash_res > 0:
-                group_geohash = folium.FeatureGroup(name="Geohash")
-                cell_layers = Karta2._add_cell_layers(
-                    gdf,
-                    geohash_res=geohash_res,
-                )
-                for cell_layer in cell_layers:
-                    cell_layer.add_to(group_geohash)
-                group_geohash.add_to(karta)
+                layers = Karta2._add_cell_layers(gdf, geohash_res=geohash_res)
+                folium.FeatureGroup(name="Geohash").add_child(layers[0]).add_to(karta)
 
             if s2_res > -1:
-                group_s2 = folium.FeatureGroup(name="S2")
-                cell_layers = Karta2._add_cell_layers(
-                    gdf,
-                    s2_res=s2_res,
-                )
-                for cell_layer in cell_layers:
-                    cell_layer.add_to(group_s2)
-                group_s2.add_to(karta)
+                layers = Karta2._add_cell_layers(gdf, s2_res=s2_res)
+                folium.FeatureGroup(name="S2").add_child(layers[0]).add_to(karta)
 
             if h3_res > -1:
-                group_h3 = folium.FeatureGroup(name="H3")
-                cell_layers = Karta2._add_cell_layers(
-                    gdf,
-                    h3_res=h3_res,
-                )
-                for cell_layer in cell_layers:
-                    cell_layer.add_to(group_h3)
-                group_h3.add_to(karta)
+                layers = Karta2._add_cell_layers(gdf, h3_res=h3_res)
+                folium.FeatureGroup(name="H3").add_child(layers[0]).add_to(karta)
 
             # Display centroids of the geometry
             if centroid:
-                group_centroid = folium.FeatureGroup(name="Centroid")
                 cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs=gdf.crs)  # centroid df
                 layer = Karta2._create_plp_layer(cdf)
-                layer.add_to(group_centroid)
-                group_centroid.add_to(karta)
+                folium.FeatureGroup(name="Centroid").add_child(layer).add_to(karta)
 
             # Create a buffer or ring layer
             if buffer_r_max > 0:
-                group_buffer = folium.FeatureGroup(name="Buffer")
                 layer = Karta2._add_buffer_layer(
                     gdf,
                     buffer_r_max=buffer_r_max,
                     buffer_r_min=buffer_r_min,
                 )
-                layer.add_to(group_buffer)
-                group_buffer.add_to(karta)
+                folium.FeatureGroup(name="Buffer").add_child(layer).add_to(karta)
 
         karta.fit_bounds(karta.get_bounds())
         folium.LayerControl(collapsed=False).add_to(karta)
