@@ -1293,43 +1293,6 @@ class Karta2:
         poly_highlight_color: str = "green",
         popup_dict: dict = None,
     ) -> None:
-        """
-        Adds a polygon to a Folium map based on the specified parameters and data in the provided row.
-
-        This function creates a polygon (GeoJson) object for the specified row's geometry and adds it to the Folium map (`karta`).
-        It allows customization of fill color, line width, and popups. The function also defines style and highlight properties
-        for the polygon.
-
-        Parameters
-        ----------
-        row : pd.Series
-            A row of data containing a 'geometry' attribute that defines the polygon shape.
-
-        karta : folium.Map
-            A Folium map object to which the polygon will be added.
-
-        fill_color : str
-            Column name to determine the fill color of the polygon. If the column is present in the row, the color is extracted
-            using the `_select_color` function.
-
-        line_width : int
-            The width of the border (outline) of the polygon.
-
-        popup_dict : dict, optional
-            A dictionary where keys are labels and values are column names in the row. This dictionary is used to create an
-            HTML popup with the specified labels and values for the polygon (default is None).
-
-        Returns
-        -------
-        None
-            The function modifies the Folium map in place and does not return anything.
-
-        Examples
-        --------
-        >>> row = pd.Series({"geometry": Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]), "fill_color": "blue"})
-        >>> karta = folium.Map(location=[0.5, 0.5], zoom_start=10)
-        >>> Karta._add_poly(row, karta, "fill_color", line_width=2)
-        """
         # Determine fill color if specified column is present
         #    fill_color = Karta._select_color(row[fill_color]) if fill_color in row.index else fill_color
 
@@ -1409,7 +1372,7 @@ class Karta2:
         geohash_res: int = 0,
         s2_res: int = -1,
         h3_res: int = -1,
-        force_full_cover: bool = False,
+        force_full_cover: bool = True,
         compact: bool = False,
     ) -> None:
         """Create cell visualization layers for specified resolutions.
@@ -1427,7 +1390,7 @@ class Karta2:
             S2 cell resolution (-1 = no layer).
         h3_res : int, default=-1
             H3 cell resolution (-1 = no layer).
-        force_full_cover : bool, default=False
+        force_full_cover : bool, default=True
             Whether to force full coverage of the bounding box.
         compact : bool, default=False
             Whether to use compact cell representation.
@@ -1437,7 +1400,6 @@ class Karta2:
         List[lb.PolygonLayer]
             List of created cell layers.
         """
-        cell_layers = []
 
         # Cell visualization configurations
         cell_configs = [
@@ -1462,10 +1424,9 @@ class Karta2:
 
                 cdf = gpd.GeoDataFrame({"id": cells, "res": res_values, "geometry": geoms}, crs="EPSG:4326")
 
-                cell_layer = SnabbKarta._create_poly_layer(cdf, fill_color="green")
-                cell_layers.append(cell_layer)
+                Karta2._create_plp_layer(cdf, karta, popup_dict={"Cell ID": "id", "Resolution": "res"})
 
-        return cell_layers
+        return
 
     @staticmethod
     def _add_buffer_layer(
@@ -1591,18 +1552,30 @@ class Karta2:
             )
             group_polygon.add_to(karta)
             # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
-            if geohash_res > 0 or s2_res > -1 or h3_res > -1:
-                group_cell = folium.FeatureGroup(name="Cell")
-                #    SnabbKarta._add_cell_layers(gdf, geohash_res, s2_res, h3_res, force_full_cover, compact)
-                # layers.extend(cell_layers)
-
-                Karta2._create_plp_layer(
+            if geohash_res > 0:
+                group_geohash = folium.FeatureGroup(name="Geohash")
+                Karta2._add_cell_layers(
                     gdf,
-                    karta=group_polygon,
-                    line_color=line_color,
-                    popup_dict=popup_dict,
+                    karta=group_geohash,
+                    geohash_res=geohash_res,
                 )
-                group_cell.add_to(karta)
+                group_geohash.add_to(karta)
+            if s2_res > -1:
+                group_s2 = folium.FeatureGroup(name="S2")
+                Karta2._add_cell_layers(
+                    gdf,
+                    karta=group_s2,
+                    s2_res=s2_res,
+                )
+                group_s2.add_to(karta)
+            if h3_res > -1:
+                group_h3 = folium.FeatureGroup(name="H3")
+                Karta2._add_cell_layers(
+                    gdf,
+                    karta=group_h3,
+                    h3_res=h3_res,
+                )
+                group_h3.add_to(karta)
             # Display centroids of the geometry
             if centroid:
                 group_centroid = folium.FeatureGroup(name="Centroid")
@@ -1970,7 +1943,7 @@ class SnabbKarta:
         geohash_res: int = 0,
         s2_res: int = -1,
         h3_res: int = -1,
-        force_full_cover: bool = False,
+        force_full_cover: bool = True,
         compact: bool = False,
     ) -> list[lb.PolygonLayer]:
         """Create cell visualization layers for specified resolutions.
@@ -1988,7 +1961,7 @@ class SnabbKarta:
             S2 cell resolution (-1 = no layer).
         h3_res : int, default=-1
             H3 cell resolution (-1 = no layer).
-        force_full_cover : bool, default=False
+        force_full_cover : bool, default=True
             Whether to force full coverage of the bounding box.
         compact : bool, default=False
             Whether to use compact cell representation.
