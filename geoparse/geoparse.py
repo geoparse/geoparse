@@ -1275,18 +1275,23 @@ class Karta2:
 
         return palette[idx]
 
+        # LineString
+        # Polygon
+        # Cell
+        # Buffer and ring radius parameters (in meters)
+
     @staticmethod
     def _create_plp_layer(
         gdf: gpd.GeoDataFrame,
         karta: folium.Map,
-        point_color: str,
-        point_radius: int,  # in meters
-        point_opacity: float,
-        line_color: str,
-        line_width: int,  # in pixels
-        poly_fill_color: str,
-        poly_highlight_color: str,
-        popup_dict: dict,
+        point_color: str = "blue",
+        point_radius: int | str = 5,  # in meters
+        point_opacity: float = 1.0,
+        line_color: str = "blue",
+        line_width: int = 3,  # in pixels
+        poly_fill_color: str = "red",
+        poly_highlight_color: str = "green",
+        popup_dict: dict = None,
     ) -> None:
         """
         Adds a polygon to a Folium map based on the specified parameters and data in the provided row.
@@ -1398,6 +1403,127 @@ class Karta2:
         ).add_to(karta)
 
     @staticmethod
+    def _add_cell_layers(
+        gdf: gpd.GeoDataFrame,
+        karta: folium.Map,
+        geohash_res: int = 0,
+        s2_res: int = -1,
+        h3_res: int = -1,
+        force_full_cover: bool = False,
+        compact: bool = False,
+    ) -> None:
+        """Create cell visualization layers for specified resolutions.
+
+        Creates geohash, s2, and/or h3 cell layers based on which resolutions
+        are specified with valid values.
+
+        Parameters
+        ----------
+        gdf : geopandas.GeoDataFrame
+            Input GeoDataFrame containing geometries.
+        geohash_res : int, default=0
+            Geohash resolution (0 = no layer).
+        s2_res : int, default=-1
+            S2 cell resolution (-1 = no layer).
+        h3_res : int, default=-1
+            H3 cell resolution (-1 = no layer).
+        force_full_cover : bool, default=False
+            Whether to force full coverage of the bounding box.
+        compact : bool, default=False
+            Whether to use compact cell representation.
+
+        Returns
+        -------
+        List[lb.PolygonLayer]
+            List of created cell layers.
+        """
+        cell_layers = []
+
+        # Cell visualization configurations
+        cell_configs = [
+            ("geohash", geohash_res, lambda x: x > 0),
+            ("s2", s2_res, lambda x: x > -1),
+            ("h3", h3_res, lambda x: x > -1),
+        ]
+
+        # Clean indices for filtered selections e.g. gdf[gdf.city=='London']
+        gdf = gdf.reset_index(drop=True)
+        for cell_type, res, condition in cell_configs:
+            if condition(res):
+                # Create polygon for bounding box if input is not a polygon
+                if gdf.geometry.type[0] in ("Polygon", "MultiPolygon"):
+                    cdf = gdf[["geometry"]]
+                else:  # Create convex hull polygon for points and lines
+                    # Apply tiny buffer to avoid degenerate geometries from collinear points
+                    tight_polygon = shapely.convex_hull(gdf.geometry.unary_union).buffer(0.0000001)
+                    cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
+                cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type, res, force_full_cover, compact)
+                geoms, res_values = SpatialIndex.cell_poly(cells, cell_type=cell_type)
+
+                cdf = gpd.GeoDataFrame({"id": cells, "res": res_values, "geometry": geoms}, crs="EPSG:4326")
+
+                cell_layer = SnabbKarta._create_poly_layer(cdf, fill_color="green")
+                cell_layers.append(cell_layer)
+
+        return cell_layers
+
+    @staticmethod
+    def _add_buffer_layer(
+        gdf: gpd.GeoDataFrame,
+        buffer_r_max: int,
+        buffer_r_min: int = 0,
+    ) -> lb.PolygonLayer:
+        """Create and add buffer or ring layers to a map.
+
+        This function creates either a simple buffer layer or a ring/donut layer
+        by applying geometric buffer operations and reprojecting to WGS84 (EPSG:4326).
+
+        Parameters
+        ----------
+        gdf : geopandas.GeoDataFrame
+            Input GeoDataFrame containing geometries to buffer.
+        buffer_r_max : int
+            Buffer radius in meters for the outer boundary.
+            For 'buffer' type, this is the buffer distance.
+            For 'ring' type, this is the outer radius.
+        buffer_r_min : int, optional
+            Inner radius for rings in meters.
+            Default is 0.
+
+        Returns
+        -------
+        object
+            lb.PolygonLayer
+
+        Notes
+        -----
+        - The function automatically detects the appropriate projected CRS
+          for meter-based buffer operations using `GeomUtils.find_proj()`.
+        - All geometries are converted to WGS84 (EPSG:4326) before returning.
+
+        Examples
+        --------
+        >>> # Create a simple buffer layer with 1000m radius
+        >>> buffer_layer = _add_buffer_layer(gdf, 1000)
+        >>>
+        >>> # Create a ring with outer radius 2000m and inner radius 1500m
+        >>> ring_layer = _add_buffer_layer(gdf, 2000, 1500)
+        """
+
+        if buffer_r_min >= buffer_r_max:
+            raise ValueError("buffer_r_min must be less than buffer_r_max")
+
+        crs = GeomUtils.find_proj(gdf.geometry.to_list()[0])
+        gdf = gdf[["geometry"]].to_crs(crs)  # projected gdf
+
+        if buffer_r_min == 0:  # buffer
+            gdf["geometry"] = gdf.buffer(buffer_r_max).to_crs("EPSG:4326")
+        else:  # ring
+            gdf["geometry"] = gdf.buffer(buffer_r_max).difference(gdf.buffer(buffer_r_min)).to_crs("EPSG:4326")
+
+        return SnabbKarta._create_poly_layer(gdf)
+
+    @staticmethod
     def plp(
         data_list: gpd.GeoDataFrame | pd.DataFrame | set | list[gpd.GeoDataFrame | pd.DataFrame | set],
         geom_type: str | None = None,  #  'h3', 's2', 'geohash', 'osm', 'uprn', 'usrn', 'postcode'
@@ -1465,22 +1591,32 @@ class Karta2:
             )
             group_polygon.add_to(karta)
             # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
-            #            if geohash_res > 0 or s2_res > -1 or h3_res > -1:
-            #                cell_layers = SnabbKarta._add_cell_layers(
-            #                    gdf, geohash_res, s2_res, h3_res, force_full_cover, compact
-            #                )
-            #                layers.extend(cell_layers)
-            #
-            #            # Display centroids of the geometry
-            #            if centroid:
-            #                cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs=gdf.crs)  # centroid df
-            #                centroid_layer = SnabbKarta._create_point_layer(cdf, get_radius=1000)
-            #                layers.append(centroid_layer)
-            #
-            #            # Create a buffer or ring layer
-            #            if buffer_r_max > 0:
-            #                buffer_layer = SnabbKarta._add_buffer_layer(gdf, buffer_r_max, buffer_r_min)
-            #                layers.append(buffer_layer)
+            if geohash_res > 0 or s2_res > -1 or h3_res > -1:
+                group_cell = folium.FeatureGroup(name="Cell")
+                #    SnabbKarta._add_cell_layers(gdf, geohash_res, s2_res, h3_res, force_full_cover, compact)
+                # layers.extend(cell_layers)
+
+                Karta2._create_plp_layer(
+                    gdf,
+                    karta=group_polygon,
+                    line_color=line_color,
+                    popup_dict=popup_dict,
+                )
+                group_cell.add_to(karta)
+            # Display centroids of the geometry
+            if centroid:
+                group_centroid = folium.FeatureGroup(name="Centroid")
+                cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs=gdf.crs)  # centroid df
+                Karta2._create_plp_layer(
+                    cdf,
+                    karta=group_centroid,
+                )
+                group_centroid.add_to(karta)
+
+            # Create a buffer or ring layer
+            # if buffer_r_max > 0:
+            #   buffer_layer = SnabbKarta._add_buffer_layer(gdf, buffer_r_max, buffer_r_min)
+            #  layers.append(buffer_layer)
 
         karta.fit_bounds(karta.get_bounds())
         folium.LayerControl(collapsed=False).add_to(karta)
