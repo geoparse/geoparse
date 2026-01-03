@@ -1604,8 +1604,7 @@ class Karta2:
             gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
 
             # Create main geometry layer
-            group_geometry = folium.FeatureGroup(name="Geometry")
-            main_layer = Karta2._create_plp_layer(
+            layer = Karta2._create_plp_layer(
                 gdf,
                 poly_fill_color=poly_fill_color,
                 poly_highlight_color=poly_highlight_color,
@@ -1616,8 +1615,7 @@ class Karta2:
                 line_width=line_width,
                 popup_dict=popup_dict,
             )
-            main_layer.add_to(group_geometry)
-            group_geometry.add_to(karta)
+            folium.FeatureGroup(name="Geometry").add_child(layer).add_to(karta)
 
             # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
             if geohash_res > 0:
