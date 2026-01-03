@@ -1275,11 +1275,6 @@ class Karta2:
 
         return palette[idx]
 
-        # LineString
-        # Polygon
-        # Cell
-        # Buffer and ring radius parameters (in meters)
-
     @staticmethod
     def _create_plp_layer(
         gdf: gpd.GeoDataFrame,
