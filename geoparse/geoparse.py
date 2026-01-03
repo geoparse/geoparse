@@ -1278,7 +1278,6 @@ class Karta2:
     @staticmethod
     def _create_plp_layer(
         gdf: gpd.GeoDataFrame,
-        karta: folium.Map,
         point_color: str = "blue",
         point_radius: int | str = 5,  # in meters
         point_opacity: float = 1.0,
@@ -1287,7 +1286,7 @@ class Karta2:
         poly_fill_color: str = "red",
         poly_highlight_color: str = "green",
         popup_dict: dict = None,
-    ) -> None:
+    ) -> folium.GeoJson:
         # Determine fill color if specified column is present
         #    fill_color = Karta._select_color(row[fill_color]) if fill_color in row.index else fill_color
 
@@ -1345,8 +1344,9 @@ class Karta2:
         else:
             tooltip = None
             popup = None
-        # Create a Folium GeoJson object from gpd.GeoDatFrame
-        folium.GeoJson(
+
+        # Create and return a Folium GeoJson object from gpd.GeoDataFrame
+        plp_layer = folium.GeoJson(
             gdf,
             marker=folium.Circle(
                 radius=point_radius,  # in meters
@@ -1358,18 +1358,18 @@ class Karta2:
             highlight_function=highlight_function,
             tooltip=tooltip,
             popup=popup,
-        ).add_to(karta)
+        )
+        return plp_layer
 
     @staticmethod
     def _add_cell_layers(
         gdf: gpd.GeoDataFrame,
-        karta: folium.Map,
         geohash_res: int = 0,
         s2_res: int = -1,
         h3_res: int = -1,
         force_full_cover: bool = True,
         compact: bool = False,
-    ) -> None:
+    ) -> list[folium.GeoJson]:
         """Create cell visualization layers for specified resolutions.
 
         Creates geohash, s2, and/or h3 cell layers based on which resolutions
@@ -1392,10 +1392,13 @@ class Karta2:
 
         Returns
         -------
-        List[lb.PolygonLayer]
+        List[folium.GeoJson]
             List of created cell layers.
-        """
 
+        Notes
+        -----
+        This method now returns GeoJson layers.
+        """
         # Cell visualization configurations
         cell_configs = [
             ("geohash", geohash_res, lambda x: x > 0),
@@ -1405,6 +1408,8 @@ class Karta2:
 
         # Clean indices for filtered selections e.g. gdf[gdf.city=='London']
         gdf = gdf.reset_index(drop=True)
+        cell_layers = []
+
         for cell_type, res, condition in cell_configs:
             if condition(res):
                 # Create polygon for bounding box if input is not a polygon
@@ -1419,17 +1424,17 @@ class Karta2:
 
                 cdf = gpd.GeoDataFrame({"id": cells, "res": res_values, "geometry": geoms}, crs="EPSG:4326")
 
-                Karta2._create_plp_layer(cdf, karta, popup_dict={"Cell ID": "id", "Resolution": "res"})
+                layer = Karta2._create_plp_layer(cdf, popup_dict={"Cell ID": "id", "Resolution": "res"})
+                cell_layers.append(layer)
 
-        return
+        return cell_layers
 
     @staticmethod
     def _add_buffer_layer(
         gdf: gpd.GeoDataFrame,
-        karta: folium.Map,
         buffer_r_max: int,
         buffer_r_min: int = 0,
-    ) -> None:
+    ) -> folium.GeoJson:
         """Create and add buffer or ring layers to a map.
 
         This function creates either a simple buffer layer or a ring/donut layer
@@ -1449,14 +1454,15 @@ class Karta2:
 
         Returns
         -------
-        object
-            lb.PolygonLayer
+        folium.GeoJson
+            The created buffer/ring layer.
 
         Notes
         -----
         - The function automatically detects the appropriate projected CRS
           for meter-based buffer operations using `GeomUtils.find_proj()`.
         - All geometries are converted to WGS84 (EPSG:4326) before returning.
+        - This method now returns GeoJson layers without adding them to a map.
 
         Examples
         --------
@@ -1478,9 +1484,8 @@ class Karta2:
         else:  # ring
             gdf["geometry"] = gdf.buffer(buffer_r_max).difference(gdf.buffer(buffer_r_min)).to_crs("EPSG:4326")
 
-        Karta2._create_plp_layer(gdf, karta)
-
-        return
+        layer = Karta2._create_plp_layer(gdf)
+        return layer
 
     @staticmethod
     def plp(
@@ -1523,6 +1528,71 @@ class Karta2:
         speed_limit_field: str = "speedlimit",
         popup_dict: dict = None,
     ) -> folium.Map:
+        """
+        Creates a map with various geometry layers.
+
+        Parameters
+        ----------
+        data_list : GeoDataFrame, DataFrame, set, or list of these
+            Input data containing geometries.
+        geom_type : str, optional
+            Type of geometry ('h3', 's2', 'geohash', 'osm', 'uprn', 'usrn', 'postcode').
+        geom_col : str or list of str, optional
+            Geometry column(s) name.
+        data_crs : int, default=4326
+            CRS of input data.
+        lookup_gdf : DataFrame or GeoDataFrame, optional
+            External DataFrame containing geometry.
+        lookup_key : str, optional
+            Geometry column name in lookup_gdf.
+        osm_url : str, optional
+            OpenStreetMap server URL.
+        point_color : str, default="blue"
+            Color for points.
+        point_radius : int or str, default=5
+            Radius for points.
+        point_opacity : float, default=1.0
+            Opacity for points.
+        heatmap : bool, default=False
+            Whether to create heatmap.
+        cluster : bool, default=False
+            Whether to cluster points.
+        line_color : str, default="blue"
+            Color for lines.
+        line_width : int, default=3
+            Width for lines.
+        poly_fill_color : str, default="red"
+            Fill color for polygons.
+        poly_highlight_color : str, default="green"
+            Highlight color for polygons.
+        centroid : bool, default=False
+            Whether to show centroids.
+        geohash_res : int, default=0
+            Geohash resolution.
+        s2_res : int, default=-1
+            S2 cell resolution.
+        h3_res : int, default=-1
+            H3 cell resolution.
+        force_full_cover : bool, default=True
+            Force full coverage of bounding box.
+        compact : bool, default=False
+            Use compact cell representation.
+        buffer_r_max : int, default=0
+            Buffer radius in meters.
+        buffer_r_min : int, default=0
+            Inner radius for rings.
+        speed_field : str, default="speed"
+            Speed field name.
+        speed_limit_field : str, default="speedlimit"
+            Speed limit field name.
+        popup_dict : dict, optional
+            Popup dictionary.
+
+        Returns
+        -------
+        folium.Map
+            The Folium map object containing all layers.
+        """
         # Ensure `data_list` is always a list (of gpd.GeoDataFrames, df.DataFrames or set)
         data_list = data_list if isinstance(data_list, list) else [data_list]
 
@@ -1532,11 +1602,11 @@ class Karta2:
         # Iterate through each set, pd.DataFrame or gpd.GeoDataFrame in the list to add layers to the map
         for data in data_list:
             gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
-            # Create layers
-            group_polygon = folium.FeatureGroup(name="Polygon")
-            Karta2._create_plp_layer(
+
+            # Create main geometry layer
+            group_geometry = folium.FeatureGroup(name="Geometry")
+            main_layer = Karta2._create_plp_layer(
                 gdf,
-                karta=group_polygon,
                 poly_fill_color=poly_fill_color,
                 poly_highlight_color=poly_highlight_color,
                 point_color=point_color,
@@ -1544,59 +1614,65 @@ class Karta2:
                 point_opacity=point_opacity,
                 line_color=line_color,
                 line_width=line_width,
-                # speed_field,
-                # speed_limit_field,
                 popup_dict=popup_dict,
             )
-            group_polygon.add_to(karta)
+            main_layer.add_to(group_geometry)
+            group_geometry.add_to(karta)
+
             # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
             if geohash_res > 0:
                 group_geohash = folium.FeatureGroup(name="Geohash")
-                Karta2._add_cell_layers(
+                cell_layers = Karta2._add_cell_layers(
                     gdf,
-                    karta=group_geohash,
                     geohash_res=geohash_res,
                 )
+                for cell_layer in cell_layers:
+                    cell_layer.add_to(group_geohash)
                 group_geohash.add_to(karta)
+
             if s2_res > -1:
                 group_s2 = folium.FeatureGroup(name="S2")
-                Karta2._add_cell_layers(
+                cell_layers = Karta2._add_cell_layers(
                     gdf,
-                    karta=group_s2,
                     s2_res=s2_res,
                 )
+                for cell_layer in cell_layers:
+                    cell_layer.add_to(group_s2)
                 group_s2.add_to(karta)
+
             if h3_res > -1:
                 group_h3 = folium.FeatureGroup(name="H3")
-                Karta2._add_cell_layers(
+                cell_layers = Karta2._add_cell_layers(
                     gdf,
-                    karta=group_h3,
                     h3_res=h3_res,
                 )
+                for cell_layer in cell_layers:
+                    cell_layer.add_to(group_h3)
                 group_h3.add_to(karta)
+
             # Display centroids of the geometry
             if centroid:
                 group_centroid = folium.FeatureGroup(name="Centroid")
                 cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs=gdf.crs)  # centroid df
-                Karta2._create_plp_layer(
-                    cdf,
-                    karta=group_centroid,
-                )
+                layer = Karta2._create_plp_layer(cdf)
+                layer.add_to(group_centroid)
                 group_centroid.add_to(karta)
 
             # Create a buffer or ring layer
             if buffer_r_max > 0:
                 group_buffer = folium.FeatureGroup(name="Buffer")
-                Karta2._add_buffer_layer(
+                layer = Karta2._add_buffer_layer(
                     gdf,
-                    karta=group_buffer,
                     buffer_r_max=buffer_r_max,
                     buffer_r_min=buffer_r_min,
                 )
+                layer.add_to(group_buffer)
                 group_buffer.add_to(karta)
 
         karta.fit_bounds(karta.get_bounds())
         folium.LayerControl(collapsed=False).add_to(karta)
+
+        # Return only the map
         return karta
 
     @staticmethod
