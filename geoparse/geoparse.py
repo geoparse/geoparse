@@ -1507,6 +1507,7 @@ class Karta2:
         point_color: str = "blue",
         point_radius: int | str = 5,
         point_opacity: float = 1.0,
+        max_points: int = 50_000,
         heatmap: bool = False,
         heatmap_radius: int = 12,
         cluster: bool = False,
@@ -1606,20 +1607,58 @@ class Karta2:
         for data in data_list:
             gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
 
-            # Create main geometry layer
-            main_layer = Karta2._create_plp_layer(
-                gdf,
-                poly_fill_color=poly_fill_color,
-                poly_highlight_color=poly_highlight_color,
-                point_color=point_color,
-                point_radius=point_radius,
-                point_opacity=point_opacity,
-                line_color=line_color,
-                line_width=line_width,
-                popup_dict=popup_dict,
-            )
-            layers.append(main_layer)
-            layer_names.append("Main")
+            # For large datasets (>50K), hide main layer to ensure smooth interaction
+            if len(gdf) > max_points:
+                print(f"Performance: Dataset exceeds {max_points:,} records.", flush=True)
+                print("Main layer hidden to maintain interactive performance.")
+                print("Options:")
+                print("  1. Use `cluster=True` for point clustering.")
+                print("  2. Use SnabbKarta.plp() for faster rendering.")
+                print("  3. Increase `max_points` parameter (may cause slowdown).")
+            else:
+                # Create main geometry layer
+                main_layer = Karta2._create_plp_layer(
+                    gdf,
+                    poly_fill_color=poly_fill_color,
+                    poly_highlight_color=poly_highlight_color,
+                    point_color=point_color,
+                    point_radius=point_radius,
+                    point_opacity=point_opacity,
+                    line_color=line_color,
+                    line_width=line_width,
+                    popup_dict=popup_dict,
+                )
+                layers.append(main_layer)
+                layer_names.append("Main")
+
+                # Display centroids of the geometry
+                if centroid:
+                    cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs=gdf.crs)  # centroid df
+                    centroid_layer = Karta2._create_plp_layer(cdf)
+                    layers.append(centroid_layer)
+                    layer_names.append("Centroid")
+
+                # Create a buffer or ring layer
+                if buffer_r_max > 0:
+                    buffer_layer = Karta2._add_buffer_layer(
+                        gdf,
+                        buffer_r_max=buffer_r_max,
+                        buffer_r_min=buffer_r_min,
+                    )
+                    layers.append(buffer_layer)
+                    layer_names.append("Buffer")
+
+            # Create a cluster layer
+            if cluster:
+                cluster_layer = plugins.MarkerCluster(locations=list(zip(gdf.geometry.y, gdf.geometry.x)))
+                layers.append(cluster_layer)
+                layer_names.append("Cluster")
+
+            # Create a heatmap layer
+            if heatmap:
+                heatmap_layer = plugins.HeatMap(list(zip(gdf.geometry.y, gdf.geometry.x)), radius=heatmap_radius)
+                layers.append(heatmap_layer)
+                layer_names.append("Heatmap")
 
             # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
             if geohash_res > 0 or s2_res > -1 or h3_res > -1:
@@ -1634,41 +1673,8 @@ class Karta2:
                 layers.extend(cell_layers)
                 layer_names.extend(cell_display_names)
 
-            # Display centroids of the geometry
-            if centroid:
-                cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs=gdf.crs)  # centroid df
-                centroid_layer = Karta2._create_plp_layer(cdf)
-                layers.append(centroid_layer)
-                layer_names.append("Centroid")
-
-            # Create a buffer or ring layer
-            if buffer_r_max > 0:
-                buffer_layer = Karta2._add_buffer_layer(
-                    gdf,
-                    buffer_r_max=buffer_r_max,
-                    buffer_r_min=buffer_r_min,
-                )
-                layers.append(buffer_layer)
-                layer_names.append("Buffer")
-
-            # Create a cluster layer
-            if cluster:
-                cluster_layer = plugins.MarkerCluster(locations=list(zip(gdf.geometry.y, gdf.geometry.x)))
-                layers.append(cluster_layer)
-                layer_names.append("Cluster")
-
-            # Create a heatmap layer
-            if heatmap:
-                heatmap_layer = plugins.HeatMap(list(zip(gdf.geometry.y, gdf.geometry.x)), radius=heatmap_radius)
-                layers.append(heatmap_layer)
-                layer_names.append("Heatmap")
         # Instantiate base map and render all generated layers
         karta = Karta2._base_map()
-
-        # For large datasets (>50K), hide main layer to ensure smooth interaction
-        if len(gdf) > 50_000:
-            layers.remove(main_layer)
-            layer_names.remove("Main")
 
         for layer, layer_name in zip(layers, layer_names):
             folium.FeatureGroup(name=layer_name).add_child(layer).add_to(karta)
