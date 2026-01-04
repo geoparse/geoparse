@@ -1508,6 +1508,7 @@ class Karta2:
         point_radius: int | str = 5,
         point_opacity: float = 1.0,
         heatmap: bool = False,
+        heatmap_radius: int = 12,
         cluster: bool = False,
         # LineString
         line_color: str = "blue",
@@ -1606,7 +1607,7 @@ class Karta2:
             gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
 
             # Create main geometry layer
-            layer = Karta2._create_plp_layer(
+            main_layer = Karta2._create_plp_layer(
                 gdf,
                 poly_fill_color=poly_fill_color,
                 poly_highlight_color=poly_highlight_color,
@@ -1617,8 +1618,8 @@ class Karta2:
                 line_width=line_width,
                 popup_dict=popup_dict,
             )
-            layers.append(layer)
-            layer_names.append("Geometry")
+            layers.append(main_layer)
+            layer_names.append("Main")
 
             # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
             if geohash_res > 0 or s2_res > -1 or h3_res > -1:
@@ -1636,19 +1637,31 @@ class Karta2:
             # Display centroids of the geometry
             if centroid:
                 cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs=gdf.crs)  # centroid df
-                layer = Karta2._create_plp_layer(cdf)
-                layers.append(layer)
+                centroid_layer = Karta2._create_plp_layer(cdf)
+                layers.append(centroid_layer)
                 layer_names.append("Centroid")
 
             # Create a buffer or ring layer
             if buffer_r_max > 0:
-                layer = Karta2._add_buffer_layer(
+                buffer_layer = Karta2._add_buffer_layer(
                     gdf,
                     buffer_r_max=buffer_r_max,
                     buffer_r_min=buffer_r_min,
                 )
-                layers.append(layer)
+                layers.append(buffer_layer)
                 layer_names.append("Buffer")
+
+            # Create a cluster layer
+            if cluster:
+                cluster_layer = plugins.MarkerCluster(locations=list(zip(gdf.geometry.y, gdf.geometry.x)))
+                layers.append(cluster_layer)
+                layer_names.append("Cluster")
+
+            # Create a heatmap layer
+            if heatmap:
+                heatmap_layer = plugins.HeatMap(list(zip(gdf.geometry.y, gdf.geometry.x)), radius=heatmap_radius)
+                layers.append(heatmap_layer)
+                layer_names.append("Heatmap")
 
         karta = Karta2._base_map()
         # Add layers to karta
