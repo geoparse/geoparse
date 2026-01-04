@@ -1542,12 +1542,12 @@ class Karta2:
         for data in data_list:
             gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
 
-            # For large datasets (>50K), hide main layer to ensure smooth interaction
+            # For large datasets (>50K), hide main, centroid and buffer layers to ensure smooth interaction
             if len(gdf) > max_records:
-                print(f"Performance: Dataset exceeds {max_records:,} records.", flush=True)
+                print(f"Dataset size ({len(gdf):,} records) exceeds threshold ({max_records:,})", flush=True)
                 print("Main layer hidden to maintain interactive performance.")
                 print("Options:")
-                print("  1. Use `cluster=True` for point clustering.")
+                print("  1. Set `cluster=True` for point clustering (point data only).")
                 print("  2. Use SnabbKarta.plp() for faster rendering.")
                 print("  3. Increase `max_records` parameter (may cause slowdown).")
             else:
