@@ -1507,7 +1507,6 @@ class Karta2:
         point_color: str = "blue",
         point_radius: int | str = 5,
         point_opacity: float = 1.0,
-        max_points: int = 50_000,
         heatmap: bool = False,
         heatmap_radius: int = 12,
         cluster: bool = False,
@@ -1531,72 +1530,8 @@ class Karta2:
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
         popup_dict: dict = None,
+        max_records: int = 50_000,  # Maximum records to display in main layer to avoid performance degradation
     ) -> folium.Map:
-        """
-        Creates a map with various geometry layers.
-
-        Parameters
-        ----------
-        data_list : GeoDataFrame, DataFrame, set, or list of these
-            Input data containing geometries.
-        geom_type : str, optional
-            Type of geometry ('h3', 's2', 'geohash', 'osm', 'uprn', 'usrn', 'postcode').
-        geom_col : str or list of str, optional
-            Geometry column(s) name.
-        data_crs : int, default=4326
-            CRS of input data.
-        lookup_gdf : DataFrame or GeoDataFrame, optional
-            External DataFrame containing geometry.
-        lookup_key : str, optional
-            Geometry column name in lookup_gdf.
-        osm_url : str, optional
-            OpenStreetMap server URL.
-        point_color : str, default="blue"
-            Color for points.
-        point_radius : int or str, default=5
-            Radius for points.
-        point_opacity : float, default=1.0
-            Opacity for points.
-        heatmap : bool, default=False
-            Whether to create heatmap.
-        cluster : bool, default=False
-            Whether to cluster points.
-        line_color : str, default="blue"
-            Color for lines.
-        line_width : int, default=3
-            Width for lines.
-        poly_fill_color : str, default="red"
-            Fill color for polygons.
-        poly_highlight_color : str, default="green"
-            Highlight color for polygons.
-        centroid : bool, default=False
-            Whether to show centroids.
-        geohash_res : int, default=0
-            Geohash resolution.
-        s2_res : int, default=-1
-            S2 cell resolution.
-        h3_res : int, default=-1
-            H3 cell resolution.
-        force_full_cover : bool, default=True
-            Force full coverage of bounding box.
-        compact : bool, default=False
-            Use compact cell representation.
-        buffer_r_max : int, default=0
-            Buffer radius in meters.
-        buffer_r_min : int, default=0
-            Inner radius for rings.
-        speed_field : str, default="speed"
-            Speed field name.
-        speed_limit_field : str, default="speedlimit"
-            Speed limit field name.
-        popup_dict : dict, optional
-            Popup dictionary.
-
-        Returns
-        -------
-        folium.Map
-            The Folium map object containing all layers.
-        """
         # Ensure `data_list` is always a list (of gpd.GeoDataFrames, df.DataFrames or set)
         data_list = data_list if isinstance(data_list, list) else [data_list]
 
@@ -1608,13 +1543,13 @@ class Karta2:
             gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
 
             # For large datasets (>50K), hide main layer to ensure smooth interaction
-            if len(gdf) > max_points:
-                print(f"Performance: Dataset exceeds {max_points:,} records.", flush=True)
+            if len(gdf) > max_records:
+                print(f"Performance: Dataset exceeds {max_records:,} records.", flush=True)
                 print("Main layer hidden to maintain interactive performance.")
                 print("Options:")
                 print("  1. Use `cluster=True` for point clustering.")
                 print("  2. Use SnabbKarta.plp() for faster rendering.")
-                print("  3. Increase `max_points` parameter (may cause slowdown).")
+                print("  3. Increase `max_records` parameter (may cause slowdown).")
             else:
                 # Create main geometry layer
                 main_layer = Karta2._create_plp_layer(
