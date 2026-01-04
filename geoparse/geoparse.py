@@ -1599,7 +1599,7 @@ class Karta2:
         data_list = data_list if isinstance(data_list, list) else [data_list]
 
         # Create a base map
-        layers = []  # List of GeoJson layer objects
+        layers = []  # List of Folium.GeoJson layer objects
         layer_names = []  # Corresponding display names for layer controls
         # Iterate through each set, pd.DataFrame or gpd.GeoDataFrame in the list to add layers to the map
         for data in data_list:
@@ -1623,7 +1623,12 @@ class Karta2:
             # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
             if geohash_res > 0 or s2_res > -1 or h3_res > -1:
                 cell_layers, cell_display_names = Karta2._add_cell_layers(
-                    gdf, geohash_res=geohash_res, s2_res=s2_res, h3_res=h3_res
+                    gdf,
+                    geohash_res=geohash_res,
+                    s2_res=s2_res,
+                    h3_res=h3_res,
+                    force_full_cover=force_full_cover,
+                    compact=compact,
                 )
                 layers.extend(cell_layers)
                 layer_names.extend(cell_display_names)
@@ -1649,7 +1654,6 @@ class Karta2:
         # Add layers to karta
         for layer, layer_name in zip(layers, layer_names):
             folium.FeatureGroup(name=layer_name).add_child(layer).add_to(karta)
-
         karta.fit_bounds(karta.get_bounds())
         folium.LayerControl(collapsed=False).add_to(karta)
 
