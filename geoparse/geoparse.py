@@ -1662,9 +1662,14 @@ class Karta2:
                 heatmap_layer = plugins.HeatMap(list(zip(gdf.geometry.y, gdf.geometry.x)), radius=heatmap_radius)
                 layers.append(heatmap_layer)
                 layer_names.append("Heatmap")
-
+        # Instantiate base map and render all generated layers
         karta = Karta2._base_map()
-        # Add layers to karta
+
+        # For large datasets (>50K), hide main layer to ensure smooth interaction
+        if len(gdf) > 50_000:
+            layers.remove(main_layer)
+            layer_names.remove("Main")
+
         for layer, layer_name in zip(layers, layer_names):
             folium.FeatureGroup(name=layer_name).add_child(layer).add_to(karta)
         karta.fit_bounds(karta.get_bounds())
