@@ -1401,16 +1401,17 @@ class Karta2:
         """
         # Cell visualization configurations
         cell_configs = [
-            ("geohash", geohash_res, lambda x: x > 0),
-            ("s2", s2_res, lambda x: x > -1),
-            ("h3", h3_res, lambda x: x > -1),
+            ("geohash", "Geohash", geohash_res, lambda x: x > 0),
+            ("s2", "S2", s2_res, lambda x: x > -1),
+            ("h3", "H3", h3_res, lambda x: x > -1),
         ]
 
         # Clean indices for filtered selections e.g. gdf[gdf.city=='London']
         gdf = gdf.reset_index(drop=True)
         cell_layers = []
+        cell_display_names = []
 
-        for cell_type, res, condition in cell_configs:
+        for cell_type, cell_display_name, res, condition in cell_configs:
             if condition(res):
                 # Create polygon for bounding box if input is not a polygon
                 if gdf.geometry.type[0] in ("Polygon", "MultiPolygon"):
@@ -1426,8 +1427,9 @@ class Karta2:
 
                 layer = Karta2._create_plp_layer(cdf, popup_dict={"Cell ID": "id", "Resolution": "res"})
                 cell_layers.append(layer)
+                cell_display_names.append(cell_display_name)
 
-        return cell_layers
+        return cell_layers, cell_display_names
 
     @staticmethod
     def _add_buffer_layer(
@@ -1597,15 +1599,14 @@ class Karta2:
         data_list = data_list if isinstance(data_list, list) else [data_list]
 
         # Create a base map
-        karta = Karta2._base_map()  # Initialize folium map with the bounding box
-
+        layers = []  # List of Folium.GeoJson layer objects
+        layer_names = []  # Corresponding display names for layer controls
         # Iterate through each set, pd.DataFrame or gpd.GeoDataFrame in the list to add layers to the map
         for data in data_list:
             gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
 
             # Create main geometry layer
-            group_geometry = folium.FeatureGroup(name="Geometry")
-            main_layer = Karta2._create_plp_layer(
+            layer = Karta2._create_plp_layer(
                 gdf,
                 poly_fill_color=poly_fill_color,
                 poly_highlight_color=poly_highlight_color,
@@ -1616,63 +1617,46 @@ class Karta2:
                 line_width=line_width,
                 popup_dict=popup_dict,
             )
-            main_layer.add_to(group_geometry)
-            group_geometry.add_to(karta)
+            layers.append(layer)
+            layer_names.append("Geometry")
 
             # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
-            if geohash_res > 0:
-                group_geohash = folium.FeatureGroup(name="Geohash")
-                cell_layers = Karta2._add_cell_layers(
+            if geohash_res > 0 or s2_res > -1 or h3_res > -1:
+                cell_layers, cell_display_names = Karta2._add_cell_layers(
                     gdf,
                     geohash_res=geohash_res,
-                )
-                for cell_layer in cell_layers:
-                    cell_layer.add_to(group_geohash)
-                group_geohash.add_to(karta)
-
-            if s2_res > -1:
-                group_s2 = folium.FeatureGroup(name="S2")
-                cell_layers = Karta2._add_cell_layers(
-                    gdf,
                     s2_res=s2_res,
-                )
-                for cell_layer in cell_layers:
-                    cell_layer.add_to(group_s2)
-                group_s2.add_to(karta)
-
-            if h3_res > -1:
-                group_h3 = folium.FeatureGroup(name="H3")
-                cell_layers = Karta2._add_cell_layers(
-                    gdf,
                     h3_res=h3_res,
+                    force_full_cover=force_full_cover,
+                    compact=compact,
                 )
-                for cell_layer in cell_layers:
-                    cell_layer.add_to(group_h3)
-                group_h3.add_to(karta)
+                layers.extend(cell_layers)
+                layer_names.extend(cell_display_names)
 
             # Display centroids of the geometry
             if centroid:
-                group_centroid = folium.FeatureGroup(name="Centroid")
                 cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs=gdf.crs)  # centroid df
                 layer = Karta2._create_plp_layer(cdf)
-                layer.add_to(group_centroid)
-                group_centroid.add_to(karta)
+                layers.append(layer)
+                layer_names.append("Centroid")
 
             # Create a buffer or ring layer
             if buffer_r_max > 0:
-                group_buffer = folium.FeatureGroup(name="Buffer")
                 layer = Karta2._add_buffer_layer(
                     gdf,
                     buffer_r_max=buffer_r_max,
                     buffer_r_min=buffer_r_min,
                 )
-                layer.add_to(group_buffer)
-                group_buffer.add_to(karta)
+                layers.append(layer)
+                layer_names.append("Buffer")
 
+        karta = Karta2._base_map()
+        # Add layers to karta
+        for layer, layer_name in zip(layers, layer_names):
+            folium.FeatureGroup(name=layer_name).add_child(layer).add_to(karta)
         karta.fit_bounds(karta.get_bounds())
         folium.LayerControl(collapsed=False).add_to(karta)
 
-        # Return only the map
         return karta
 
     @staticmethod
