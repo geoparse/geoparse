@@ -1508,6 +1508,7 @@ class Karta2:
         point_radius: int | str = 5,
         point_opacity: float = 1.0,
         heatmap: bool = False,
+        heatmap_radius: int = 12,
         cluster: bool = False,
         # LineString
         line_color: str = "blue",
@@ -1529,72 +1530,8 @@ class Karta2:
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
         popup_dict: dict = None,
+        max_records: int = 50_000,  # Maximum records to display in main layer to avoid performance degradation
     ) -> folium.Map:
-        """
-        Creates a map with various geometry layers.
-
-        Parameters
-        ----------
-        data_list : GeoDataFrame, DataFrame, set, or list of these
-            Input data containing geometries.
-        geom_type : str, optional
-            Type of geometry ('h3', 's2', 'geohash', 'osm', 'uprn', 'usrn', 'postcode').
-        geom_col : str or list of str, optional
-            Geometry column(s) name.
-        data_crs : int, default=4326
-            CRS of input data.
-        lookup_gdf : DataFrame or GeoDataFrame, optional
-            External DataFrame containing geometry.
-        lookup_key : str, optional
-            Geometry column name in lookup_gdf.
-        osm_url : str, optional
-            OpenStreetMap server URL.
-        point_color : str, default="blue"
-            Color for points.
-        point_radius : int or str, default=5
-            Radius for points.
-        point_opacity : float, default=1.0
-            Opacity for points.
-        heatmap : bool, default=False
-            Whether to create heatmap.
-        cluster : bool, default=False
-            Whether to cluster points.
-        line_color : str, default="blue"
-            Color for lines.
-        line_width : int, default=3
-            Width for lines.
-        poly_fill_color : str, default="red"
-            Fill color for polygons.
-        poly_highlight_color : str, default="green"
-            Highlight color for polygons.
-        centroid : bool, default=False
-            Whether to show centroids.
-        geohash_res : int, default=0
-            Geohash resolution.
-        s2_res : int, default=-1
-            S2 cell resolution.
-        h3_res : int, default=-1
-            H3 cell resolution.
-        force_full_cover : bool, default=True
-            Force full coverage of bounding box.
-        compact : bool, default=False
-            Use compact cell representation.
-        buffer_r_max : int, default=0
-            Buffer radius in meters.
-        buffer_r_min : int, default=0
-            Inner radius for rings.
-        speed_field : str, default="speed"
-            Speed field name.
-        speed_limit_field : str, default="speedlimit"
-            Speed limit field name.
-        popup_dict : dict, optional
-            Popup dictionary.
-
-        Returns
-        -------
-        folium.Map
-            The Folium map object containing all layers.
-        """
         # Ensure `data_list` is always a list (of gpd.GeoDataFrames, df.DataFrames or set)
         data_list = data_list if isinstance(data_list, list) else [data_list]
 
@@ -1605,20 +1542,58 @@ class Karta2:
         for data in data_list:
             gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
 
-            # Create main geometry layer
-            layer = Karta2._create_plp_layer(
-                gdf,
-                poly_fill_color=poly_fill_color,
-                poly_highlight_color=poly_highlight_color,
-                point_color=point_color,
-                point_radius=point_radius,
-                point_opacity=point_opacity,
-                line_color=line_color,
-                line_width=line_width,
-                popup_dict=popup_dict,
-            )
-            layers.append(layer)
-            layer_names.append("Geometry")
+            # For large datasets (>50K), hide main, centroid and buffer layers to ensure smooth interaction
+            if len(gdf) > max_records:
+                print(f"Dataset size ({len(gdf):,} records) exceeds threshold ({max_records:,})", flush=True)
+                print("Main layer hidden to maintain interactive performance.")
+                print("Options:")
+                print("  1. Set `cluster=True` for point clustering (point data only).")
+                print("  2. Use SnabbKarta.plp() for faster rendering.")
+                print("  3. Increase `max_records` parameter (may cause slowdown).")
+            else:
+                # Create main geometry layer
+                main_layer = Karta2._create_plp_layer(
+                    gdf,
+                    poly_fill_color=poly_fill_color,
+                    poly_highlight_color=poly_highlight_color,
+                    point_color=point_color,
+                    point_radius=point_radius,
+                    point_opacity=point_opacity,
+                    line_color=line_color,
+                    line_width=line_width,
+                    popup_dict=popup_dict,
+                )
+                layers.append(main_layer)
+                layer_names.append("Main")
+
+                # Display centroids of the geometry
+                if centroid:
+                    cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs=gdf.crs)  # centroid df
+                    centroid_layer = Karta2._create_plp_layer(cdf)
+                    layers.append(centroid_layer)
+                    layer_names.append("Centroid")
+
+                # Create a buffer or ring layer
+                if buffer_r_max > 0:
+                    buffer_layer = Karta2._add_buffer_layer(
+                        gdf,
+                        buffer_r_max=buffer_r_max,
+                        buffer_r_min=buffer_r_min,
+                    )
+                    layers.append(buffer_layer)
+                    layer_names.append("Buffer")
+
+            # Create a cluster layer
+            if cluster:
+                cluster_layer = plugins.MarkerCluster(locations=list(zip(gdf.geometry.y, gdf.geometry.x)))
+                layers.append(cluster_layer)
+                layer_names.append("Cluster")
+
+            # Create a heatmap layer
+            if heatmap:
+                heatmap_layer = plugins.HeatMap(list(zip(gdf.geometry.y, gdf.geometry.x)), radius=heatmap_radius)
+                layers.append(heatmap_layer)
+                layer_names.append("Heatmap")
 
             # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
             if geohash_res > 0 or s2_res > -1 or h3_res > -1:
@@ -1633,25 +1608,9 @@ class Karta2:
                 layers.extend(cell_layers)
                 layer_names.extend(cell_display_names)
 
-            # Display centroids of the geometry
-            if centroid:
-                cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs=gdf.crs)  # centroid df
-                layer = Karta2._create_plp_layer(cdf)
-                layers.append(layer)
-                layer_names.append("Centroid")
-
-            # Create a buffer or ring layer
-            if buffer_r_max > 0:
-                layer = Karta2._add_buffer_layer(
-                    gdf,
-                    buffer_r_max=buffer_r_max,
-                    buffer_r_min=buffer_r_min,
-                )
-                layers.append(layer)
-                layer_names.append("Buffer")
-
+        # Instantiate base map and render all generated layers
         karta = Karta2._base_map()
-        # Add layers to karta
+
         for layer, layer_name in zip(layers, layer_names):
             folium.FeatureGroup(name=layer_name).add_child(layer).add_to(karta)
         karta.fit_bounds(karta.get_bounds())
