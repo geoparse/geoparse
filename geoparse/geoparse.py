@@ -1542,20 +1542,20 @@ class Karta2:
         for data in data_list:
             gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
 
-            # Create a cluster layer
             if cluster:
+                # Create a cluster layer
                 cluster_layer = plugins.MarkerCluster(locations=list(zip(gdf.geometry.y, gdf.geometry.x)))
                 layers.append(cluster_layer)
                 layer_names.append("Cluster")
 
-            # Create a heatmap layer
             if heatmap:
+                # Create a heatmap layer
                 heatmap_layer = plugins.HeatMap(list(zip(gdf.geometry.y, gdf.geometry.x)), radius=heatmap_radius)
                 layers.append(heatmap_layer)
                 layer_names.append("Heatmap")
 
-            # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
             if geohash_res > 0 or s2_res > -1 or h3_res > -1:
+                # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
                 cell_layers, cell_display_names = Karta2._add_cell_layers(
                     gdf,
                     geohash_res=geohash_res,
