@@ -1542,6 +1542,31 @@ class Karta2:
         for data in data_list:
             gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
 
+            # Create a cluster layer
+            if cluster:
+                cluster_layer = plugins.MarkerCluster(locations=list(zip(gdf.geometry.y, gdf.geometry.x)))
+                layers.append(cluster_layer)
+                layer_names.append("Cluster")
+
+            # Create a heatmap layer
+            if heatmap:
+                heatmap_layer = plugins.HeatMap(list(zip(gdf.geometry.y, gdf.geometry.x)), radius=heatmap_radius)
+                layers.append(heatmap_layer)
+                layer_names.append("Heatmap")
+
+            # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
+            if geohash_res > 0 or s2_res > -1 or h3_res > -1:
+                cell_layers, cell_display_names = Karta2._add_cell_layers(
+                    gdf,
+                    geohash_res=geohash_res,
+                    s2_res=s2_res,
+                    h3_res=h3_res,
+                    force_full_cover=force_full_cover,
+                    compact=compact,
+                )
+                layers.extend(cell_layers)
+                layer_names.extend(cell_display_names)
+
             if len(gdf) <= max_records:
                 # Create main geometry layer
                 main_layer = Karta2._create_plp_layer(
@@ -1575,12 +1600,7 @@ class Karta2:
                     layers.append(buffer_layer)
                     layer_names.append("Buffer")
             else:
-                # Create a cluster layer
-                if cluster:
-                    cluster_layer = plugins.MarkerCluster(locations=list(zip(gdf.geometry.y, gdf.geometry.x)))
-                    layers.append(cluster_layer)
-                    layer_names.append("Cluster")
-                else:
+                if not cluster:
                     # For large datasets (>50K), hide main, centroid and buffer layers to ensure smooth interaction
                     print(f"Dataset size ({len(gdf):,} records) exceeds threshold (max_records={max_records:,})", flush=True)
                     print("Main layer hidden to maintain interactive performance.")
@@ -1589,28 +1609,8 @@ class Karta2:
                     print("  2. Use SnabbKarta.plp() for faster rendering.")
                     print("  3. Increase `max_records` parameter (may cause slowdown).")
 
-            # Create a heatmap layer
-            if heatmap:
-                heatmap_layer = plugins.HeatMap(list(zip(gdf.geometry.y, gdf.geometry.x)), radius=heatmap_radius)
-                layers.append(heatmap_layer)
-                layer_names.append("Heatmap")
-
-            # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
-            if geohash_res > 0 or s2_res > -1 or h3_res > -1:
-                cell_layers, cell_display_names = Karta2._add_cell_layers(
-                    gdf,
-                    geohash_res=geohash_res,
-                    s2_res=s2_res,
-                    h3_res=h3_res,
-                    force_full_cover=force_full_cover,
-                    compact=compact,
-                )
-                layers.extend(cell_layers)
-                layer_names.extend(cell_display_names)
-
         # Instantiate base map and render all generated layers
         karta = Karta2._base_map()
-
         for layer, layer_name in zip(layers, layer_names):
             folium.FeatureGroup(name=layer_name).add_child(layer).add_to(karta)
         karta.fit_bounds(karta.get_bounds())
