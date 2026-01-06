@@ -1541,7 +1541,6 @@ class Karta2:
         # Iterate through each set, pd.DataFrame or gpd.GeoDataFrame in the list to add layers to the map
         for data in data_list:
             gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
-
             if cluster:
                 # Create a cluster layer
                 cluster_layer = plugins.MarkerCluster(locations=list(zip(gdf.geometry.y, gdf.geometry.x)))
@@ -2279,8 +2278,6 @@ class GeomUtils:
         # if data is a gpd.GeoDataFrame, simply copy it
         if isinstance(data, gpd.GeoDataFrame):
             gdf = data.copy()
-            return gdf
-
         # Convert pd.DataFrame to gpd.GeoDataFrame
         elif isinstance(data, pd.DataFrame):
             if geom_type in ["geohash", "s2", "s2_int", "h3"]:
@@ -2300,8 +2297,6 @@ class GeomUtils:
                     x = [col for col in df.columns if "lon" in col.lower() or "lng" in col.lower()][0]
                     y = [col for col in df.columns if "lat" in col.lower()][0]
                 gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df[x], df[y]), crs=data_crs).to_crs(4326)
-            return gdf
-
         # Convert set to gpd.GeoDataFrame
         elif isinstance(data, set):  # e.g. set of uprn {1, 26, 27, 30, 31}
             data = [item for item in data if item is not None]  # Remove None from the set if exists
@@ -2314,10 +2309,12 @@ class GeomUtils:
             elif geom_type in ["uprn", "usrn", "postcode", "osm"]:
                 df = pd.DataFrame({geom_type: sorted(data)})  # Sort data for faster join
                 gdf = lookup_gdf.merge(df, left_on=lookup_key, right_on=geom_type, how="right")
-            return gdf
+
         # Unsupported input type
         else:
             raise TypeError("Invalid input type: data must be gpd.GeoDataFrame, pd.DataFrame or a set")
+        gdf = gdf[gdf.geometry.is_valid]
+        return gdf
 
     @staticmethod
     def find_proj(geom: BaseGeometry) -> str:
