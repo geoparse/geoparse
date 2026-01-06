@@ -1287,14 +1287,21 @@ class Karta2:
         poly_highlight_color: str = "green",
         popup_dict: dict = None,
     ) -> folium.GeoJson:
-        # Determine fill color if specified column is present
-        #    fill_color = Karta._select_color(row[fill_color]) if fill_color in row.index else fill_color
-
         # Style function to apply to the polygon
         def style_function(feature):
             geom_type = feature["geometry"]["type"]
+            if geom_type in ["Point", "MultiPoint"]:
+                return {
+                    "radius": point_radius,
+                    # Determine fill color if specified column is present
+                    "fillColor": Karta2._select_color(feature["properties"][point_color])
+                    if point_color in feature["properties"]
+                    else point_color,
+                    "fillOpacity": point_opacity,
+                    "weight": 0,
+                }
+
             if geom_type in ["Polygon", "MultiPolygon"]:
-                # Style for polygons only
                 return {
                     "fillColor": poly_fill_color,
                     "color": "black",  # Border color
@@ -1348,12 +1355,7 @@ class Karta2:
         # Create and return a Folium GeoJson object from gpd.GeoDataFrame
         plp_layer = folium.GeoJson(
             gdf,
-            marker=folium.Circle(
-                radius=point_radius,  # in meters
-                fill_color=point_color,
-                fill_opacity=point_opacity,
-                weight=0,  # Point border thickness in pixels (0 = no border)
-            ),
+            marker=folium.Circle(fill_color="blue"),  # 'blue' will be overridden by 'fillColor' in style_function
             style_function=style_function,
             highlight_function=highlight_function,
             tooltip=tooltip,
