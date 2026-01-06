@@ -1287,14 +1287,21 @@ class Karta2:
         poly_highlight_color: str = "green",
         popup_dict: dict = None,
     ) -> folium.GeoJson:
-        # Determine fill color if specified column is present
-        #    fill_color = Karta._select_color(row[fill_color]) if fill_color in row.index else fill_color
-
         # Style function to apply to the polygon
         def style_function(feature):
             geom_type = feature["geometry"]["type"]
+            if geom_type in ["Point", "MultiPoint"]:
+                return {
+                    "radius": point_radius,
+                    # Determine fill color if specified column is present
+                    "fillColor": Karta2._select_color(feature["properties"][point_color])
+                    if point_color in feature["properties"]
+                    else point_color,
+                    "fillOpacity": point_opacity,
+                    "weight": 0,
+                }
+
             if geom_type in ["Polygon", "MultiPolygon"]:
-                # Style for polygons only
                 return {
                     "fillColor": poly_fill_color,
                     "color": "black",  # Border color
@@ -1348,12 +1355,7 @@ class Karta2:
         # Create and return a Folium GeoJson object from gpd.GeoDataFrame
         plp_layer = folium.GeoJson(
             gdf,
-            marker=folium.Circle(
-                radius=point_radius,  # in meters
-                fill_color=point_color,
-                fill_opacity=point_opacity,
-                weight=0,  # Point border thickness in pixels (0 = no border)
-            ),
+            marker=folium.Circle(fill_color="blue"),  # 'blue' will be overridden by 'fillColor' in style_function
             style_function=style_function,
             highlight_function=highlight_function,
             tooltip=tooltip,
@@ -1541,7 +1543,6 @@ class Karta2:
         # Iterate through each set, pd.DataFrame or gpd.GeoDataFrame in the list to add layers to the map
         for data in data_list:
             gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
-
             if cluster:
                 # Create a cluster layer
                 cluster_layer = plugins.MarkerCluster(locations=list(zip(gdf.geometry.y, gdf.geometry.x)))
@@ -2279,8 +2280,6 @@ class GeomUtils:
         # if data is a gpd.GeoDataFrame, simply copy it
         if isinstance(data, gpd.GeoDataFrame):
             gdf = data.copy()
-            return gdf
-
         # Convert pd.DataFrame to gpd.GeoDataFrame
         elif isinstance(data, pd.DataFrame):
             if geom_type in ["geohash", "s2", "s2_int", "h3"]:
@@ -2300,8 +2299,6 @@ class GeomUtils:
                     x = [col for col in df.columns if "lon" in col.lower() or "lng" in col.lower()][0]
                     y = [col for col in df.columns if "lat" in col.lower()][0]
                 gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df[x], df[y]), crs=data_crs).to_crs(4326)
-            return gdf
-
         # Convert set to gpd.GeoDataFrame
         elif isinstance(data, set):  # e.g. set of uprn {1, 26, 27, 30, 31}
             data = [item for item in data if item is not None]  # Remove None from the set if exists
@@ -2314,10 +2311,12 @@ class GeomUtils:
             elif geom_type in ["uprn", "usrn", "postcode", "osm"]:
                 df = pd.DataFrame({geom_type: sorted(data)})  # Sort data for faster join
                 gdf = lookup_gdf.merge(df, left_on=lookup_key, right_on=geom_type, how="right")
-            return gdf
+
         # Unsupported input type
         else:
             raise TypeError("Invalid input type: data must be gpd.GeoDataFrame, pd.DataFrame or a set")
+        gdf = gdf[gdf.geometry.is_valid]
+        return gdf
 
     @staticmethod
     def find_proj(geom: BaseGeometry) -> str:
