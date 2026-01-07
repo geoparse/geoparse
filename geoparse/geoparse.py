@@ -1192,6 +1192,27 @@ class Karta2:
         for item in tiles:
             folium.TileLayer(item, name=tiles[item], max_zoom=21).add_to(karta)
 
+        from folium import Element
+
+        attribution = Element("""
+        <div style="
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            z-index: 9999;
+            background: rgba(255,255,255,0.8);
+            padding: 4px 8px;
+            font-size: 11px;
+            border-radius: 4px;
+        ">
+            Created by <b>GeoParse</b>:
+            <a href="https://github.com/geoparse/geoparse" target="_blank">
+                https://github.com/geoparse/geoparse
+            </a>
+        </div>
+        """)
+        karta.get_root().html.add_child(attribution)
+
         return karta
 
     @staticmethod
