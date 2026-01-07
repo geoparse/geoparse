@@ -1701,6 +1701,7 @@ class Karta2:
         poly_id: str,
         legend: str,
         bins: list = None,
+        min_observations: int = 1,
         palette: str = "YlOrRd",
         cell_type: str = None,
         res: int = None,
@@ -1757,6 +1758,7 @@ class Karta2:
         del gdf["index_right"]
 
         mdf = pd.merge(mdf, gdf[poly_id].value_counts().reset_index(), on=poly_id, how="left")
+        mdf = mdf[mdf["count"] >= min_observations]
 
         if bins is None:
             bins = np.quantile(mdf["count"].dropna(), [0, 0.25, 0.5, 0.75, 0.98, 1])
