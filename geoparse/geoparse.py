@@ -1661,11 +1661,7 @@ class Karta2:
                 palette="YlOrRd",
             )
         """
-        # Extract the bounding coordinates of the GeoDataFrame
-        minlon, minlat, maxlon, maxlat = mdf.total_bounds  # Get the total bounds of the GeoDataFrame
-        sw = [minlat, minlon]  # South-west corner
-        ne = [maxlat, maxlon]  # North-east corner
-        karta = Karta._base_map(sw, ne)  # Create a base map using the bounding coordinates
+        karta = Karta2._base_map()  # Create a base map using the bounding coordinates
 
         if bins is None:
             bins = np.quantile(mdf[columns[1]].dropna(), [0, 0.25, 0.5, 0.75, 0.98, 1])
@@ -1688,7 +1684,7 @@ class Karta2:
         # Add a tooltip to display the attribute values for each region when hovered over
         folium.features.GeoJsonTooltip(fields=columns).add_to(choropleth.geojson)
 
-        # Add layer control to the map
+        karta.fit_bounds(karta.get_bounds())
         folium.LayerControl(collapsed=False).add_to(karta)
 
         # Return the Folium map object containing the choropleth layer
