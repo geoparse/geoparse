@@ -1779,7 +1779,7 @@ class Karta2:
 
         if bins is None:
             bins = np.quantile(mdf["count"].dropna(), [0, 0.25, 0.5, 0.75, 0.98, 1])
-        return Karta.choropleth(
+        return Karta2.choropleth(
             mdf,
             columns=[poly_id, "count"],
             bins=bins,
