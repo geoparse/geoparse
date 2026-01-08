@@ -22,7 +22,7 @@ import pyproj
 import requests
 import shapely
 from branca.element import MacroElement, Template
-from folium import plugins
+from folium import Element, plugins
 from lonboard.basemap import CartoStyle
 from s2 import s2
 from scipy.spatial import KDTree
@@ -1192,13 +1192,11 @@ class Karta2:
         for item in tiles:
             folium.TileLayer(item, name=tiles[item], max_zoom=21).add_to(karta)
 
-        from folium import Element
-
         attribution = Element("""
         <div style="
             position: fixed;
-            bottom: 10px;
-            left: 10px;
+            bottom: 0px;
+            left: 0px;
             z-index: 9999;
             background: rgba(255,255,255,0.8);
             padding: 4px 8px;
