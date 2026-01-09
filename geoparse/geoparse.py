@@ -1551,7 +1551,7 @@ class Karta2:
         speed_field: str = "speed",
         speed_limit_field: str = "speedlimit",
         popup_dict: dict = None,
-        max_records: int = 50_000,  # Maximum records to display in main layer to avoid performance degradation
+        render_limit: int = 50_000,  # Maximum records to display in main layer to avoid performance degradation
     ) -> folium.Map:
         # Ensure `data_list` is always a list (of gpd.GeoDataFrames, df.DataFrames or set)
         data_list = data_list if isinstance(data_list, list) else [data_list]
@@ -1587,7 +1587,7 @@ class Karta2:
                 layers.extend(cell_layers)
                 layer_names.extend(cell_display_names)
 
-            if len(gdf) <= max_records:
+            if len(gdf) <= render_limit:
                 # Create main geometry layer
                 main_layer = Karta2._create_plp_layer(
                     gdf,
@@ -1620,14 +1620,14 @@ class Karta2:
                     layers.append(buffer_layer)
                     layer_names.append("Buffer")
             else:
-                if not cluster:
+                if not cluster and not heatmap:
                     # For large datasets (>50K), hide main, centroid and buffer layers to ensure smooth interaction
-                    print(f"Dataset size ({len(gdf):,} records) exceeds threshold (max_records={max_records:,})", flush=True)
+                    print(f"Dataset size ({len(gdf):,} records) exceeds threshold (render_limit={render_limit:,})", flush=True)
                     print("Main layer hidden to maintain interactive performance.")
                     print("Options:")
                     print("  1. Set `cluster=True` for point clustering (point data only).")
                     print("  2. Use SnabbKarta.plp() for faster rendering.")
-                    print("  3. Increase `max_records` parameter (may cause slowdown).")
+                    print("  3. Increase `render_limit` parameter (may cause slowdown).")
 
         # Instantiate base map and render all generated layers
         karta = Karta2._base_map()
