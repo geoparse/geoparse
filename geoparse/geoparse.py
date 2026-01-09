@@ -1125,7 +1125,7 @@ class GamlaKarta:
         )
 
 
-class Karta2:
+class Karta:
     @staticmethod
     def _base_map() -> folium.Map:
         """
@@ -1313,7 +1313,7 @@ class Karta2:
                 return {
                     "radius": point_radius,
                     # Determine fill color if specified column is present
-                    "fillColor": Karta2._select_color(feature["properties"][point_color])
+                    "fillColor": Karta._select_color(feature["properties"][point_color])
                     if point_color in feature["properties"]
                     else point_color,
                     "fillOpacity": point_opacity,
@@ -1446,7 +1446,7 @@ class Karta2:
 
                 cdf = gpd.GeoDataFrame({"id": cells, "res": res_values, "geometry": geoms}, crs="EPSG:4326")
 
-                layer = Karta2._create_plp_layer(cdf, popup_dict={"Cell ID": "id", "Resolution": "res"})
+                layer = Karta._create_plp_layer(cdf, popup_dict={"Cell ID": "id", "Resolution": "res"})
                 cell_layers.append(layer)
                 cell_display_names.append(cell_display_name)
 
@@ -1507,7 +1507,7 @@ class Karta2:
         else:  # ring
             gdf["geometry"] = gdf.buffer(buffer_r_max).difference(gdf.buffer(buffer_r_min)).to_crs("EPSG:4326")
 
-        layer = Karta2._create_plp_layer(gdf)
+        layer = Karta._create_plp_layer(gdf)
         return layer
 
     @staticmethod
@@ -1576,7 +1576,7 @@ class Karta2:
 
             if geohash_res > 0 or s2_res > -1 or h3_res > -1:
                 # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
-                cell_layers, cell_display_names = Karta2._add_cell_layers(
+                cell_layers, cell_display_names = Karta._add_cell_layers(
                     gdf,
                     geohash_res=geohash_res,
                     s2_res=s2_res,
@@ -1589,7 +1589,7 @@ class Karta2:
 
             if len(gdf) <= render_limit:
                 # Create main geometry layer
-                main_layer = Karta2._create_plp_layer(
+                main_layer = Karta._create_plp_layer(
                     gdf,
                     poly_fill_color=poly_fill_color,
                     poly_highlight_color=poly_highlight_color,
@@ -1606,13 +1606,13 @@ class Karta2:
                 # Display centroids of the geometry
                 if centroid:
                     cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs=gdf.crs)  # centroid df
-                    centroid_layer = Karta2._create_plp_layer(cdf)
+                    centroid_layer = Karta._create_plp_layer(cdf)
                     layers.append(centroid_layer)
                     layer_names.append("Centroid")
 
                 # Create a buffer or ring layer
                 if buffer_r_max > 0:
-                    buffer_layer = Karta2._add_buffer_layer(
+                    buffer_layer = Karta._add_buffer_layer(
                         gdf,
                         buffer_r_max=buffer_r_max,
                         buffer_r_min=buffer_r_min,
@@ -1630,7 +1630,7 @@ class Karta2:
                     print("  3. Increase `render_limit` parameter (may cause slowdown).")
 
         # Instantiate base map and render all generated layers
-        karta = Karta2._base_map()
+        karta = Karta._base_map()
         for layer, layer_name in zip(layers, layer_names):
             folium.FeatureGroup(name=layer_name).add_child(layer).add_to(karta)
         karta.fit_bounds(karta.get_bounds())
@@ -1680,7 +1680,7 @@ class Karta2:
                 palette="YlOrRd",
             )
         """
-        karta = Karta2._base_map()  # Create a base map using the bounding coordinates
+        karta = Karta._base_map()  # Create a base map using the bounding coordinates
 
         if bins is None:
             bins = np.quantile(mdf[columns[1]].dropna(), [0, 0.25, 0.5, 0.75, 0.98, 1])
@@ -1777,7 +1777,7 @@ class Karta2:
 
         if bins is None:
             bins = np.quantile(mdf["count"].dropna(), [0, 0.25, 0.5, 0.75, 0.98, 1])
-        return Karta2.choropleth(
+        return Karta.choropleth(
             mdf,
             columns=[poly_id, "count"],
             bins=bins,
@@ -4618,4 +4618,4 @@ class SpatialOps:
         return None
 
 
-plp = GamlaKarta.plp
+plp = Karta.plp
