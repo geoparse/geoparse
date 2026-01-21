@@ -121,7 +121,12 @@ class Karta:
         return karta
 
     @staticmethod
-    def _select_color(col: int | float | str, head: int | None = None, tail: int | None = None) -> str:
+    def _select_color(
+        col: int | float | str,
+        head: int | None = None,
+        tail: int | None = None,
+        palette: list = None,
+    ) -> str:
         """
         Generates a consistent color based on the input column value by mapping it to a predefined color palette.
 
@@ -160,33 +165,35 @@ class Karta:
         >>> Karta._select_color("Example", head=0, tail=3)
         '#e12348'  # Bright Red from the palette
         """
-        # Predefined color palette
-        palette = [
-            "#e6194b",  # red
-            "#4363d8",  # blue
-            "#3cb44b",  # green
-            "#800000",  # maroon (dark red)
-            "#008080",  # teal (dark green)
-            "#000080",  # navy (dark blue)
-            "#f58231",  # orange
-            "#911eb4",  # purple
-            "#808000",  # olive
-            "#9a6324",  # brown
-            "#f032e6",  # magenta
-            "#dfb119",  # dark yellow
-            "#42d4f4",  # cyan
-            "#808080",  # grey
-            "#e12348",  # Bright Red
-            "#dc2c46",  # Strong Red
-            "#d73644",  # Vivid Red
-            "#cd4a40",  # Deep Red
-            "#c8543e",  # Intense Red
-            "#c25e3c",  # Fire Red
-            "#bd683a",  # Scarlet
-            "#b77238",  # Fiery Orange
-            "#b27c36",  # Tangerine
-            "#ad8634",  # Burnt Orange
-        ]
+
+        if not palette:
+            # Predefined color palette
+            palette = [
+                "#e6194b",  # red
+                "#4363d8",  # blue
+                "#3cb44b",  # green
+                "#800000",  # maroon (dark red)
+                "#008080",  # teal (dark green)
+                "#000080",  # navy (dark blue)
+                "#f58231",  # orange
+                "#911eb4",  # purple
+                "#808000",  # olive
+                "#9a6324",  # brown
+                "#f032e6",  # magenta
+                "#dfb119",  # dark yellow
+                "#42d4f4",  # cyan
+                "#808080",  # grey
+                "#e12348",  # Bright Red
+                "#dc2c46",  # Strong Red
+                "#d73644",  # Vivid Red
+                "#cd4a40",  # Deep Red
+                "#c8543e",  # Intense Red
+                "#c25e3c",  # Fire Red
+                "#bd683a",  # Scarlet
+                "#b77238",  # Fiery Orange
+                "#b27c36",  # Tangerine
+                "#ad8634",  # Burnt Orange
+            ]
 
         # Handle NaN (return black)
         if col is None or (isinstance(col, float) and math.isnan(col)):
@@ -211,6 +218,7 @@ class Karta:
         line_width: int = 3,  # in pixels
         poly_fill_color: str = "red",
         poly_highlight_color: str = "green",
+        palette: list = None,
         popup_dict: dict = None,
     ) -> folium.GeoJson:
         # Style function to apply to the polygon
@@ -220,7 +228,7 @@ class Karta:
                 return {
                     "radius": point_radius,
                     # Determine fill color if specified column is present
-                    "fillColor": Karta._select_color(feature["properties"][point_color])
+                    "fillColor": Karta._select_color(col=feature["properties"][point_color], palette=palette)
                     if point_color in feature["properties"]
                     else point_color,
                     "fillOpacity": point_opacity,
@@ -435,6 +443,7 @@ class Karta:
         point_color: str = "blue",
         point_radius: int | str = 5,
         point_opacity: float = 1.0,
+        palette: list = None,
         heatmap: bool = False,
         heatmap_radius: int = 12,
         cluster: bool = False,
@@ -505,6 +514,7 @@ class Karta:
                     point_opacity=point_opacity,
                     line_color=line_color,
                     line_width=line_width,
+                    palette=palette,
                     popup_dict=popup_dict,
                 )
                 layers.append(main_layer)
