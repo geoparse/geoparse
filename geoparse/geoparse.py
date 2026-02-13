@@ -1461,6 +1461,755 @@ class Karta2:
             # Return a default map
             return Karta2._base_map(map_style=map_style, height=height, width=width)
 
+    @staticmethod
+    def create_3d_column_map(
+        data: pd.DataFrame,
+        lat_col: str = "latitude",
+        lon_col: str = "longitude",
+        height_col: str = "value",
+        radius: int = 1000,
+        elevation_scale: float = 100,
+        color_gradient: str = "blue_to_red",
+        pitch: float = 45,
+        bearing: float = 30,
+        zoom: float = 10,
+        tooltip_fields: Optional[List[str]] = None,
+    ) -> pdk.Deck:
+        """
+        Create a 3D column map where column height represents value.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            Input data with lat/lon and values
+        lat_col : str
+            Latitude column name
+        lon_col : str
+            Longitude column name
+        height_col : str
+            Column containing values for height
+        radius : int
+            Column radius in meters
+        elevation_scale : float
+            Scale factor for height
+        color_gradient : str
+            Name of color gradient ('blue_to_red', 'purple_to_yellow', 'heatmap', 'terrain')
+        pitch : float
+            Camera tilt angle (0-90°)
+        bearing : float
+            Camera rotation (0-360°)
+        zoom : float
+            Initial zoom level
+        tooltip_fields : List[str], optional
+            Fields to show in tooltip
+
+        Returns
+        -------
+        pdk.Deck
+            PyDeck Deck object
+        """
+        # Get color gradient
+        #        color_range = Karta2.HEIGHT_GRADIENTS.get(
+        #            color_gradient,
+        #            Karta2.HEIGHT_GRADIENTS['blue_to_red']
+        #        )
+
+        # Prepare data
+        df = data.copy()
+        df["height"] = df[height_col] * elevation_scale
+        max_val = df[height_col].max()
+
+        # Create column layer
+        column_layer = pdk.Layer(
+            "ColumnLayer",
+            data=df,
+            get_position=f"[{lon_col}, {lat_col}]",
+            get_elevation="height",
+            elevation_scale=1,
+            radius=radius,
+            get_fill_color=[
+                f"255 * ({height_col} / {max_val})",
+                f"100 * ({height_col} / {max_val})",
+                f"50 * (1 - {height_col} / {max_val})",
+                200,
+            ],
+            pickable=True,
+            auto_highlight=True,
+            extruded=True,
+            coverage=1,
+            id="3d-columns",
+        )
+
+        # Prepare tooltip
+        if tooltip_fields:
+            tooltip_text = "<br/>".join([f"{field}: {{{field}}}" for field in tooltip_fields])
+        else:
+            tooltip_text = f"Value: {{{height_col}}}<br/>Height: {{{height_col}}}"
+
+        # Calculate view state
+        view_state = pdk.ViewState(
+            latitude=df[lat_col].mean(), longitude=df[lon_col].mean(), zoom=zoom, pitch=pitch, bearing=bearing
+        )
+
+        # Create deck
+        deck = Karta2._base_map(initial_view_state=view_state, map_style="light", height=600, width=800)
+        deck.layers = [column_layer]
+        deck.tooltip = {"text": tooltip_text}
+
+        return deck
+
+    @staticmethod
+    def create_3d_hexagon_map(
+        df: pd.DataFrame,
+        lat_col: str = "latitude",
+        lon_col: str = "longitude",
+        weight_col: str = "value",
+        elevation_range: List[int] = None,
+        radius: int = 500,
+        coverage: float = 0.9,
+        color_gradient: str = "blue_to_red",
+        pitch: float = 60,
+        bearing: float = 45,
+        zoom: float = 12,
+    ) -> pdk.Deck:
+        """
+        Create 3D hexagon heatmap with variable heights.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Input data with lat/lon
+        lat_col : str
+            Latitude column name
+        lon_col : str
+            Longitude column name
+        weight_col : str
+            Column containing values for weighting
+        elevation_range : List[int]
+            Min/max elevation in pixels
+        radius : int
+            Hexagon radius in meters
+        coverage : float
+            How much of cell to fill (0-1)
+        color_gradient : str
+            Name of color gradient
+        pitch : float
+            Camera tilt angle
+        bearing : float
+            Camera rotation
+        zoom : float
+            Initial zoom level
+
+        Returns
+        -------
+        pdk.Deck
+            PyDeck Deck object
+        """
+        # Get color gradient
+        if elevation_range is None:
+            elevation_range = [100, 5000]
+        color_range = Karta2.HEIGHT_GRADIENTS.get(color_gradient, Karta2.HEIGHT_GRADIENTS["blue_to_red"])
+
+        # Hexagon layer with 3D extrusion
+        hexagon_layer = pdk.Layer(
+            "HexagonLayer",
+            data=df,
+            get_position=f"[{lon_col}, {lat_col}]",
+            radius=radius,
+            elevation_scale=50,
+            elevation_range=elevation_range,
+            get_elevation_weight=weight_col,
+            extruded=True,
+            coverage=coverage,
+            pickable=True,
+            auto_highlight=True,
+            color_range=color_range,
+            color_aggregation="SUM",
+            elevation_aggregation="SUM",
+            id="3d-hexagon",
+        )
+
+        view_state = pdk.ViewState(
+            latitude=df[lat_col].mean(), longitude=df[lon_col].mean(), zoom=zoom, pitch=pitch, bearing=bearing
+        )
+
+        deck = Karta2._base_map(initial_view_state=view_state, map_style="light", height=600, width=800)
+        deck.layers = [hexagon_layer]
+        deck.tooltip = {"text": "Count: {elevation_value}"}
+
+        return deck
+
+    @staticmethod
+    def create_3d_grid_map(
+        df: pd.DataFrame,
+        lat_col: str = "latitude",
+        lon_col: str = "longitude",
+        weight_col: str = "value",
+        cell_size: int = 500,
+        elevation_scale: float = 50,
+        color_gradient: str = "blue_to_red",
+        pitch: float = 60,
+        bearing: float = 30,
+        zoom: float = 13,
+    ) -> pdk.Deck:
+        """
+        Create 3D grid map with extruded cells.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Input data with lat/lon
+        lat_col : str
+            Latitude column name
+        lon_col : str
+            Longitude column name
+        weight_col : str
+            Column containing values for weighting
+        cell_size : int
+            Grid cell size in meters
+        elevation_scale : float
+            Scale factor for elevation
+        color_gradient : str
+            Name of color gradient
+        pitch : float
+            Camera tilt angle
+        bearing : float
+            Camera rotation
+        zoom : float
+            Initial zoom level
+
+        Returns
+        -------
+        pdk.Deck
+            PyDeck Deck object
+        """
+        # Get color gradient
+        color_range = Karta2.HEIGHT_GRADIENTS.get(color_gradient, Karta2.HEIGHT_GRADIENTS["blue_to_red"])
+
+        grid_layer = pdk.Layer(
+            "GridLayer",
+            data=df,
+            get_position=f"[{lon_col}, {lat_col}]",
+            cell_size=cell_size,
+            elevation_scale=elevation_scale,
+            extruded=True,
+            get_elevation_weight=weight_col,
+            pickable=True,
+            auto_highlight=True,
+            color_range=color_range,
+            id="3d-grid",
+        )
+
+        view_state = pdk.ViewState(
+            latitude=df[lat_col].mean(), longitude=df[lon_col].mean(), zoom=zoom, pitch=pitch, bearing=bearing
+        )
+
+        deck = Karta2._base_map(initial_view_state=view_state, map_style="light", height=600, width=800)
+        deck.layers = [grid_layer]
+
+        return deck
+
+    @staticmethod
+    def create_gradient_3d_map(
+        df: pd.DataFrame,
+        lat_col: str = "latitude",
+        lon_col: str = "longitude",
+        height_col: str = "value",
+        color_col: str = "category",
+        category_colors: Optional[Dict] = None,
+        radius: int = 200,
+        elevation_scale: float = 10,
+        pitch: float = 60,
+        bearing: float = 0,
+        zoom: float = 12,
+    ) -> pdk.Deck:
+        """
+        Create 3D columns with custom colors and gradient heights.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Input data with lat/lon
+        lat_col : str
+            Latitude column name
+        lon_col : str
+            Longitude column name
+        height_col : str
+            Column containing values for height
+        color_col : str
+            Column containing category for colors
+        category_colors : Dict, optional
+            Dictionary mapping categories to RGB colors
+        radius : int
+            Column radius in meters
+        elevation_scale : float
+            Scale factor for height
+        pitch : float
+            Camera tilt angle
+        bearing : float
+            Camera rotation
+        zoom : float
+            Initial zoom level
+
+        Returns
+        -------
+        pdk.Deck
+            PyDeck Deck object
+        """
+        # Default category colors
+        if category_colors is None:
+            category_colors = {
+                "A": [255, 50, 50, 200],  # Red
+                "B": [50, 255, 50, 200],  # Green
+                "C": [50, 50, 255, 200],  # Blue
+                "D": [255, 255, 50, 200],  # Yellow
+                "E": [255, 50, 255, 200],  # Magenta
+            }
+
+        # Prepare data
+        data = df.copy()
+        data["height"] = data[height_col] * elevation_scale
+
+        # Add color based on category
+        data["color"] = data[color_col].map(category_colors).fillna([200, 200, 200, 200])
+
+        column_layer = pdk.Layer(
+            "ColumnLayer",
+            data=data,
+            get_position=f"[{lon_col}, {lat_col}]",
+            get_elevation="height",
+            elevation_scale=1,
+            radius=radius,
+            get_fill_color="color",
+            pickable=True,
+            extruded=True,
+            coverage=0.9,
+            id="gradient-columns",
+        )
+
+        # Add a base layer of points
+        point_layer = pdk.Layer(
+            "ScatterplotLayer",
+            data=data,
+            get_position=f"[{lon_col}, {lat_col}]",
+            get_radius=radius // 2,
+            get_fill_color=[255, 255, 255, 100],
+            pickable=False,
+            id="base-points",
+        )
+
+        view_state = pdk.ViewState(
+            latitude=data[lat_col].mean(), longitude=data[lon_col].mean(), zoom=zoom, pitch=pitch, bearing=bearing
+        )
+
+        deck = Karta2._base_map(initial_view_state=view_state, map_style="light", height=600, width=800)
+        deck.layers = [column_layer, point_layer]
+
+        return deck
+
+    @staticmethod
+    def create_h3_3d_map(
+        df: pd.DataFrame,
+        lat_col: str = "latitude",
+        lon_col: str = "longitude",
+        value_col: str = "value",
+        resolution: int = 8,
+        color_gradient: str = "blue_to_red",
+        pitch: float = 60,
+        bearing: float = 30,
+        zoom: float = 12,
+    ) -> pdk.Deck:
+        """
+        Aggregate points into H3 hexagons and visualize in 3D.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Input data with lat/lon
+        lat_col : str
+            Latitude column name
+        lon_col : str
+            Longitude column name
+        value_col : str
+            Column containing values to aggregate
+        resolution : int
+            H3 resolution (0-15)
+        color_gradient : str
+            Name of color gradient
+        pitch : float
+            Camera tilt angle
+        bearing : float
+            Camera rotation
+        zoom : float
+            Initial zoom level
+
+        Returns
+        -------
+        pdk.Deck
+            PyDeck Deck object
+        """
+        # Convert points to H3 indexes
+        df["h3_index"] = df.apply(lambda row: h3.geo_to_h3(row[lat_col], row[lon_col], resolution), axis=1)
+
+        # Aggregate values by H3 index
+        h3_agg = df.groupby("h3_index").agg({value_col: ["sum", "count", "mean"]}).round(2)
+        h3_agg.columns = ["total", "count", "mean"]
+        h3_agg = h3_agg.reset_index()
+
+        # Get hexagon boundaries and calculate centers
+        hex_features = []
+        for _idx, row in h3_agg.iterrows():
+            h3_idx = row["h3_index"]
+
+            # Get hexagon boundary
+            boundary = h3.h3_to_geo_boundary(h3_idx)
+            # Format for polygon (lon, lat)
+            polygon_coords = [[lon, lat] for lat, lon in boundary]
+            polygon_coords.append(polygon_coords[0])  # Close polygon
+
+            # Calculate center
+            center = h3.h3_to_geo(h3_idx)
+
+            hex_features.append(
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Polygon", "coordinates": [polygon_coords]},
+                    "properties": {
+                        "h3_index": h3_idx,
+                        "total": row["total"],
+                        "count": row["count"],
+                        "mean": row["mean"],
+                        "center_lat": center[0],
+                        "center_lon": center[1],
+                        "height": row["total"] * 100,  # Scale height
+                    },
+                }
+            )
+
+        # Get color gradient
+        Karta2.HEIGHT_GRADIENTS.get(color_gradient, Karta2.HEIGHT_GRADIENTS["blue_to_red"])
+
+        # Create GeoJSON
+        geojson = {"type": "FeatureCollection", "features": hex_features}
+
+        max_total = max([f["properties"]["total"] for f in hex_features]) if hex_features else 1
+
+        # Create 3D polygon layer
+        polygon_layer = pdk.Layer(
+            "GeoJsonLayer",
+            data=geojson,
+            extruded=True,
+            wireframe=True,
+            get_elevation="properties.height",
+            get_fill_color=[f"255 * properties.total / {max_total}", f"100 * properties.total / {max_total}", "50", 200],
+            get_line_color=[0, 0, 0, 100],
+            line_width_min_pixels=1,
+            pickable=True,
+            auto_highlight=True,
+            id="h3-3d",
+        )
+
+        # Add points layer for original data
+        point_layer = pdk.Layer(
+            "ScatterplotLayer",
+            data=df,
+            get_position=f"[{lon_col}, {lat_col}]",
+            get_radius=20,
+            get_fill_color=[255, 255, 255, 50],
+            pickable=False,
+            id="original-points",
+        )
+
+        # Calculate center
+        center_lat = df[lat_col].mean()
+        center_lon = df[lon_col].mean()
+
+        view_state = pdk.ViewState(latitude=center_lat, longitude=center_lon, zoom=zoom, pitch=pitch, bearing=bearing)
+
+        deck = Karta2._base_map(initial_view_state=view_state, map_style="light", height=600, width=800)
+        deck.layers = [polygon_layer, point_layer]
+        deck.tooltip = {
+            "html": "<b>H3 Index:</b> {h3_index}<br/>"
+            "<b>Total Value:</b> {total}<br/>"
+            "<b>Count:</b> {count}<br/>"
+            "<b>Mean:</b> {mean}"
+        }
+
+        return deck
+
+    @staticmethod
+    def create_multi_layer_3d_map(
+        layers_data: List[Dict],
+        pitch: float = 65,
+        bearing: float = 45,
+        zoom: float = 13,
+    ) -> pdk.Deck:
+        """
+        Create multiple 3D layers with different heights and colors.
+
+        Parameters
+        ----------
+        layers_data : List[Dict]
+            List of layer configurations, each with:
+            - 'data': DataFrame with lat/lon
+            - 'lat_col': latitude column
+            - 'lon_col': longitude column
+            - 'value_col': value column for height
+            - 'color': RGB color list
+            - 'radius': column radius
+            - 'elevation_scale': height scale factor
+            - 'name': layer name
+        pitch : float
+            Camera tilt angle
+        bearing : float
+            Camera rotation
+        zoom : float
+            Initial zoom level
+
+        Returns
+        -------
+        pdk.Deck
+            PyDeck Deck object
+        """
+        layers = []
+        all_points = []
+
+        for layer_config in layers_data:
+            df = layer_config["data"].copy()
+            all_points.append(df)
+
+            df["height"] = df[layer_config["value_col"]] * layer_config.get("elevation_scale", 10)
+
+            layer = pdk.Layer(
+                "ColumnLayer",
+                data=df,
+                get_position=f"[{layer_config['lon_col']}, {layer_config['lat_col']}]",
+                get_elevation="height",
+                elevation_scale=1,
+                radius=layer_config.get("radius", 200),
+                get_fill_color=layer_config["color"],
+                extruded=True,
+                pickable=True,
+                id=layer_config.get("name", "layer"),
+            )
+            layers.append(layer)
+
+        # Combine all points for view calculation
+        all_df = pd.concat(all_points, ignore_index=True)
+
+        view_state = pdk.ViewState(
+            latitude=all_df["latitude"].mean(), longitude=all_df["longitude"].mean(), zoom=zoom, pitch=pitch, bearing=bearing
+        )
+
+        deck = Karta2._base_map(initial_view_state=view_state, map_style="light", height=600, width=800)
+        deck.layers = layers
+
+        return deck
+
+    @staticmethod
+    def create_animated_3d_map(
+        df: pd.DataFrame,
+        lat_col: str = "latitude",
+        lon_col: str = "longitude",
+        value_col: str = "value",
+        time_col: str = "timestamp",
+        radius: int = 200,
+        elevation_scale: float = 10,
+        pitch: float = 60,
+        bearing: float = 0,
+        zoom: float = 12,
+    ) -> pdk.Deck:
+        """
+        Create animated 3D map with changing heights over time.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Input data with lat/lon, values, and timestamps
+        lat_col : str
+            Latitude column name
+        lon_col : str
+            Longitude column name
+        value_col : str
+            Column containing values for height
+        time_col : str
+            Column containing timestamps
+        radius : int
+            Column radius in meters
+        elevation_scale : float
+            Scale factor for height
+        pitch : float
+            Camera tilt angle
+        bearing : float
+            Camera rotation
+        zoom : float
+            Initial zoom level
+
+        Returns
+        -------
+        pdk.Deck
+            PyDeck Deck object
+        """
+        # Prepare data
+        df = df.copy()
+        df["height"] = df[value_col] * elevation_scale
+        max_val = df[value_col].max()
+
+        # Create column layer
+        column_layer = pdk.Layer(
+            "ColumnLayer",
+            data=df,
+            get_position=f"[{lon_col}, {lat_col}]",
+            get_elevation="height",
+            elevation_scale=1,
+            radius=radius,
+            get_fill_color=[
+                f"255 * {value_col} / {max_val}",
+                f"100 * {value_col} / {max_val}",
+                f"50 * (1 - {value_col} / {max_val})",
+                200,
+            ],
+            extruded=True,
+            pickable=True,
+            auto_highlight=True,
+            id="animated-columns",
+        )
+
+        view_state = pdk.ViewState(
+            latitude=df[lat_col].mean(), longitude=df[lon_col].mean(), zoom=zoom, pitch=pitch, bearing=bearing
+        )
+
+        deck = Karta2._base_map(initial_view_state=view_state, map_style="light", height=600, width=800)
+        deck.layers = [column_layer]
+
+        return deck
+
+    @staticmethod
+    def stats19_3d_visualization(
+        crashes_gdf: gpd.GeoDataFrame,
+        aggregation: str = "hexagon",
+        value_field: str = "number_of_casualties",
+        resolution: int = 8,
+        color_gradient: str = "blue_to_red",
+        pitch: float = 60,
+    ) -> pdk.Deck:
+        """
+        Visualize STATS19 crash data in 3D with height representing casualties.
+
+        Parameters
+        ----------
+        crashes_gdf : gpd.GeoDataFrame
+            GeoDataFrame with crash locations and attributes
+        aggregation : str
+            Aggregation method: 'hexagon', 'grid', 'column'
+        value_field : str
+            Field containing values to visualize (casualties, severity, etc.)
+        resolution : int
+            H3 resolution for hexagon aggregation
+        color_gradient : str
+            Name of color gradient
+        pitch : float
+            Camera tilt angle
+
+        Returns
+        -------
+        pdk.Deck
+            PyDeck Deck object
+        """
+        # Prepare data
+        df = pd.DataFrame(
+            {
+                "latitude": crashes_gdf.geometry.y,
+                "longitude": crashes_gdf.geometry.x,
+                "value": crashes_gdf[value_field].astype(float),
+                "severity": crashes_gdf["collision_severity"] if "collision_severity" in crashes_gdf.columns else "Unknown",
+            }
+        )
+
+        if aggregation == "hexagon":
+            return Karta2.create_3d_hexagon_map(
+                df,
+                lat_col="latitude",
+                lon_col="longitude",
+                weight_col="value",
+                radius=500,
+                color_gradient=color_gradient,
+                pitch=pitch,
+            )
+
+        elif aggregation == "grid":
+            return Karta2.create_3d_grid_map(
+                df,
+                lat_col="latitude",
+                lon_col="longitude",
+                weight_col="value",
+                cell_size=500,
+                color_gradient=color_gradient,
+                pitch=pitch,
+            )
+
+        elif aggregation == "h3":
+            return Karta2.create_h3_3d_map(
+                df,
+                lat_col="latitude",
+                lon_col="longitude",
+                value_col="value",
+                resolution=resolution,
+                color_gradient=color_gradient,
+                pitch=pitch,
+            )
+
+        else:  # column
+            # Aggregate by location
+            location_agg = (
+                df.groupby(["latitude", "longitude"])
+                .agg({"value": "sum", "severity": lambda x: x.mode()[0] if not x.empty else "Unknown"})
+                .reset_index()
+            )
+
+            return Karta2.create_3d_column_map(
+                location_agg,
+                lat_col="latitude",
+                lon_col="longitude",
+                height_col="value",
+                radius=200,
+                elevation_scale=20,
+                color_gradient=color_gradient,
+                pitch=pitch,
+            )
+
+    @staticmethod
+    def add_lighting_effect(deck: pdk.Deck) -> pdk.Deck:
+        """
+        Add lighting effects to enhance 3D visualization.
+
+        Parameters
+        ----------
+        deck : pdk.Deck
+            PyDeck Deck object
+
+        Returns
+        -------
+        pdk.Deck
+            Deck with lighting effects
+        """
+        deck.effects = [
+            {
+                "@@type": "LightingEffect",
+                "shadowColor": [0, 0, 0, 0.5],
+                "ambientLight": {"@@type": "AmbientLight", "color": [255, 255, 255], "intensity": 1.0},
+                "directionalLights": [
+                    {
+                        "@@type": "DirectionalLight",
+                        "direction": [1, 1, -2],
+                        "color": [255, 255, 255],
+                        "intensity": 2.0,
+                    }
+                ],
+            }
+        ]
+        return deck
+
 
 class SnabbKarta:
     @staticmethod
