@@ -1467,16 +1467,17 @@ class Karta2:
         lat_col: str = "latitude",
         lon_col: str = "longitude",
         height_col: str = "value",
-        radius: int = 1000,
-        elevation_scale: float = 100,
+        radius: int = 50,
+        elevation_scale: float = 10,
         color_gradient: str = "blue_to_red",
-        pitch: float = 45,
-        bearing: float = 30,
-        zoom: float = 10,
+        pitch: float = 85,
+        bearing: float = 0,
+        zoom: float = 5,
         tooltip_fields: Optional[List[str]] = None,
     ) -> pdk.Deck:
         """
         Create a 3D column map where column height represents value.
+        Colors transition from blue (low values) to red (high values).
 
         Parameters
         ----------
@@ -1508,18 +1509,14 @@ class Karta2:
         pdk.Deck
             PyDeck Deck object
         """
-        # Get color gradient
-        #        color_range = Karta2.HEIGHT_GRADIENTS.get(
-        #            color_gradient,
-        #            Karta2.HEIGHT_GRADIENTS['blue_to_red']
-        #        )
-
         # Prepare data
         df = data.copy()
         df["height"] = df[height_col] * elevation_scale
         max_val = df[height_col].max()
+        min_val = df[height_col].min()
+        val_range = max_val - min_val if max_val > min_val else 1  # Avoid division by zero
 
-        # Create column layer
+        # Create column layer with blue (low) to red (high) color gradient
         column_layer = pdk.Layer(
             "ColumnLayer",
             data=df,
@@ -1528,10 +1525,10 @@ class Karta2:
             elevation_scale=1,
             radius=radius,
             get_fill_color=[
-                f"255 * ({height_col} / {max_val})",
-                f"100 * ({height_col} / {max_val})",
-                f"50 * (1 - {height_col} / {max_val})",
-                200,
+                f"255 * ({height_col} - {min_val}) / {val_range}",  # Red component increases with value
+                "0",  # Green component (minimal)
+                f"255 * (1 - ({height_col} - {min_val}) / {val_range})",  # Blue component decreases with value
+                "200",  # Alpha (transparency)
             ],
             pickable=True,
             auto_highlight=True,
