@@ -46,7 +46,7 @@ from shapely.prepared import prep
 
 class Karta:
     @staticmethod
-    def _base_map(sw=None, ne=None, add_measurement_tools=True) -> folium.Map:
+    def _base_map(add_measurement_tools=True) -> folium.Map:
         """
         Creates a base map with multiple tile layers and fits the map to the specified bounding box.
 
@@ -119,10 +119,6 @@ class Karta:
         </div>
         """)
         karta.get_root().html.add_child(attribution)
-
-        # Fit bounds if provided
-        if sw and ne:
-            karta.fit_bounds([sw, ne])
 
         return karta
 
