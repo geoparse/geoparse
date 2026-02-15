@@ -46,7 +46,7 @@ from shapely.prepared import prep
 
 class Karta:
     @staticmethod
-    def _base_map(add_measurement_tools=True) -> folium.Map:
+    def _base_map() -> folium.Map:
         """
         Creates a base map with multiple tile layers and fits the map to the specified bounding box.
 
@@ -56,8 +56,6 @@ class Karta:
             The southwest coordinate [latitude, longitude] of the bounding box to fit the map view.
         ne : list, optional
             The northeast coordinate [latitude, longitude] of the bounding box to fit the map view.
-        add_measurement_tools : bool, default=True
-            Whether to add area selection and measurement tools to the map.
 
         Returns
         -------
@@ -97,9 +95,8 @@ class Karta:
         for item in tiles:
             folium.TileLayer(item, name=tiles[item], max_zoom=21).add_to(karta)
 
-        # Add measurement tools if requested - BUT DON'T ADD LAYER CONTROL YET
-        if add_measurement_tools:
-            Karta._add_folium_measurement_tools(karta)
+        # Add measurement tools
+        Karta._add_folium_measurement_tools(karta)
 
         attribution = Element("""
         <div style="
