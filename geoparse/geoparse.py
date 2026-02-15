@@ -65,7 +65,7 @@ class Karta:
             A Folium map object with multiple tile layers and optional measurement tools.
         """
         # Initialize the base map without any default tiles
-        karta = folium.Map(tiles=None)
+        karta = folium.Map(tiles=None, control_scale=True)
 
         # Add OpenStreetMap (OSM) tile layer
         folium.TileLayer("openstreetmap", name="OSM", max_zoom=19).add_to(karta)
@@ -105,7 +105,7 @@ class Karta:
         <div style="
             position: fixed;
             bottom: 0px;
-            left: 0px;
+            left: 120px;
             z-index: 9999;
             background: rgba(255,255,255,0.8);
             padding: 4px 8px;
