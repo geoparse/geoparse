@@ -125,46 +125,8 @@ class Karta:
         Add area selection and measurement tools using folium plugins.
         This version preserves the existing layer control functionality.
         """
-        # 1. Add Draw plugin for area selection - with custom feature group
-        draw = plugins.Draw(
-            export=True,
-            filename="data.geojson",
-            position="topleft",
-            draw_options={
-                "polyline": {
-                    "allowIntersection": False,
-                    "drawError": {"color": "#f357a1", "message": "Line cannot intersect itself!"},
-                    "guidelineDistance": 20,
-                    "metric": True,
-                    "shapeOptions": {"color": "#f357a1", "weight": 3},
-                    "zIndexOffset": 2000,
-                },
-                "polygon": {
-                    "allowIntersection": False,
-                    "drawError": {"color": "#f357a1", "message": "Polygon cannot intersect itself!"},
-                    "guidelineDistance": 20,
-                    "metric": True,
-                    "shapeOptions": {"color": "#f357a1", "weight": 3},
-                    "showArea": True,
-                    "zIndexOffset": 2000,
-                },
-                "circle": {
-                    "metric": True,
-                    "shapeOptions": {"color": "#f357a1", "weight": 3},
-                    "showRadius": True,
-                    "zIndexOffset": 2000,
-                },
-                "rectangle": {"metric": True, "shapeOptions": {"color": "#f357a1", "weight": 3}, "zIndexOffset": 2000},
-                "marker": {"zIndexOffset": 2000},
-                "circlemarker": False,
-            },
-            edit_options={"edit": True, "remove": True, "poly": {"allowIntersection": False}},
-        )
 
-        # Add draw control to map
-        draw.add_to(map_obj)
-
-        # 2. Add Measure Control plugin
+        # Add Measure Control plugin
         measure_control = plugins.MeasureControl(
             position="topleft",
             primary_length_unit="kilometers",
@@ -176,7 +138,7 @@ class Karta:
         )
         measure_control.add_to(map_obj)
 
-        # 3. Add Mouse Position plugin for coordinate display
+        # Mouse Position plugin for coordinate display
         mouse_position = plugins.MousePosition(
             position="bottomright",
             separator=" | ",
@@ -189,7 +151,7 @@ class Karta:
         )
         mouse_position.add_to(map_obj)
 
-        # 4. Add JavaScript that works with existing layers
+        # Add JavaScript that works with existing layers
         measurement_js = """
         <script>
         // Wait for map to be ready
