@@ -275,38 +275,6 @@ class Karta:
                 });
             }
         }, 1000);
-
-        // Add a custom clear button that only clears drawn items
-        setTimeout(function() {
-            var clearButton = document.createElement('div');
-            clearButton.innerHTML = '🗑️ Clear Drawings';
-            clearButton.style.cssText = `
-                position: absolute;
-                top: 10px;
-                left: 180px;
-                z-index: 1000;
-                background: white;
-                padding: 6px 10px;
-                border-radius: 4px;
-                box-shadow: 0 1px 5px rgba(0,0,0,0.4);
-                cursor: pointer;
-                font-size: 12px;
-                border: 2px solid rgba(0,0,0,0.2);
-                background-clip: padding-box;
-                font-family: Arial, sans-serif;
-            `;
-            clearButton.onclick = function() {
-                if (window.drawnItems) {
-                    window.drawnItems.clearLayers();
-                }
-                window.map.closePopup();
-            };
-
-            var mapContainer = document.querySelector('.folium-map');
-            if (mapContainer) {
-                mapContainer.appendChild(clearButton);
-            }
-        }, 1500);
         </script>
         """
 
