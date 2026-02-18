@@ -50,12 +50,11 @@ class Karta:
         """
         Creates a base map with multiple tile layers and fits the map to the specified bounding box.
 
-        Parameters
-        ----------
-        sw : list, optional
-            The southwest coordinate [latitude, longitude] of the bounding box to fit the map view.
-        ne : list, optional
-            The northeast coordinate [latitude, longitude] of the bounding box to fit the map view.
+        This function initializes a Folium map object with multiple tile layers, including:
+        - `Bright Mode` (CartoDB Positron)
+        - `Dark Mode` (CartoDB Dark Matter)
+        - `Satellite` (Esri World Imagery)
+        - `OpenStreetMap` (OSM)
 
         Returns
         -------
@@ -120,7 +119,7 @@ class Karta:
         return karta
 
     @staticmethod
-    def _add_folium_measurement_tools(map_obj):
+    def _add_measurement_tools(karta):
         """
         Add area selection and measurement tools using folium plugins.
         This version preserves the existing layer control functionality.
@@ -136,7 +135,7 @@ class Karta:
             active_color="#f357a1",
             completed_color="#0066ff",
         )
-        measure_control.add_to(map_obj)
+        measure_control.add_to(karta)
 
         # Mouse Position plugin for coordinate display
         mouse_position = plugins.MousePosition(
@@ -149,7 +148,7 @@ class Karta:
             lat_formatter="function(num) {return L.Util.formatNum(num, 5);}",
             lng_formatter="function(num) {return L.Util.formatNum(num, 5);}",
         )
-        mouse_position.add_to(map_obj)
+        mouse_position.add_to(karta)
 
         # Add JavaScript that works with existing layers
         measurement_js = """
@@ -312,7 +311,7 @@ class Karta:
         """
 
         # Add the JavaScript to the map
-        map_obj.get_root().html.add_child(Element(measurement_js))
+        karta.get_root().html.add_child(Element(measurement_js))
 
         # Add minimal CSS
         measurement_css = """
@@ -327,7 +326,7 @@ class Karta:
         </style>
         """
 
-        map_obj.get_root().header.add_child(Element(measurement_css))
+        karta.get_root().header.add_child(Element(measurement_css))
 
     @staticmethod
     def _select_color(
