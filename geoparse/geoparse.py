@@ -95,7 +95,7 @@ class Karta:
             folium.TileLayer(item, name=tiles[item], max_zoom=21).add_to(karta)
 
         # Add measurement tools
-        Karta._add_folium_measurement_tools(karta)
+        Karta._add_measurement_tools(karta)
 
         attribution = Element("""
         <div style="
