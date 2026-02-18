@@ -27,6 +27,7 @@ dependencies = [
     "s2>=0.1.9",
     "h3>=4.3.0",
     "jupyterlab>=4.0.5",
+    "pydeck>=0.9.1",
 ]
 [tool.uv]
 exclude-newer = "2026-02-19T00:00:00Z"
