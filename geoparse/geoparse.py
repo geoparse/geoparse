@@ -56,30 +56,13 @@ class Karta:
         - `Satellite` (Esri World Imagery)
         - `OpenStreetMap` (OSM)
 
-        It then fits the map's view to the bounding box defined by the southwest (`sw`) and northeast (`ne`) coordinates.
-
-        Parameters
-        ----------
-        sw : list
-            The southwest coordinate [latitude, longitude] of the bounding box to fit the map view.
-
-        ne : list
-            The northeast coordinate [latitude, longitude] of the bounding box to fit the map view.
-
         Returns
         -------
         folium.Map
-            A Folium map object with multiple tile layers and the view fitted to the provided bounding box.
-
-        Examples
-        --------
-        >>> sw = [51.2652, -0.5426]  # Southwest coordinate (London, UK)
-        >>> ne = [51.7225, 0.2824]  # Northeast coordinate (London, UK)
-        >>> karta = Karta._base_map(sw, ne)
-        >>> karta.save("map.html")  # Save the map to an HTML file
+            A Folium map object with multiple tile layers and optional measurement tools.
         """
         # Initialize the base map without any default tiles
-        karta = folium.Map(tiles=None)
+        karta = folium.Map(tiles=None, control_scale=True)
 
         # Add OpenStreetMap (OSM) tile layer
         folium.TileLayer("openstreetmap", name="OSM", max_zoom=19).add_to(karta)
@@ -111,11 +94,14 @@ class Karta:
         for item in tiles:
             folium.TileLayer(item, name=tiles[item], max_zoom=21).add_to(karta)
 
+        # Add measurement tools
+        Karta._add_measurement_tools(karta)
+
         attribution = Element("""
         <div style="
             position: fixed;
             bottom: 0px;
-            left: 0px;
+            left: 120px;
             z-index: 9999;
             background: rgba(255,255,255,0.8);
             padding: 4px 8px;
@@ -131,6 +117,216 @@ class Karta:
         karta.get_root().html.add_child(attribution)
 
         return karta
+
+    @staticmethod
+    def _add_measurement_tools(karta):
+        """
+        Add area selection and measurement tools using folium plugins.
+        This version preserves the existing layer control functionality.
+        """
+
+        # Add Measure Control plugin
+        measure_control = plugins.MeasureControl(
+            position="topleft",
+            primary_length_unit="kilometers",
+            secondary_length_unit="meters",
+            primary_area_unit="sqkilometers",
+            secondary_area_unit="hectares",
+            active_color="#f357a1",
+            completed_color="#0066ff",
+        )
+        measure_control.add_to(karta)
+
+        # Mouse Position plugin for coordinate display
+        mouse_position = plugins.MousePosition(
+            position="bottomright",
+            separator=" | ",
+            empty_string="NaN",
+            lng_first=True,
+            num_digits=5,
+            prefix="Coordinates:",
+            lat_formatter="function(num) {return L.Util.formatNum(num, 5);}",
+            lng_formatter="function(num) {return L.Util.formatNum(num, 5);}",
+        )
+        mouse_position.add_to(karta)
+
+        # Add JavaScript that works with existing layers
+        measurement_js = """
+        <script>
+        // Wait for map to be ready
+        setTimeout(function() {
+            if (window.map) {
+                // Create a separate feature group for drawn items
+                // This ensures they don't interfere with existing layers
+                if (!window.drawnItems) {
+                    window.drawnItems = new L.FeatureGroup();
+                    window.map.addLayer(window.drawnItems);
+                }
+
+                // Store reference to original layers for layer control
+                var originalLayers = [];
+                window.map.eachLayer(function(layer) {
+                    if (layer !== window.drawnItems &&
+                        !(layer instanceof L.TileLayer) &&
+                        !(layer instanceof L.Control)) {
+                        originalLayers.push(layer);
+                    }
+                });
+
+                // Handle draw created events
+                window.map.on('draw:created', function(e) {
+                    var layer = e.layer;
+                    var type = e.layerType;
+
+                    // Calculate and display measurements
+                    if (type === 'polygon' || type === 'rectangle') {
+                        try {
+                            var area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
+                            var hectares = (area / 10000).toFixed(2);
+                            var sqKm = (area / 1000000).toFixed(2);
+                            var acres = (area * 0.000247105).toFixed(2);
+
+                            layer.bindPopup(
+                                '<b>Area Measurements</b><br>' +
+                                '━━━━━━━━━━━━━━━<br>' +
+                                '📐 ' + sqKm + ' km²<br>' +
+                                '🌾 ' + hectares + ' hectares<br>' +
+                                '🏞️ ' + acres + ' acres<br>' +
+                                '━━━━━━━━━━━━━━━<br>' +
+                                '<small>Click to close</small>'
+                            );
+                        } catch(err) {
+                            console.log('Area calculation error:', err);
+                        }
+                    }
+                    else if (type === 'polyline') {
+                        try {
+                            var distance = 0;
+                            var latlngs = layer.getLatLngs();
+                            for (var i = 0; i < latlngs.length - 1; i++) {
+                                distance += latlngs[i].distanceTo(latlngs[i + 1]);
+                            }
+                            var km = (distance / 1000).toFixed(2);
+                            var miles = (distance * 0.000621371).toFixed(2);
+
+                            layer.bindPopup(
+                                '<b>Distance Measurements</b><br>' +
+                                '━━━━━━━━━━━━━━━<br>' +
+                                '📏 ' + km + ' km<br>' +
+                                '🛣️ ' + miles + ' miles<br>' +
+                                '━━━━━━━━━━━━━━━<br>' +
+                                '<small>Click to close</small>'
+                            );
+                        } catch(err) {
+                            console.log('Distance calculation error:', err);
+                        }
+                    }
+                    else if (type === 'circle') {
+                        try {
+                            var radius = layer.getRadius();
+                            var area = Math.PI * radius * radius;
+                            var hectares = (area / 10000).toFixed(2);
+                            var sqKm = (area / 1000000).toFixed(2);
+                            var radiusKm = (radius / 1000).toFixed(2);
+
+                            layer.bindPopup(
+                                '<b>Circle Measurements</b><br>' +
+                                '━━━━━━━━━━━━━━━<br>' +
+                                '⚪ Radius: ' + radiusKm + ' km<br>' +
+                                '📐 Area: ' + sqKm + ' km²<br>' +
+                                '🌾 Area: ' + hectares + ' hectares<br>' +
+                                '━━━━━━━━━━━━━━━<br>' +
+                                '<small>Click to close</small>'
+                            );
+                        } catch(err) {
+                            console.log('Circle calculation error:', err);
+                        }
+                    }
+
+                    // Add to drawn items feature group
+                    window.drawnItems.addLayer(layer);
+                });
+
+                // Handle draw edited events
+                window.map.on('draw:edited', function(e) {
+                    var layers = e.layers;
+                    layers.eachLayer(function(layer) {
+                        if (layer.getLatLngs && layer.getLatLngs()[0]) {
+                            if (Array.isArray(layer.getLatLngs()[0]) && layer.getLatLngs()[0].length > 2) {
+                                try {
+                                    var area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
+                                    var hectares = (area / 10000).toFixed(2);
+                                    var sqKm = (area / 1000000).toFixed(2);
+
+                                    layer.setPopupContent(
+                                        '<b>Area Measurements (Updated)</b><br>' +
+                                        '━━━━━━━━━━━━━━━<br>' +
+                                        '📐 ' + sqKm + ' km²<br>' +
+                                        '🌾 ' + hectares + ' hectares<br>' +
+                                        '━━━━━━━━━━━━━━━<br>' +
+                                        '<small>Click to close</small>'
+                                    );
+                                } catch(err) {
+                                    console.log('Edit update error:', err);
+                                }
+                            }
+                        }
+                    });
+                });
+            }
+        }, 1000);
+
+        // Add a custom clear button that only clears drawn items
+        setTimeout(function() {
+            var clearButton = document.createElement('div');
+            clearButton.innerHTML = '🗑️ Clear Drawings';
+            clearButton.style.cssText = `
+                position: absolute;
+                top: 10px;
+                left: 180px;
+                z-index: 1000;
+                background: white;
+                padding: 6px 10px;
+                border-radius: 4px;
+                box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+                cursor: pointer;
+                font-size: 12px;
+                border: 2px solid rgba(0,0,0,0.2);
+                background-clip: padding-box;
+                font-family: Arial, sans-serif;
+            `;
+            clearButton.onclick = function() {
+                if (window.drawnItems) {
+                    window.drawnItems.clearLayers();
+                }
+                window.map.closePopup();
+            };
+
+            var mapContainer = document.querySelector('.folium-map');
+            if (mapContainer) {
+                mapContainer.appendChild(clearButton);
+            }
+        }, 1500);
+        </script>
+        """
+
+        # Add the JavaScript to the map
+        karta.get_root().html.add_child(Element(measurement_js))
+
+        # Add minimal CSS
+        measurement_css = """
+        <style>
+        .leaflet-draw-draw-polygon,
+        .leaflet-draw-draw-polyline,
+        .leaflet-draw-draw-rectangle,
+        .leaflet-draw-draw-circle,
+        .leaflet-draw-draw-marker {
+            background-color: #f357a1 !important;
+        }
+        </style>
+        """
+
+        karta.get_root().header.add_child(Element(measurement_css))
 
     @staticmethod
     def _select_color(
@@ -480,6 +676,7 @@ class Karta:
         speed_limit_field: str = "speedlimit",
         popup_dict: dict = None,
         main_layer_max_records: int = 50_000,  # Maximum records to display in main layer to avoid performance degradation
+        add_measurement_tools: bool = True,
     ) -> folium.Map:
         # Ensure `data_list` is always a list (of gpd.GeoDataFrames, df.DataFrames or set)
         data_list = data_list if isinstance(data_list, list) else [data_list]
@@ -563,6 +760,7 @@ class Karta:
 
         # Instantiate base map and render all generated layers
         karta = Karta._base_map()
+
         for layer, layer_name in zip(layers, layer_names):
             folium.FeatureGroup(name=layer_name).add_child(layer).add_to(karta)
         karta.fit_bounds(karta.get_bounds())
@@ -1467,16 +1665,17 @@ class Karta2:
         lat_col: str = "latitude",
         lon_col: str = "longitude",
         height_col: str = "value",
-        radius: int = 1000,
-        elevation_scale: float = 100,
+        radius: int = 50,
+        elevation_scale: float = 10,
         color_gradient: str = "blue_to_red",
-        pitch: float = 45,
-        bearing: float = 30,
-        zoom: float = 10,
+        pitch: float = 85,
+        bearing: float = 0,
+        zoom: float = 5,
         tooltip_fields: Optional[List[str]] = None,
     ) -> pdk.Deck:
         """
         Create a 3D column map where column height represents value.
+        Colors transition from blue (low values) to red (high values).
 
         Parameters
         ----------
@@ -1508,18 +1707,14 @@ class Karta2:
         pdk.Deck
             PyDeck Deck object
         """
-        # Get color gradient
-        #        color_range = Karta2.HEIGHT_GRADIENTS.get(
-        #            color_gradient,
-        #            Karta2.HEIGHT_GRADIENTS['blue_to_red']
-        #        )
-
         # Prepare data
         df = data.copy()
         df["height"] = df[height_col] * elevation_scale
         max_val = df[height_col].max()
+        min_val = df[height_col].min()
+        val_range = max_val - min_val if max_val > min_val else 1  # Avoid division by zero
 
-        # Create column layer
+        # Create column layer with blue (low) to red (high) color gradient
         column_layer = pdk.Layer(
             "ColumnLayer",
             data=df,
@@ -1528,10 +1723,10 @@ class Karta2:
             elevation_scale=1,
             radius=radius,
             get_fill_color=[
-                f"255 * ({height_col} / {max_val})",
-                f"100 * ({height_col} / {max_val})",
-                f"50 * (1 - {height_col} / {max_val})",
-                200,
+                f"255 * ({height_col} - {min_val}) / {val_range}",  # Red component increases with value
+                "0",  # Green component (minimal)
+                f"255 * (1 - ({height_col} - {min_val}) / {val_range})",  # Blue component decreases with value
+                "200",  # Alpha (transparency)
             ],
             pickable=True,
             auto_highlight=True,
