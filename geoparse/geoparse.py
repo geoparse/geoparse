@@ -24,8 +24,6 @@ import pyproj
 import requests
 import shapely
 from branca.element import MacroElement, Template
-from folium import Element, plugins
-from folium.plugins import Fullscreen, MeasureControl
 from lonboard.basemap import CartoStyle
 from s2 import s2
 from scipy.spatial import KDTree
@@ -96,13 +94,13 @@ class Karta:
             folium.TileLayer(item, name=tiles[item], max_zoom=21).add_to(karta)
 
         # Add fullscreen button
-        Fullscreen().add_to(karta)
+        folium.plugins.Fullscreen().add_to(karta)
 
         # Add measurement tools
-        karta.add_child(MeasureControl(position="topleft"))
+        karta.add_child(folium.plugins.MeasureControl(position="topleft"))
 
         # Add GeoParse legend
-        attribution = Element("""
+        attribution = folium.Element("""
         <div style="
             position: fixed;
             bottom: 0px;
@@ -484,13 +482,13 @@ class Karta:
             gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
             if cluster:
                 # Create a cluster layer
-                cluster_layer = plugins.MarkerCluster(locations=list(zip(gdf.geometry.y, gdf.geometry.x)))
+                cluster_layer = folium.plugins.MarkerCluster(locations=list(zip(gdf.geometry.y, gdf.geometry.x)))
                 layers.append(cluster_layer)
                 layer_names.append("Cluster")
 
             if heatmap:
                 # Create a heatmap layer
-                heatmap_layer = plugins.HeatMap(list(zip(gdf.geometry.y, gdf.geometry.x)), radius=heatmap_radius)
+                heatmap_layer = folium.plugins.HeatMap(list(zip(gdf.geometry.y, gdf.geometry.x)), radius=heatmap_radius)
                 layers.append(heatmap_layer)
                 layer_names.append("Heatmap")
 
@@ -5798,10 +5796,12 @@ class GamlaKarta:
                     group_cluster = folium.FeatureGroup(name=f"{i}- Cluster")
                     # If the input is a regular DataFrame, use the latitude and longitude columns
                     if not isinstance(gdf, gpd.GeoDataFrame):
-                        group_cluster.add_child(plugins.MarkerCluster(locations=list(zip(lats, lons))))
+                        group_cluster.add_child(folium.plugins.MarkerCluster(locations=list(zip(lats, lons))))
                     # If it's a GeoDataFrame, use geometry coordinates
                     else:
-                        group_cluster.add_child(plugins.MarkerCluster(locations=list(zip(gdf.geometry.y, gdf.geometry.x))))
+                        group_cluster.add_child(
+                            folium.plugins.MarkerCluster(locations=list(zip(gdf.geometry.y, gdf.geometry.x)))
+                        )
                     # Add the clustering layer to the map
                     group_cluster.add_to(karta)
 
@@ -5809,10 +5809,10 @@ class GamlaKarta:
                 if heatmap:
                     group_heatmap = folium.FeatureGroup(name=f"{i}- Heatmap")
                     if not isinstance(gdf, gpd.GeoDataFrame):
-                        group_heatmap.add_child(plugins.HeatMap(list(zip(lats, lons)), radius=heatmap_radius))
+                        group_heatmap.add_child(folium.plugins.HeatMap(list(zip(lats, lons)), radius=heatmap_radius))
                     else:
                         group_heatmap.add_child(
-                            plugins.HeatMap(list(zip(gdf.geometry.y, gdf.geometry.x)), radius=heatmap_radius)
+                            folium.plugins.HeatMap(list(zip(gdf.geometry.y, gdf.geometry.x)), radius=heatmap_radius)
                         )
                     group_heatmap.add_to(karta)
 
@@ -5839,9 +5839,9 @@ class GamlaKarta:
                 if antpath:
                     group_antpath = folium.FeatureGroup(name=f"{i}- Ant Path")
                     if not isinstance(gdf, gpd.GeoDataFrame):
-                        group_antpath.add_child(plugins.AntPath(list(zip(lats, lons))))
+                        group_antpath.add_child(folium.plugins.AntPath(list(zip(lats, lons))))
                     else:
-                        group_antpath.add_child(plugins.AntPath(list(zip(gdf.geometry.y, gdf.geometry.x))))
+                        group_antpath.add_child(folium.plugins.AntPath(list(zip(gdf.geometry.y, gdf.geometry.x))))
                     group_antpath.add_to(karta)
 
                 # Create a buffer visualization if `buffer_radius > 0`
