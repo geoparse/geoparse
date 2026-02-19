@@ -25,6 +25,7 @@ import requests
 import shapely
 from branca.element import MacroElement, Template
 from folium import Element, plugins
+from folium.plugins import Fullscreen
 from lonboard.basemap import CartoStyle
 from s2 import s2
 from scipy.spatial import KDTree
@@ -94,9 +95,13 @@ class Karta:
         for item in tiles:
             folium.TileLayer(item, name=tiles[item], max_zoom=21).add_to(karta)
 
+        # Add fullscreen button
+        Fullscreen().add_to(karta)
+
         # Add measurement tools
         Karta._add_measurement_tools(karta)
 
+        # Add GeoParse legend
         attribution = Element("""
         <div style="
             position: fixed;
