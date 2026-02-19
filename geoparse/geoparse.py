@@ -97,7 +97,7 @@ class Karta:
         folium.plugins.Fullscreen().add_to(karta)
 
         # Add measurement tools
-        karta.add_child(folium.plugins.MeasureControl(position="topleft"))
+        folium.plugins.MeasureControl(position="topleft").add_to(karta)
 
         # Add GeoParse legend
         attribution = folium.Element("""
