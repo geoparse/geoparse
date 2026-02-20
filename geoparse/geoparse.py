@@ -24,7 +24,7 @@ import pyproj
 import requests
 import shapely
 from branca.element import MacroElement, Template
-from folium import Element, plugins
+from folium import plugins
 from lonboard.basemap import CartoStyle
 from s2 import s2
 from scipy.spatial import KDTree
@@ -94,10 +94,14 @@ class Karta:
         for item in tiles:
             folium.TileLayer(item, name=tiles[item], max_zoom=21).add_to(karta)
 
-        # Add measurement tools
-        Karta._add_measurement_tools(karta)
+        # Add fullscreen button
+        plugins.Fullscreen().add_to(karta)
 
-        attribution = Element("""
+        # Add measurement tools
+        plugins.MeasureControl(position="topleft").add_to(karta)
+
+        # Add GeoParse legend
+        attribution = folium.Element("""
         <div style="
             position: fixed;
             bottom: 0px;
@@ -117,184 +121,6 @@ class Karta:
         karta.get_root().html.add_child(attribution)
 
         return karta
-
-    @staticmethod
-    def _add_measurement_tools(karta):
-        """
-        Add area selection and measurement tools using folium plugins.
-        This version preserves the existing layer control functionality.
-        """
-
-        # Add Measure Control plugin
-        measure_control = plugins.MeasureControl(
-            position="topleft",
-            primary_length_unit="kilometers",
-            secondary_length_unit="meters",
-            primary_area_unit="sqkilometers",
-            secondary_area_unit="hectares",
-            active_color="#f357a1",
-            completed_color="#0066ff",
-        )
-        measure_control.add_to(karta)
-
-        # Mouse Position plugin for coordinate display
-        mouse_position = plugins.MousePosition(
-            position="bottomright",
-            separator=" | ",
-            empty_string="NaN",
-            lng_first=True,
-            num_digits=5,
-            prefix="Coordinates:",
-            lat_formatter="function(num) {return L.Util.formatNum(num, 5);}",
-            lng_formatter="function(num) {return L.Util.formatNum(num, 5);}",
-        )
-        mouse_position.add_to(karta)
-
-        # Add JavaScript that works with existing layers
-        measurement_js = """
-        <script>
-        // Wait for map to be ready
-        setTimeout(function() {
-            if (window.map) {
-                // Create a separate feature group for drawn items
-                // This ensures they don't interfere with existing layers
-                if (!window.drawnItems) {
-                    window.drawnItems = new L.FeatureGroup();
-                    window.map.addLayer(window.drawnItems);
-                }
-
-                // Store reference to original layers for layer control
-                var originalLayers = [];
-                window.map.eachLayer(function(layer) {
-                    if (layer !== window.drawnItems &&
-                        !(layer instanceof L.TileLayer) &&
-                        !(layer instanceof L.Control)) {
-                        originalLayers.push(layer);
-                    }
-                });
-
-                // Handle draw created events
-                window.map.on('draw:created', function(e) {
-                    var layer = e.layer;
-                    var type = e.layerType;
-
-                    // Calculate and display measurements
-                    if (type === 'polygon' || type === 'rectangle') {
-                        try {
-                            var area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
-                            var hectares = (area / 10000).toFixed(2);
-                            var sqKm = (area / 1000000).toFixed(2);
-                            var acres = (area * 0.000247105).toFixed(2);
-
-                            layer.bindPopup(
-                                '<b>Area Measurements</b><br>' +
-                                '━━━━━━━━━━━━━━━<br>' +
-                                '📐 ' + sqKm + ' km²<br>' +
-                                '🌾 ' + hectares + ' hectares<br>' +
-                                '🏞️ ' + acres + ' acres<br>' +
-                                '━━━━━━━━━━━━━━━<br>' +
-                                '<small>Click to close</small>'
-                            );
-                        } catch(err) {
-                            console.log('Area calculation error:', err);
-                        }
-                    }
-                    else if (type === 'polyline') {
-                        try {
-                            var distance = 0;
-                            var latlngs = layer.getLatLngs();
-                            for (var i = 0; i < latlngs.length - 1; i++) {
-                                distance += latlngs[i].distanceTo(latlngs[i + 1]);
-                            }
-                            var km = (distance / 1000).toFixed(2);
-                            var miles = (distance * 0.000621371).toFixed(2);
-
-                            layer.bindPopup(
-                                '<b>Distance Measurements</b><br>' +
-                                '━━━━━━━━━━━━━━━<br>' +
-                                '📏 ' + km + ' km<br>' +
-                                '🛣️ ' + miles + ' miles<br>' +
-                                '━━━━━━━━━━━━━━━<br>' +
-                                '<small>Click to close</small>'
-                            );
-                        } catch(err) {
-                            console.log('Distance calculation error:', err);
-                        }
-                    }
-                    else if (type === 'circle') {
-                        try {
-                            var radius = layer.getRadius();
-                            var area = Math.PI * radius * radius;
-                            var hectares = (area / 10000).toFixed(2);
-                            var sqKm = (area / 1000000).toFixed(2);
-                            var radiusKm = (radius / 1000).toFixed(2);
-
-                            layer.bindPopup(
-                                '<b>Circle Measurements</b><br>' +
-                                '━━━━━━━━━━━━━━━<br>' +
-                                '⚪ Radius: ' + radiusKm + ' km<br>' +
-                                '📐 Area: ' + sqKm + ' km²<br>' +
-                                '🌾 Area: ' + hectares + ' hectares<br>' +
-                                '━━━━━━━━━━━━━━━<br>' +
-                                '<small>Click to close</small>'
-                            );
-                        } catch(err) {
-                            console.log('Circle calculation error:', err);
-                        }
-                    }
-
-                    // Add to drawn items feature group
-                    window.drawnItems.addLayer(layer);
-                });
-
-                // Handle draw edited events
-                window.map.on('draw:edited', function(e) {
-                    var layers = e.layers;
-                    layers.eachLayer(function(layer) {
-                        if (layer.getLatLngs && layer.getLatLngs()[0]) {
-                            if (Array.isArray(layer.getLatLngs()[0]) && layer.getLatLngs()[0].length > 2) {
-                                try {
-                                    var area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
-                                    var hectares = (area / 10000).toFixed(2);
-                                    var sqKm = (area / 1000000).toFixed(2);
-
-                                    layer.setPopupContent(
-                                        '<b>Area Measurements (Updated)</b><br>' +
-                                        '━━━━━━━━━━━━━━━<br>' +
-                                        '📐 ' + sqKm + ' km²<br>' +
-                                        '🌾 ' + hectares + ' hectares<br>' +
-                                        '━━━━━━━━━━━━━━━<br>' +
-                                        '<small>Click to close</small>'
-                                    );
-                                } catch(err) {
-                                    console.log('Edit update error:', err);
-                                }
-                            }
-                        }
-                    });
-                });
-            }
-        }, 1000);
-        </script>
-        """
-
-        # Add the JavaScript to the map
-        karta.get_root().html.add_child(Element(measurement_js))
-
-        # Add minimal CSS
-        measurement_css = """
-        <style>
-        .leaflet-draw-draw-polygon,
-        .leaflet-draw-draw-polyline,
-        .leaflet-draw-draw-rectangle,
-        .leaflet-draw-draw-circle,
-        .leaflet-draw-draw-marker {
-            background-color: #f357a1 !important;
-        }
-        </style>
-        """
-
-        karta.get_root().header.add_child(Element(measurement_css))
 
     @staticmethod
     def _select_color(
@@ -385,6 +211,93 @@ class Karta:
         return palette[idx]
 
     @staticmethod
+    def _create_speeding_legend():
+        speeding_legend_html = """
+        <!doctype html>
+        <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>jQuery UI Draggable - Default functionality</title>
+          <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+          <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+          <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+          <script>
+          $( function() {
+            $( "#maplegend" ).draggable({
+                            start: function (event, ui) {
+                                $(this).css({
+                                    right: "auto",
+                                    top: "auto",
+                                    bottom: "auto"
+                                });
+                            }
+                        });
+        });
+          </script>
+        </head>
+        <body>
+        <div id='maplegend' class='maplegend'
+            style='position: absolute; z-index:9999; border:2px solid grey; background-color:rgba(255, 255, 255, 1);
+             border-radius:6px; padding: 10px; font-size:14px; right: 95px; top: 10px;'>
+        <div class='legend-scale'>
+          <ul class='legend-labels'>
+            <li><span style='background:black;'></span>Speeding ≥ 40% </li>
+            <li><span style='background:red;'></span>30% ≤ Speeding < 40%</li>
+            <li><span style='background:orange;'></span>20% ≤ Speeding < 30%</li>
+            <li><span style='background:yellow;'></span>10% ≤ Speeding < 20%</li>
+            <li><span style='background:green;'></span>0 < Speeding < 10%</li>
+            <li><span style='background:blue;'></span>No speeding</li>
+            <li><span style='background:purple;'></span>Speed limit unavailable</li>
+          </ul>
+        </div>
+        </div>
+        </body>
+        </html>
+        <style type='text/css'>
+          .maplegend .legend-title {
+            text-align: left;
+            margin-bottom: 0;
+            font-weight: bold;
+            font-size: 90%;
+            }
+          .maplegend .legend-scale ul {
+            margin: 0;
+            margin-bottom: 0;
+            padding: 0;
+            float: left;
+            list-style: none;
+            }
+          .maplegend .legend-scale ul li {
+            font-size: 80%;
+            list-style: none;
+            margin-left: 0;
+            line-height: 18px;
+            margin-bottom: 1px;
+            }
+          .maplegend ul.legend-labels li span {
+            display: block;
+            float: left;
+            height: 16px;
+            width: 30px;
+            margin-right: 5px;
+            margin-left: 0;
+            border: 1px solid #999;
+            }
+          .maplegend .legend-source {
+            font-size: 80%;
+            color: #777;
+            clear: both;
+            }
+          .maplegend a {
+            color: #777;
+            }
+        </style>
+        """
+
+        return speeding_legend_html
+
+    @staticmethod
     def _create_plp_layer(
         gdf: gpd.GeoDataFrame,
         point_color: str = "blue",
@@ -396,17 +309,43 @@ class Karta:
         poly_highlight_color: str = "green",
         palette: list = None,
         popup_dict: dict = None,
+        speed_field: str = "speed",
+        speed_limit_field: str = "speedlimit",
     ) -> folium.GeoJson:
-        # Style function to apply to the polygon
+        # Style function to apply to each feature
         def style_function(feature):
             geom_type = feature["geometry"]["type"]
+            props = feature["properties"]
+
             if geom_type in ["Point", "MultiPoint"]:
+                # Handle speeding color logic if point_color is set to speed_field
+                if point_color == speed_field:
+                    speed_limit = props.get(speed_limit_field)
+                    speed = props.get(speed_field)
+                    # Check if speed limit is available and valid
+                    if pd.isna(speed_limit) or speed_limit <= 0:
+                        fill_color = "purple"
+                    elif speed <= speed_limit:
+                        fill_color = "blue"
+                    elif speed < 1.1 * speed_limit:
+                        fill_color = "green"
+                    elif speed < 1.2 * speed_limit:
+                        fill_color = "yellow"
+                    elif speed < 1.3 * speed_limit:
+                        fill_color = "orange"
+                    elif speed < 1.4 * speed_limit:
+                        fill_color = "red"
+                    else:
+                        fill_color = "black"
+                # Handle column-based color selection
+                elif point_color in props:
+                    fill_color = Karta._select_color(col=props[point_color], palette=palette)
+                else:
+                    fill_color = point_color
+
                 return {
                     "radius": point_radius,
-                    # Determine fill color if specified column is present
-                    "fillColor": Karta._select_color(col=feature["properties"][point_color], palette=palette)
-                    if point_color in feature["properties"]
-                    else point_color,
+                    "fillColor": fill_color,
                     "fillOpacity": point_opacity,
                     "weight": 0,
                 }
@@ -423,11 +362,10 @@ class Karta:
                     "color": line_color,
                     "weight": line_width,
                 }
-
             else:
                 return {}
 
-        # Highlight style function when the polygon is hovered over
+        # Highlight style function when the feature is hovered over
         def highlight_function(feature):
             geom_type = feature["geometry"]["type"]
             if geom_type in ["Polygon", "MultiPolygon"]:
@@ -443,7 +381,6 @@ class Karta:
                     "color": "red",
                     "weight": 2 * line_width,
                 }
-
             else:
                 return {}
 
@@ -691,6 +628,8 @@ class Karta:
                     point_opacity=point_opacity,
                     line_color=line_color,
                     line_width=line_width,
+                    speed_field=speed_field,
+                    speed_limit_field=speed_limit_field,
                     palette=palette,
                     popup_dict=popup_dict,
                 )
@@ -728,6 +667,10 @@ class Karta:
 
         # Instantiate base map and render all generated layers
         karta = Karta._base_map()
+
+        if point_color == speed_field:
+            speeding_legend_html = Karta._create_speeding_legend()
+            karta.get_root().html.add_child(folium.Element(speeding_legend_html))
 
         for layer, layer_name in zip(layers, layer_names):
             folium.FeatureGroup(name=layer_name).add_child(layer).add_to(karta)
