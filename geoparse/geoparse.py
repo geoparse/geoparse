@@ -347,7 +347,7 @@ class Karta:
                     "radius": point_radius,
                     "fillColor": fill_color,
                     "fillOpacity": point_opacity,
-                    "weight": 0,  # Add a small border weight for visibility
+                    "weight": 0,
                 }
 
             if geom_type in ["Polygon", "MultiPolygon"]:
