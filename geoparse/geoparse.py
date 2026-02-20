@@ -308,19 +308,47 @@ class Karta:
         poly_highlight_color: str = "green",
         palette: list = None,
         popup_dict: dict = None,
+        speed_field: str = "speed",
+        speed_limit_field: str = "speedlimit",
     ) -> folium.GeoJson:
-        # Style function to apply to the polygon
+        # Style function to apply to each feature
         def style_function(feature):
             geom_type = feature["geometry"]["type"]
+            props = feature["properties"]
+
             if geom_type in ["Point", "MultiPoint"]:
+                # Handle speeding color logic if point_color is set to speed_field
+                if point_color == speed_field:
+                    speed_limit = props.get(speed_limit_field)
+                    speed = props.get(speed_field)
+                    # Check if speed limit is available and valid
+                    if pd.isna(speed_limit) or speed_limit <= 0:
+                        fill_color = "purple"
+                    elif speed <= speed_limit:
+                        fill_color = "blue"
+                    elif speed < 1.1 * speed_limit:
+                        fill_color = "green"
+                    elif speed < 1.2 * speed_limit:
+                        fill_color = "yellow"
+                    elif speed < 1.3 * speed_limit:
+                        fill_color = "orange"
+                    elif speed < 1.4 * speed_limit:
+                        fill_color = "red"
+                    else:
+                        fill_color = "black"
+                # Handle column-based color selection
+                elif point_color in props:
+                    fill_color = Karta._select_color(col=props[point_color], palette=palette)
+                else:
+                    fill_color = point_color
+
                 return {
                     "radius": point_radius,
-                    # Determine fill color if specified column is present
-                    "fillColor": Karta._select_color(col=feature["properties"][point_color], palette=palette)
-                    if point_color in feature["properties"]
-                    else point_color,
+                    "fillColor": fill_color,
+                    "color": fill_color,  # Set border color to match fill for points
                     "fillOpacity": point_opacity,
-                    "weight": 0,
+                    "weight": 1,  # Add a small border weight for visibility
+                    "opacity": point_opacity,
                 }
 
             if geom_type in ["Polygon", "MultiPolygon"]:
@@ -335,11 +363,10 @@ class Karta:
                     "color": line_color,
                     "weight": line_width,
                 }
-
             else:
                 return {}
 
-        # Highlight style function when the polygon is hovered over
+        # Highlight style function when the feature is hovered over
         def highlight_function(feature):
             geom_type = feature["geometry"]["type"]
             if geom_type in ["Polygon", "MultiPolygon"]:
@@ -355,7 +382,12 @@ class Karta:
                     "color": "red",
                     "weight": 2 * line_width,
                 }
-
+            elif geom_type in ["Point", "MultiPoint"]:
+                # Optional: Add highlight effect for points
+                return {
+                    "radius": point_radius * 1.5 if isinstance(point_radius, (int, float)) else point_radius,
+                    "weight": 2,
+                }
             else:
                 return {}
 
@@ -364,11 +396,14 @@ class Karta:
             popup = folium.GeoJsonPopup(
                 fields=list(popup_dict.values()),
                 aliases=list(popup_dict.keys()),
+                localize=True,
             )
 
             tooltip = folium.GeoJsonTooltip(
                 fields=list(popup_dict.values()),
                 aliases=list(popup_dict.keys()),
+                localize=True,
+                sticky=True,
             )
         else:
             tooltip = None
@@ -377,7 +412,7 @@ class Karta:
         # Create and return a Folium GeoJson object from gpd.GeoDataFrame
         plp_layer = folium.GeoJson(
             gdf,
-            marker=folium.Circle(fill_color="blue"),  # 'blue' will be overridden by 'fillColor' in style_function
+            marker=folium.Circle(),  # Empty Circle marker - styling handled by style_function
             style_function=style_function,
             highlight_function=highlight_function,
             tooltip=tooltip,
@@ -603,6 +638,8 @@ class Karta:
                     point_opacity=point_opacity,
                     line_color=line_color,
                     line_width=line_width,
+                    speed_field=speed_field,
+                    speed_limit_field=speed_limit_field,
                     palette=palette,
                     popup_dict=popup_dict,
                 )
