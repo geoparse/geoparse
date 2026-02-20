@@ -346,10 +346,8 @@ class Karta:
                 return {
                     "radius": point_radius,
                     "fillColor": fill_color,
-                    "color": fill_color,  # Set border color to match fill for points
                     "fillOpacity": point_opacity,
-                    "weight": 1,  # Add a small border weight for visibility
-                    "opacity": point_opacity,
+                    "weight": 0,  # Add a small border weight for visibility
                 }
 
             if geom_type in ["Polygon", "MultiPolygon"]:
@@ -383,12 +381,6 @@ class Karta:
                     "color": "red",
                     "weight": 2 * line_width,
                 }
-            elif geom_type in ["Point", "MultiPoint"]:
-                # Optional: Add highlight effect for points
-                return {
-                    "radius": point_radius * 1.5 if isinstance(point_radius, (int, float)) else point_radius,
-                    "weight": 2,
-                }
             else:
                 return {}
 
@@ -397,14 +389,11 @@ class Karta:
             popup = folium.GeoJsonPopup(
                 fields=list(popup_dict.values()),
                 aliases=list(popup_dict.keys()),
-                localize=True,
             )
 
             tooltip = folium.GeoJsonTooltip(
                 fields=list(popup_dict.values()),
                 aliases=list(popup_dict.keys()),
-                localize=True,
-                sticky=True,
             )
         else:
             tooltip = None
@@ -413,7 +402,7 @@ class Karta:
         # Create and return a Folium GeoJson object from gpd.GeoDataFrame
         plp_layer = folium.GeoJson(
             gdf,
-            marker=folium.Circle(),  # Empty Circle marker - styling handled by style_function
+            marker=folium.Circle(fill_color="blue"),  # 'blue' will be overridden by 'fillColor' in style_function
             style_function=style_function,
             highlight_function=highlight_function,
             tooltip=tooltip,
