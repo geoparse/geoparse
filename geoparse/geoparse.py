@@ -310,7 +310,7 @@ class Karta:
         palette: list = None,
         popup_dict: dict = None,
         speed_field: str = "speed",
-        speed_limit_field: str = "speedlimit",
+        speed_limit_field: str = "speed_limit",
     ) -> folium.GeoJson:
         # Style function to apply to each feature
         def style_function(feature):
@@ -578,7 +578,7 @@ class Karta:
         buffer_r_min: int = 0,
         # Vehicle speed and applicable speed limit fields from telematics data
         speed_field: str = "speed",
-        speed_limit_field: str = "speedlimit",
+        speed_limit_field: str = "speed_limit",
         popup_dict: dict = None,
         main_layer_max_records: int = 50_000,  # Maximum records to display in main layer to avoid performance degradation
         add_measurement_tools: bool = True,
@@ -1202,7 +1202,7 @@ class Karta2:
         buffer_r_min: int = 0,
         # Telematics
         speed_field: str = "speed",
-        speed_limit_field: str = "speedlimit",
+        speed_limit_field: str = "speed_limit",
         # Popup
         popup_dict: Optional[Dict] = None,
         main_layer_max_records: int = 50000,
@@ -2386,7 +2386,7 @@ class SnabbKarta:
         radius_min_pixels: int = 1,
         radius_max_pixels: int = 10,
         speed_field: str = "speed",
-        speed_limit_field: str = "speedlimit",
+        speed_limit_field: str = "speed_limit",
         pickable: bool = True,
     ) -> lb.ScatterplotLayer:
         """Creates a Lonboard ScatterplotLayer from a GeoDataFrame."""
@@ -2675,7 +2675,7 @@ class SnabbKarta:
         buffer_r_min: int = 0,
         # Vehicle speed and applicable speed limit fields from telematics data
         speed_field: str = "speed",
-        speed_limit_field: str = "speedlimit",
+        speed_limit_field: str = "speed_limit",
     ) -> lb.Map:
         minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
         layers = []
@@ -5308,7 +5308,7 @@ class GamlaKarta:
         karta: folium.Map,
         color: str = "black",
         speed_field: str = "speed",
-        speed_limit_field: str = "speedlimit",
+        speed_limit_field: str = "speed_limit",
         opacity: float = 0.5,
         radius: int = 3,
         weight: int = 6,
@@ -5333,7 +5333,7 @@ class GamlaKarta:
 
         color : str
             Specifies the color of the marker. If "speed" is passed, the marker color is determined by comparing
-            the 'speed' and 'speedlimit' values in the row (e.g., blue for under the speed limit, black for very high speeds).
+            the 'speed' and 'speed_limit' values in the row (e.g., blue for under the speed limit, black for very high speeds).
             Otherwise, it can be a column name in the `row` to create a unique color from that column's value.
 
         opacity : float, optional
@@ -5540,7 +5540,7 @@ class GamlaKarta:
         antpath: bool = False,
         point_color: str = "blue",
         speed_field: str = "speed",
-        speed_limit_field: str = "speedlimit",
+        speed_limit_field: str = "speed_limit",
         point_opacity: float = 0.5,
         point_radius: int = 3,
         point_weight: int = 6,
@@ -5606,7 +5606,7 @@ class GamlaKarta:
         speed_field : str, default "speed"
             Name of the speed field in DataFrame or GeoDataFrame.
 
-        speed_limit_field : str, default "speedlimit"
+        speed_limit_field : str, default "speed_limit"
             Name of the speed limit field in DataFrame or GeoDataFrame.
 
         point_opacity : float, default 0.5
