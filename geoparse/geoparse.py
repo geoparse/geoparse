@@ -882,7 +882,7 @@ class Karta2:
                 "latitude": 54.5,
                 "longitude": -2.5,
                 "zoom": 5.5,
-                "pitch": 0,
+                "pitch": 70,
                 "bearing": 0,
             }
 
@@ -982,6 +982,7 @@ class Karta2:
         poly_opacity: float = 0.25,
         palette: Optional[List] = None,
         popup_dict: Optional[Dict] = None,
+        get_elevation: str = "speed_limit",
         layer_name: str = "Main Layer",
     ) -> pdk.Layer:
         """
@@ -1074,6 +1075,7 @@ class Karta2:
             get_line_color=get_line_color,
             get_radius=get_radius,
             get_line_width=get_line_width,
+            get_elevation=get_elevation,
             pickable=True,
             auto_highlight=True,
             highlight_color=[0, 255, 0, 100],
@@ -1211,6 +1213,7 @@ class Karta2:
         height: int = 600,
         width: int = 800,
         initial_view_state: Optional[Dict] = None,
+        get_elevation="speed_limit",
     ) -> pdk.Deck:
         """
         Create PyDeck map with multiple layers (Points, Polygons, Lines, Cells, Buffers).
@@ -1307,6 +1310,7 @@ class Karta2:
                         poly_opacity=poly_opacity,
                         palette=palette,
                         popup_dict=popup_dict,
+                        get_elevation=get_elevation,
                         layer_name="Main",
                     )
                     all_layers.append(main_layer)
@@ -1391,7 +1395,7 @@ class Karta2:
                         "latitude": center_lat,
                         "longitude": center_lon,
                         "zoom": zoom,
-                        "pitch": 0,
+                        "pitch": 60,
                         "bearing": 0,
                     }
                 else:
@@ -1571,7 +1575,7 @@ class Karta2:
             return Karta2._base_map(map_style=map_style, height=height, width=width)
 
     @staticmethod
-    def create_3d_column_map(
+    def create_3d_column(
         data: pd.DataFrame,
         lat_col: str = "latitude",
         lon_col: str = "longitude",
@@ -1628,7 +1632,7 @@ class Karta2:
         # Create column layer with blue (low) to red (high) color gradient
         column_layer = pdk.Layer(
             "ColumnLayer",
-            data=df,
+            data=df.to_dict("records"),  # important for serialization
             get_position=f"[{lon_col}, {lat_col}]",
             get_elevation="height",
             elevation_scale=1,
