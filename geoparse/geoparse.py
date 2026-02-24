@@ -1087,6 +1087,101 @@ class Karta2:
         return layer
 
     @staticmethod
+    def _create_column_layer(
+        data: pd.DataFrame,
+        lat_col: str = "latitude",
+        lon_col: str = "longitude",
+        height_col: str = "value",
+        radius: int = 50,
+        elevation_scale: float = 10,
+        color_gradient: str = "blue_to_red",
+        # pitch: float = 85,
+        # bearing: float = 0,
+        # zoom: float = 5,
+        tooltip_fields: Optional[List[str]] = None,
+    ) -> pdk.layer:
+        """
+        Create a 3D column map where column height represents value.
+        Colors transition from blue (low values) to red (high values).
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            Input data with lat/lon and values
+        lat_col : str
+            Latitude column name
+        lon_col : str
+            Longitude column name
+        height_col : str
+            Column containing values for height
+        radius : int
+            Column radius in meters
+        elevation_scale : float
+            Scale factor for height
+        color_gradient : str
+            Name of color gradient ('blue_to_red', 'purple_to_yellow', 'heatmap', 'terrain')
+        pitch : float
+            Camera tilt angle (0-90°)
+        bearing : float
+            Camera rotation (0-360°)
+        zoom : float
+            Initial zoom level
+        tooltip_fields : List[str], optional
+            Fields to show in tooltip
+
+        Returns
+        -------
+        pdk.Deck
+            PyDeck Deck object
+        """
+        # Prepare data
+        df = data.copy()
+        df["height"] = df[height_col] * elevation_scale
+        max_val = df[height_col].max()
+        min_val = df[height_col].min()
+        val_range = max_val - min_val if max_val > min_val else 1  # Avoid division by zero
+
+        # Create column layer with blue (low) to red (high) color gradient
+        column_layer = pdk.Layer(
+            "ColumnLayer",
+            data=df.to_dict("records"),  # important for serialization
+            get_position=f"[{lon_col}, {lat_col}]",
+            get_elevation="height",
+            elevation_scale=1,
+            radius=radius,
+            get_fill_color=[
+                f"255 * ({height_col} - {min_val}) / {val_range}",  # Red component increases with value
+                "0",  # Green component (minimal)
+                f"255 * (1 - ({height_col} - {min_val}) / {val_range})",  # Blue component decreases with value
+                "200",  # Alpha (transparency)
+            ],
+            pickable=True,
+            auto_highlight=True,
+            extruded=True,
+            coverage=1,
+            id="column_layer",
+        )
+        return column_layer
+
+        ## Prepare tooltip
+        # if tooltip_fields:
+        #    tooltip_text = "<br/>".join([f"{field}: {{{field}}}" for field in tooltip_fields])
+        # else:
+        #    tooltip_text = f"Value: {{{height_col}}}<br/>Height: {{{height_col}}}"
+
+        ## Calculate view state
+        # view_state = pdk.ViewState(
+        #    latitude=df[lat_col].mean(), longitude=df[lon_col].mean(), zoom=zoom, pitch=pitch, bearing=bearing
+        # )
+
+        ## Create deck
+        # deck = Karta2._base_map(initial_view_state=view_state, map_style="light", height=600, width=800)
+        # deck.layers = [column_layer]
+        # deck.tooltip = {"text": tooltip_text}
+
+        # return deck
+
+    @staticmethod
     def _add_cell_layers(
         gdf: gpd.GeoDataFrame,
         geohash_res: int = 0,
@@ -1193,6 +1288,14 @@ class Karta2:
         poly_highlight_color: Union[str, List] = "green",
         poly_opacity: float = 0.25,
         centroid: bool = False,
+        # Column styling
+        height_col: str = None,
+        lat_col: str = "latitude",
+        lon_col: str = "longitude",
+        radius: int = 50,
+        elevation_scale: float = 10,
+        color_gradient: str = "blue_to_red",
+        # tooltip_fields: Optional[List[str]] = None,
         # Cell layers
         geohash_res: int = 0,
         s2_res: int = -1,
@@ -1295,6 +1398,20 @@ class Karta2:
                         compact=compact,
                     )
                     all_layers.extend(cell_layers)
+
+                # Column layer
+                if not height_col:
+                    column_layer = Karta2._create_column_layer(
+                        gdf,
+                        height_col=height_col,
+                        lat_col=lat_col,
+                        lon_col=lon_col,
+                        radius=50,
+                        elevation_scale=10,
+                        color_gradient="blue_to_red",
+                        # tooltip_fields: Optional[List[str]] = None,
+                    )
+                    all_layers.append(column_layer)
 
                 # Main geometry layer
                 if len(gdf) <= main_layer_max_records:
@@ -1573,100 +1690,6 @@ class Karta2:
             print(f"Error creating joint choropleth: {e}")
             # Return a default map
             return Karta2._base_map(map_style=map_style, height=height, width=width)
-
-    @staticmethod
-    def create_3d_column(
-        data: pd.DataFrame,
-        lat_col: str = "latitude",
-        lon_col: str = "longitude",
-        height_col: str = "value",
-        radius: int = 50,
-        elevation_scale: float = 10,
-        color_gradient: str = "blue_to_red",
-        pitch: float = 85,
-        bearing: float = 0,
-        zoom: float = 5,
-        tooltip_fields: Optional[List[str]] = None,
-    ) -> pdk.Deck:
-        """
-        Create a 3D column map where column height represents value.
-        Colors transition from blue (low values) to red (high values).
-
-        Parameters
-        ----------
-        data : pd.DataFrame
-            Input data with lat/lon and values
-        lat_col : str
-            Latitude column name
-        lon_col : str
-            Longitude column name
-        height_col : str
-            Column containing values for height
-        radius : int
-            Column radius in meters
-        elevation_scale : float
-            Scale factor for height
-        color_gradient : str
-            Name of color gradient ('blue_to_red', 'purple_to_yellow', 'heatmap', 'terrain')
-        pitch : float
-            Camera tilt angle (0-90°)
-        bearing : float
-            Camera rotation (0-360°)
-        zoom : float
-            Initial zoom level
-        tooltip_fields : List[str], optional
-            Fields to show in tooltip
-
-        Returns
-        -------
-        pdk.Deck
-            PyDeck Deck object
-        """
-        # Prepare data
-        df = data.copy()
-        df["height"] = df[height_col] * elevation_scale
-        max_val = df[height_col].max()
-        min_val = df[height_col].min()
-        val_range = max_val - min_val if max_val > min_val else 1  # Avoid division by zero
-
-        # Create column layer with blue (low) to red (high) color gradient
-        column_layer = pdk.Layer(
-            "ColumnLayer",
-            data=df.to_dict("records"),  # important for serialization
-            get_position=f"[{lon_col}, {lat_col}]",
-            get_elevation="height",
-            elevation_scale=1,
-            radius=radius,
-            get_fill_color=[
-                f"255 * ({height_col} - {min_val}) / {val_range}",  # Red component increases with value
-                "0",  # Green component (minimal)
-                f"255 * (1 - ({height_col} - {min_val}) / {val_range})",  # Blue component decreases with value
-                "200",  # Alpha (transparency)
-            ],
-            pickable=True,
-            auto_highlight=True,
-            extruded=True,
-            coverage=1,
-            id="3d-columns",
-        )
-
-        # Prepare tooltip
-        if tooltip_fields:
-            tooltip_text = "<br/>".join([f"{field}: {{{field}}}" for field in tooltip_fields])
-        else:
-            tooltip_text = f"Value: {{{height_col}}}<br/>Height: {{{height_col}}}"
-
-        # Calculate view state
-        view_state = pdk.ViewState(
-            latitude=df[lat_col].mean(), longitude=df[lon_col].mean(), zoom=zoom, pitch=pitch, bearing=bearing
-        )
-
-        # Create deck
-        deck = Karta2._base_map(initial_view_state=view_state, map_style="light", height=600, width=800)
-        deck.layers = [column_layer]
-        deck.tooltip = {"text": tooltip_text}
-
-        return deck
 
     @staticmethod
     def create_3d_hexagon_map(
@@ -2061,7 +2084,7 @@ class Karta2:
         ----------
         layers_data : List[Dict]
             List of layer configurations, each with:
-            - 'data': DataFrame with lat/lon
+            - 'data' : DataFrame with lat/lon
             - 'lat_col': latitude column
             - 'lon_col': longitude column
             - 'value_col': value column for height
