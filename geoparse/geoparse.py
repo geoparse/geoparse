@@ -1095,11 +1095,8 @@ class Karta2:
         radius: int = 50,
         elevation_scale: float = 10,
         color_gradient: str = "blue_to_red",
-        # pitch: float = 85,
-        # bearing: float = 0,
-        # zoom: float = 5,
         tooltip_fields: Optional[List[str]] = None,
-    ) -> pdk.layer:
+    ) -> pdk.Layer:
         """
         Create a 3D column map where column height represents value.
         Colors transition from blue (low values) to red (high values).
@@ -1136,6 +1133,11 @@ class Karta2:
         """
         # Prepare data
         df = data.copy()
+
+        df["lon"] = df.geometry.x
+        df["lat"] = df.geometry.y
+        df = df.drop(columns="geometry")
+
         df["height"] = df[height_col] * elevation_scale
         max_val = df[height_col].max()
         min_val = df[height_col].min()
@@ -1168,18 +1170,6 @@ class Karta2:
         #    tooltip_text = "<br/>".join([f"{field}: {{{field}}}" for field in tooltip_fields])
         # else:
         #    tooltip_text = f"Value: {{{height_col}}}<br/>Height: {{{height_col}}}"
-
-        ## Calculate view state
-        # view_state = pdk.ViewState(
-        #    latitude=df[lat_col].mean(), longitude=df[lon_col].mean(), zoom=zoom, pitch=pitch, bearing=bearing
-        # )
-
-        ## Create deck
-        # deck = Karta2._base_map(initial_view_state=view_state, map_style="light", height=600, width=800)
-        # deck.layers = [column_layer]
-        # deck.tooltip = {"text": tooltip_text}
-
-        # return deck
 
     @staticmethod
     def _add_cell_layers(
@@ -1400,15 +1390,15 @@ class Karta2:
                     all_layers.extend(cell_layers)
 
                 # Column layer
-                if not height_col:
+                if height_col:
                     column_layer = Karta2._create_column_layer(
                         gdf,
                         height_col=height_col,
                         lat_col=lat_col,
                         lon_col=lon_col,
-                        radius=50,
-                        elevation_scale=10,
-                        color_gradient="blue_to_red",
+                        radius=radius,
+                        elevation_scale=elevation_scale,
+                        color_gradient=color_gradient,
                         # tooltip_fields: Optional[List[str]] = None,
                     )
                     all_layers.append(column_layer)
