@@ -1088,9 +1088,7 @@ class Karta2:
 
     @staticmethod
     def _create_column_layer(
-        data: pd.DataFrame,
-        lat_col: str = "latitude",
-        lon_col: str = "longitude",
+        gdf: gpd.GeoDataFrame,
         height_col: str = "value",
         radius: int = 50,
         elevation_scale: float = 10,
@@ -1103,12 +1101,8 @@ class Karta2:
 
         Parameters
         ----------
-        data : pd.DataFrame
-            Input data with lat/lon and values
-        lat_col : str
-            Latitude column name
-        lon_col : str
-            Longitude column name
+        gdf : gpd.GeoDataFrame
+            Input data
         height_col : str
             Column containing values for height
         radius : int
@@ -1128,17 +1122,15 @@ class Karta2:
 
         Returns
         -------
-        pdk.Deck
-            PyDeck Deck object
+        pdk.Layer
+            PyDeck Layer object
         """
         # Prepare data
-        df = data.copy()
-
-        df["lon"] = df.geometry.x
-        df["lat"] = df.geometry.y
-        df = df.drop(columns="geometry")
-
+        gdf["lon"] = gdf.geometry.x
+        gdf["lat"] = gdf.geometry.y
+        df = gdf.drop(columns="geometry")
         df["height"] = df[height_col] * elevation_scale
+
         max_val = df[height_col].max()
         min_val = df[height_col].min()
         val_range = max_val - min_val if max_val > min_val else 1  # Avoid division by zero
@@ -1146,10 +1138,10 @@ class Karta2:
         # Create column layer with blue (low) to red (high) color gradient
         column_layer = pdk.Layer(
             "ColumnLayer",
-            data=df.to_dict("records"),  # important for serialization
-            get_position=f"[{lon_col}, {lat_col}]",
+            df.to_dict("records"),  # important for serialization
+            get_position="[lon, lat]",
             get_elevation="height",
-            elevation_scale=1,
+            elevation_scale=elevation_scale,
             radius=radius,
             get_fill_color=[
                 f"255 * ({height_col} - {min_val}) / {val_range}",  # Red component increases with value
@@ -1394,8 +1386,6 @@ class Karta2:
                     column_layer = Karta2._create_column_layer(
                         gdf,
                         height_col=height_col,
-                        lat_col=lat_col,
-                        lon_col=lon_col,
                         radius=radius,
                         elevation_scale=elevation_scale,
                         color_gradient=color_gradient,
