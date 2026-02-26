@@ -1289,7 +1289,7 @@ class Karta2:
         speed_limit_field: str = "speed_limit",
         # Popup
         popup_dict: Optional[Dict] = None,
-        main_layer_max_records: int = 50000,
+        main_layer_max_records: int = 100_000,
         # Map settings
         map_style: str = "light",
         height: int = 600,
