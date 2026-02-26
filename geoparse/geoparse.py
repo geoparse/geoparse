@@ -862,9 +862,6 @@ class Karta2:
     MAP_STYLES = {
         "light": "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
         "dark": "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
-        "satellite": "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",  # Fallback to light
-        "streets": "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",  # Fallback to light
-        "outdoors": "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",  # Fallback to light
     }
 
     @staticmethod
