@@ -1309,142 +1309,137 @@ class Karta2:
 
         # Process each dataset
         for data in data_list:
-            try:
-                gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
+            gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
 
-                if len(gdf) == 0:
-                    continue
-
-                # Get bounds for this dataset
-                if hasattr(gdf, "total_bounds"):
-                    all_bounds.append(gdf.total_bounds)
-
-                # Heatmap layer
-                if heatmap and len(gdf) > 0 and "Point" in gdf.geometry.type.values:
-                    points_df = gdf[gdf.geometry.type == "Point"].copy()
-                    if len(points_df) > 0:
-                        points_df["lat"] = points_df.geometry.y
-                        points_df["lon"] = points_df.geometry.x
-
-                        heatmap_layer = pdk.Layer(
-                            "HeatmapLayer",
-                            data=points_df[["lat", "lon"]].dropna(),
-                            get_position="[lon, lat]",
-                            aggregation="MEAN",
-                            radius_pixels=heatmap_radius,
-                            intensity=1,
-                            threshold=0.05,
-                            color_range=[
-                                [0, 0, 255, 50],
-                                [0, 255, 255, 100],
-                                [0, 255, 0, 150],
-                                [255, 255, 0, 200],
-                                [255, 0, 0, 250],
-                            ],
-                            id="Heatmap",
-                        )
-                        all_layers.append(heatmap_layer)
-
-                # Cluster layer (for points)
-                if cluster and len(gdf) > 0 and "Point" in gdf.geometry.type.values:
-                    points_df = gdf[gdf.geometry.type == "Point"].copy()
-                    if len(points_df) > 0:
-                        points_df["lat"] = points_df.geometry.y
-                        points_df["lon"] = points_df.geometry.x
-
-                        cluster_layer = pdk.Layer(
-                            "ScatterplotLayer",
-                            data=points_df[["lat", "lon"]].dropna(),
-                            get_position="[lon, lat]",
-                            get_radius=10,
-                            get_fill_color=[30, 136, 229, 200],
-                            get_line_color=[0, 0, 0, 100],
-                            radius_min_pixels=2,
-                            radius_max_pixels=50,
-                            id="Cluster",
-                        )
-                        all_layers.append(cluster_layer)
-
-                # Cell layers
-                if geohash_res > 0 or s2_res > -1 or h3_res > -1:
-                    cell_layers, _ = Karta2._add_cell_layers(
-                        gdf,
-                        geohash_res=geohash_res,
-                        s2_res=s2_res,
-                        h3_res=h3_res,
-                        force_full_cover=force_full_cover,
-                        compact=compact,
-                    )
-                    all_layers.extend(cell_layers)
-
-                # Column layer
-                if height_col:
-                    column_layer = Karta2._create_column_layer(
-                        gdf,
-                        height_col=height_col,
-                        radius=radius,
-                        elevation_scale=elevation_scale,
-                        color_gradient=color_gradient,
-                        # tooltip_fields: Optional[List[str]] = None,
-                    )
-                    all_layers.append(column_layer)
-
-                # Main geometry layer
-                if len(gdf) <= main_layer_max_records:
-                    main_layer = Karta2._create_plp_layer(
-                        gdf,
-                        point_color=point_color,
-                        point_radius=point_radius,
-                        point_opacity=point_opacity,
-                        line_color=line_color,
-                        line_width=line_width,
-                        poly_fill_color=poly_fill_color,
-                        poly_highlight_color=poly_highlight_color,
-                        poly_opacity=poly_opacity,
-                        palette=palette,
-                        popup_dict=popup_dict,
-                        get_elevation=get_elevation,
-                        layer_name="Main",
-                    )
-                    all_layers.append(main_layer)
-
-                    # Centroid layer
-                    if centroid:
-                        try:
-                            cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs=gdf.crs)
-                            centroid_layer = Karta2._create_plp_layer(
-                                cdf,
-                                point_color=[255, 0, 0],
-                                point_radius=3,
-                                point_opacity=0.8,
-                                layer_name="Centroid",
-                            )
-                            all_layers.append(centroid_layer)
-                        except Exception as e:
-                            print(f"Error creating centroid layer: {e}")
-
-                    # Buffer layer
-                    if buffer_r_max > 0:
-                        try:
-                            buffer_layer = Karta2._add_buffer_layer(
-                                gdf,
-                                buffer_r_max=buffer_r_max,
-                                buffer_r_min=buffer_r_min,
-                            )
-                            all_layers.append(buffer_layer)
-                        except Exception as e:
-                            print(f"Error creating buffer layer: {e}")
-                else:
-                    print(
-                        f"Dataset size ({len(gdf):,} records) exceeds threshold "
-                        f"(main_layer_max_records={main_layer_max_records:,})",
-                        flush=True,
-                    )
-                    print("Main layer hidden to maintain interactive performance.")
-
-            except Exception as e:
-                print(f"Error processing dataset: {e}")
+            if len(gdf) == 0:
                 continue
+
+            # Get bounds for this dataset
+            if hasattr(gdf, "total_bounds"):
+                all_bounds.append(gdf.total_bounds)
+
+            # Heatmap layer
+            if heatmap and len(gdf) > 0 and "Point" in gdf.geometry.type.values:
+                points_df = gdf[gdf.geometry.type == "Point"].copy()
+                if len(points_df) > 0:
+                    points_df["lat"] = points_df.geometry.y
+                    points_df["lon"] = points_df.geometry.x
+
+                    heatmap_layer = pdk.Layer(
+                        "HeatmapLayer",
+                        data=points_df[["lat", "lon"]].dropna(),
+                        get_position="[lon, lat]",
+                        aggregation="MEAN",
+                        radius_pixels=heatmap_radius,
+                        intensity=1,
+                        threshold=0.05,
+                        color_range=[
+                            [0, 0, 255, 50],
+                            [0, 255, 255, 100],
+                            [0, 255, 0, 150],
+                            [255, 255, 0, 200],
+                            [255, 0, 0, 250],
+                        ],
+                        id="Heatmap",
+                    )
+                    all_layers.append(heatmap_layer)
+
+            # Cluster layer (for points)
+            if cluster and len(gdf) > 0 and "Point" in gdf.geometry.type.values:
+                points_df = gdf[gdf.geometry.type == "Point"].copy()
+                if len(points_df) > 0:
+                    points_df["lat"] = points_df.geometry.y
+                    points_df["lon"] = points_df.geometry.x
+
+                    cluster_layer = pdk.Layer(
+                        "ScatterplotLayer",
+                        data=points_df[["lat", "lon"]].dropna(),
+                        get_position="[lon, lat]",
+                        get_radius=10,
+                        get_fill_color=[30, 136, 229, 200],
+                        get_line_color=[0, 0, 0, 100],
+                        radius_min_pixels=2,
+                        radius_max_pixels=50,
+                        id="Cluster",
+                    )
+                    all_layers.append(cluster_layer)
+
+            # Cell layers
+            if geohash_res > 0 or s2_res > -1 or h3_res > -1:
+                cell_layers, _ = Karta2._add_cell_layers(
+                    gdf,
+                    geohash_res=geohash_res,
+                    s2_res=s2_res,
+                    h3_res=h3_res,
+                    force_full_cover=force_full_cover,
+                    compact=compact,
+                )
+                all_layers.extend(cell_layers)
+
+            # Column layer
+            if height_col:
+                column_layer = Karta2._create_column_layer(
+                    gdf,
+                    height_col=height_col,
+                    radius=radius,
+                    elevation_scale=elevation_scale,
+                    color_gradient=color_gradient,
+                    # tooltip_fields: Optional[List[str]] = None,
+                )
+                all_layers.append(column_layer)
+
+            # Main geometry layer
+            if len(gdf) <= main_layer_max_records:
+                main_layer = Karta2._create_plp_layer(
+                    gdf,
+                    point_color=point_color,
+                    point_radius=point_radius,
+                    point_opacity=point_opacity,
+                    line_color=line_color,
+                    line_width=line_width,
+                    poly_fill_color=poly_fill_color,
+                    poly_highlight_color=poly_highlight_color,
+                    poly_opacity=poly_opacity,
+                    palette=palette,
+                    popup_dict=popup_dict,
+                    get_elevation=get_elevation,
+                    layer_name="Main",
+                )
+                all_layers.append(main_layer)
+
+                # Centroid layer
+                if centroid:
+                    try:
+                        cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs=gdf.crs)
+                        centroid_layer = Karta2._create_plp_layer(
+                            cdf,
+                            point_color=[255, 0, 0],
+                            point_radius=3,
+                            point_opacity=0.8,
+                            layer_name="Centroid",
+                        )
+                        all_layers.append(centroid_layer)
+                    except Exception as e:
+                        print(f"Error creating centroid layer: {e}")
+
+                # Buffer layer
+                if buffer_r_max > 0:
+                    try:
+                        buffer_layer = Karta2._add_buffer_layer(
+                            gdf,
+                            buffer_r_max=buffer_r_max,
+                            buffer_r_min=buffer_r_min,
+                        )
+                        all_layers.append(buffer_layer)
+                    except Exception as e:
+                        print(f"Error creating buffer layer: {e}")
+            else:
+                print(
+                    f"Dataset size ({len(gdf):,} records) exceeds threshold "
+                    f"(main_layer_max_records={main_layer_max_records:,})",
+                    flush=True,
+                )
+                print("Main layer hidden to maintain interactive performance.")
 
         # Calculate initial view state from bounds
         if initial_view_state is None:
@@ -1802,6 +1797,8 @@ class SnabbKarta:
     def _create_poly_layer(
         gdf: gpd.GeoDataFrame,
         fill_color="red",
+        height_col=None,
+        elevation_scale=100,
         opacity: float = 0.5,
         poly_highlight=True,
         pickable=True,
@@ -1815,16 +1812,31 @@ class SnabbKarta:
             rgb_color = [int(c * 255) for c in matplotlib.colors.to_rgb(fill_color)]
             get_fill_color = np.array([[*rgb_color, opacity]] * len(gdf), dtype=np.uint8)
 
-        return lb.PolygonLayer.from_geopandas(
-            gdf,
-            get_fill_color=get_fill_color,
-            auto_highlight=poly_highlight,
-            highlight_color=[0, 255, 0, 255],
-            get_line_color=[0, 0, 0, 255],
-            line_width_min_pixels=1,
-            line_width_max_pixels=1,
-            pickable=pickable,
-        )
+        if height_col:
+            return lb.PolygonLayer.from_geopandas(
+                gdf,
+                get_fill_color=get_fill_color,
+                auto_highlight=poly_highlight,
+                highlight_color=[0, 255, 0, 255],
+                get_line_color=[0, 0, 0, 255],
+                line_width_min_pixels=1,
+                line_width_max_pixels=1,
+                pickable=pickable,
+                get_elevation=gdf[height_col],
+                elevation_scale=elevation_scale,
+                extruded=True,
+            )
+        else:
+            return lb.PolygonLayer.from_geopandas(
+                gdf,
+                get_fill_color=get_fill_color,
+                auto_highlight=poly_highlight,
+                highlight_color=[0, 255, 0, 255],
+                get_line_color=[0, 0, 0, 255],
+                line_width_min_pixels=1,
+                line_width_max_pixels=1,
+                pickable=pickable,
+            )
 
     @staticmethod
     def _create_plp_layer(
@@ -1834,6 +1846,8 @@ class SnabbKarta:
         point_radius: int | str = None,
         line_color: str = None,
         fill_color: str = None,
+        height_col=None,
+        elevation_scale=100,
         speed_field: str = None,
         speed_limit_field: str = None,
     ):
@@ -1851,7 +1865,9 @@ class SnabbKarta:
         elif geom_type in {"LineString", "MultiLineString"}:
             return SnabbKarta._create_line_layer(gdf, line_color=line_color)
         elif geom_type in {"Polygon", "MultiPolygon"}:
-            return SnabbKarta._create_poly_layer(gdf, fill_color=fill_color)
+            return SnabbKarta._create_poly_layer(
+                gdf, fill_color=fill_color, height_col=height_col, elevation_scale=elevation_scale
+            )
         else:
             raise ValueError(
                 f"Unsupported geometry type: {geom_type}. "
@@ -2014,6 +2030,8 @@ class SnabbKarta:
         highlight_color: str = "green",
         fill_opacity: float = 0.25,
         highlight_opacity: float = 0.5,
+        height_col=None,
+        elevation_scale=100,
         centroid: bool = False,  # if True it shows centroids of polygons on the map
         # Cell
         geohash_res: int = 0,
@@ -2046,6 +2064,8 @@ class SnabbKarta:
                         point_radius,
                         line_color,
                         fill_color,
+                        height_col,
+                        elevation_scale,
                         speed_field,
                         speed_limit_field,
                     )
