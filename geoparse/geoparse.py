@@ -1812,31 +1812,22 @@ class SnabbKarta:
             rgb_color = [int(c * 255) for c in matplotlib.colors.to_rgb(fill_color)]
             get_fill_color = np.array([[*rgb_color, opacity]] * len(gdf), dtype=np.uint8)
 
+        common_args = {
+            "get_fill_color": get_fill_color,
+            "auto_highlight": poly_highlight,
+            "highlight_color": [0, 255, 0, 255],
+            "get_line_color": [0, 0, 0, 255],
+            "line_width_min_pixels": 1,
+            "line_width_max_pixels": 1,
+            "pickable": pickable,
+        }
+
         if height_col:
             return lb.PolygonLayer.from_geopandas(
-                gdf,
-                get_fill_color=get_fill_color,
-                auto_highlight=poly_highlight,
-                highlight_color=[0, 255, 0, 255],
-                get_line_color=[0, 0, 0, 255],
-                line_width_min_pixels=1,
-                line_width_max_pixels=1,
-                pickable=pickable,
-                get_elevation=gdf[height_col],
-                elevation_scale=elevation_scale,
-                extruded=True,
+                gdf, get_elevation=gdf[height_col], elevation_scale=elevation_scale, extruded=True, **common_args
             )
-        else:
-            return lb.PolygonLayer.from_geopandas(
-                gdf,
-                get_fill_color=get_fill_color,
-                auto_highlight=poly_highlight,
-                highlight_color=[0, 255, 0, 255],
-                get_line_color=[0, 0, 0, 255],
-                line_width_min_pixels=1,
-                line_width_max_pixels=1,
-                pickable=pickable,
-            )
+
+        return lb.PolygonLayer.from_geopandas(gdf, **common_args)
 
     @staticmethod
     def _create_plp_layer(
