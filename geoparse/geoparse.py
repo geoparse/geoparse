@@ -827,847 +827,6 @@ class Karta:
         )
 
 
-class Karta2:
-    """PyDeck-based geospatial visualization class with H3, S2, and geohash support"""
-
-    # Default color palette for categorical data
-    DEFAULT_PALETTE = [
-        [230, 25, 75],  # red
-        [67, 99, 216],  # blue
-        [60, 180, 75],  # green
-        [128, 0, 0],  # maroon
-        [0, 128, 128],  # teal
-        [0, 0, 128],  # navy
-        [245, 130, 49],  # orange
-        [145, 30, 180],  # purple
-        [128, 128, 0],  # olive
-        [154, 99, 36],  # brown
-        [240, 50, 230],  # magenta
-        [223, 177, 25],  # dark yellow
-        [66, 212, 244],  # cyan
-        [128, 128, 128],  # grey
-        [225, 35, 72],  # Bright Red
-        [220, 44, 70],  # Strong Red
-        [215, 54, 68],  # Vivid Red
-        [205, 74, 64],  # Deep Red
-        [200, 84, 62],  # Intense Red
-        [193, 104, 58],  # Fire Red
-        [190, 104, 56],  # Scarlet
-        [183, 114, 54],  # Fiery Orange
-        [178, 124, 52],  # Tangerine
-        [173, 134, 50],  # Burnt Orange
-    ]
-
-    # Base map styles - using Carto styles which don't require API keys
-    MAP_STYLES = {
-        "light": "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
-        "dark": "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
-    }
-
-    @staticmethod
-    def _base_map(
-        initial_view_state: Optional[Dict] = None,
-        map_style: str = "light",
-        height: int = 600,
-        width: int = 800,
-    ) -> pdk.Deck:
-        """
-        Creates a base PyDeck map with Carto basemap (no API key required).
-        """
-        if initial_view_state is None:
-            initial_view_state = {
-                "latitude": 54.5,
-                "longitude": -2.5,
-                "zoom": 5.5,
-                "pitch": 70,
-                "bearing": 0,
-            }
-
-        # Ensure we have a valid map style URL
-        map_style_url = Karta2.MAP_STYLES.get(map_style, Karta2.MAP_STYLES["light"])
-
-        return pdk.Deck(
-            initial_view_state=initial_view_state,
-            map_style=map_style_url,
-            tooltip={"text": "{tooltip}"},
-            height=height,
-            width=width,
-        )
-
-    @staticmethod
-    def _select_color(
-        col: Union[int, float, str],
-        head: Optional[int] = None,
-        tail: Optional[int] = None,
-        palette: Optional[List] = None,
-    ) -> List[int]:
-        """
-        Generates a consistent RGB color based on the input column value.
-        """
-        if not palette:
-            palette = Karta2.DEFAULT_PALETTE
-
-        # Handle NaN (return black)
-        if col is None or (isinstance(col, float) and math.isnan(col)):
-            return [0, 0, 0]
-
-        if isinstance(col, (int, float)):
-            idx = int(col) % len(palette)
-        else:
-            col = str(col)
-            col = re.sub(r"[\W_]+", "", col)
-            substr = col[head:tail] if head is not None and tail is not None else col[:6]
-            if not substr:
-                substr = "0"
-            idx = int(substr, 36) % len(palette) if substr else 0
-
-        return palette[idx]
-
-    @staticmethod
-    def _geo_to_pydeck_features(
-        gdf: gpd.GeoDataFrame,
-        properties: List[str],
-    ) -> List[Dict]:
-        """
-        Convert GeoDataFrame to PyDeck feature collection format.
-        """
-        features = []
-
-        for _idx, row in gdf.iterrows():
-            geom = row.geometry
-            if geom is None or geom.is_empty:
-                continue
-
-            try:
-                # Convert shapely geometry to GeoJSON format
-                geojson_geom = mapping(geom)
-
-                # Extract properties
-                props = {}
-                for prop in properties:
-                    if prop in row and prop != "geometry":
-                        value = row[prop]
-                        # Convert numpy types to Python native types
-                        if hasattr(value, "item"):
-                            value = value.item()
-                        props[prop] = value
-
-                # Add tooltip string
-                tooltip_parts = []
-                for key, value in props.items():
-                    if key not in ["geometry"] and value is not None:
-                        tooltip_parts.append(f"{key}: {value}")
-                props["tooltip"] = "\n".join(tooltip_parts)
-
-                feature = {"type": "Feature", "geometry": geojson_geom, "properties": props}
-                features.append(feature)
-            except Exception:
-                continue
-
-        return features
-
-    @staticmethod
-    def _create_plp_layer(
-        gdf: gpd.GeoDataFrame,
-        point_color: Union[str, List] = "blue",
-        point_radius: Union[int, str] = 5,
-        point_opacity: float = 0.8,
-        line_color: Union[str, List] = "blue",
-        line_width: int = 3,
-        poly_fill_color: Union[str, List] = None,
-        poly_highlight_color: Union[str, List] = None,
-        poly_opacity: float = 0.25,
-        palette: Optional[List] = None,
-        popup_dict: Optional[Dict] = None,
-        get_elevation: str = None,
-        layer_name: str = "Main Layer",
-    ) -> pdk.Layer:
-        """
-        Create a PyDeck layer for geometries with styling.
-        """
-
-        if poly_highlight_color is None:
-            poly_highlight_color = [0, 255, 0]
-        if poly_fill_color is None:
-            poly_fill_color = [255, 0, 0]
-
-        # Prepare properties list for popup
-        if popup_dict:
-            properties = list(popup_dict.values())
-        else:
-            properties = [col for col in gdf.columns if col not in ["geometry"]][:10]
-
-        # Convert to PyDeck features
-        features = Karta2._geo_to_pydeck_features(gdf, properties)
-
-        if not features:
-            # Return an empty layer if no features
-            return pdk.Layer("GeoJsonLayer", data=[], id=layer_name)
-
-        # Style function based on geometry type
-        def get_fill_color(feature):
-            props = feature.get("properties", {})
-            geom_type = feature.get("geometry", {}).get("type", "")
-
-            # For points with categorical coloring
-            if geom_type in ["Point", "MultiPoint"]:
-                if isinstance(point_color, str) and point_color in props:
-                    color = Karta2._select_color(props[point_color], palette=palette)
-                    return color + [int(point_opacity * 255)]
-                elif isinstance(point_color, list):
-                    return point_color + [int(point_opacity * 255)]
-                else:
-                    # Default blue
-                    return [30, 136, 229, int(point_opacity * 255)]
-
-            # For polygons
-            elif geom_type in ["Polygon", "MultiPolygon"]:
-                if isinstance(poly_fill_color, list):
-                    return poly_fill_color + [int(poly_opacity * 255)]
-                else:
-                    # Default red with opacity
-                    return [255, 0, 0, int(poly_opacity * 255)]
-
-            # For lines
-            elif geom_type in ["LineString", "MultiLineString"]:
-                if isinstance(line_color, list):
-                    return line_color + [255]
-                else:
-                    return [0, 0, 255, 255]
-
-            return [0, 0, 0, 255]
-
-        def get_line_color(feature):
-            geom_type = feature.get("geometry", {}).get("type", "")
-            if geom_type in ["Polygon", "MultiPolygon"]:
-                return [0, 0, 0, 255]  # Black border
-            elif geom_type in ["LineString", "MultiLineString"]:
-                if isinstance(line_color, list):
-                    return line_color + [255]
-                else:
-                    return [0, 0, 255, 255]
-            return [0, 0, 0, 255]
-
-        def get_radius(feature):
-            props = feature.get("properties", {})
-            if isinstance(point_radius, str) and point_radius in props:
-                try:
-                    return float(props[point_radius])
-                except (ValueError, TypeError):
-                    return 5
-            return point_radius
-
-        def get_line_width(feature):
-            geom_type = feature.get("geometry", {}).get("type", "")
-            if geom_type in ["LineString", "MultiLineString"]:
-                return line_width
-            return 0
-
-        # Create GeoJsonLayer
-        layer = pdk.Layer(
-            "GeoJsonLayer",
-            data={"type": "FeatureCollection", "features": features},
-            get_fill_color=get_fill_color,
-            get_line_color=get_line_color,
-            get_radius=get_radius,
-            get_line_width=get_line_width,
-            get_elevation=get_elevation,
-            pickable=True,
-            auto_highlight=True,
-            highlight_color=[0, 255, 0, 100],
-            line_width_min_pixels=1,
-            point_radius_min_pixels=1,
-            id=layer_name,
-        )
-
-        return layer
-
-    @staticmethod
-    def _create_column_layer(
-        gdf: gpd.GeoDataFrame,
-        height_col: str = "value",
-        radius: int = 50,
-        elevation_scale: float = 10,
-        color_gradient: str = "blue_to_red",
-        tooltip_fields: Optional[List[str]] = None,
-    ) -> pdk.Layer:
-        """
-        Create a 3D column map where column height represents value.
-        Colors transition from blue (low values) to red (high values).
-
-        Parameters
-        ----------
-        gdf : gpd.GeoDataFrame
-            Input data
-        height_col : str
-            Column containing values for height
-        radius : int
-            Column radius in meters
-        elevation_scale : float
-            Scale factor for height
-        color_gradient : str
-            Name of color gradient ('blue_to_red', 'purple_to_yellow', 'heatmap', 'terrain')
-        pitch : float
-            Camera tilt angle (0-90°)
-        bearing : float
-            Camera rotation (0-360°)
-        zoom : float
-            Initial zoom level
-        tooltip_fields : List[str], optional
-            Fields to show in tooltip
-
-        Returns
-        -------
-        pdk.Layer
-            PyDeck Layer object
-        """
-        # Prepare data
-        gdf["lon"] = gdf.geometry.x
-        gdf["lat"] = gdf.geometry.y
-        df = gdf.drop(columns="geometry")
-        df["height"] = df[height_col] * elevation_scale
-
-        max_val = df[height_col].max()
-        min_val = df[height_col].min()
-        val_range = max_val - min_val if max_val > min_val else 1  # Avoid division by zero
-
-        # Create column layer with blue (low) to red (high) color gradient
-        column_layer = pdk.Layer(
-            "ColumnLayer",
-            df.to_dict("records"),  # important for serialization
-            get_position="[lon, lat]",
-            get_elevation="height",
-            elevation_scale=elevation_scale,
-            radius=radius,
-            get_fill_color=[
-                f"255 * ({height_col} - {min_val}) / {val_range}",  # Red component increases with value
-                "0",  # Green component (minimal)
-                f"255 * (1 - ({height_col} - {min_val}) / {val_range})",  # Blue component decreases with value
-                "200",  # Alpha (transparency)
-            ],
-            pickable=True,
-            auto_highlight=True,
-            extruded=True,
-            coverage=1,
-            id="column_layer",
-        )
-        return column_layer
-
-        ## Prepare tooltip
-        # if tooltip_fields:
-        #    tooltip_text = "<br/>".join([f"{field}: {{{field}}}" for field in tooltip_fields])
-        # else:
-        #    tooltip_text = f"Value: {{{height_col}}}<br/>Height: {{{height_col}}}"
-
-    @staticmethod
-    def _add_cell_layers(
-        gdf: gpd.GeoDataFrame,
-        geohash_res: int = 0,
-        s2_res: int = -1,
-        h3_res: int = -1,
-        force_full_cover: bool = True,
-        compact: bool = False,
-    ) -> Tuple[List[pdk.Layer], List[str]]:
-        """Create cell visualization layers for specified resolutions."""
-
-        cell_configs = [
-            ("geohash", "Geohash", geohash_res, lambda x: x > 0),
-            ("s2", "S2", s2_res, lambda x: x > -1),
-            ("h3", "H3", h3_res, lambda x: x > -1),
-        ]
-
-        gdf = gdf.reset_index(drop=True)
-        cell_layers = []
-        cell_display_names = []
-
-        for cell_type, cell_display_name, res, condition in cell_configs:
-            if condition(res):
-                try:
-                    if gdf.geometry.type[0] in ("Polygon", "MultiPolygon"):
-                        cdf = gdf[["geometry"]]
-                    else:
-                        tight_polygon = shapely.convex_hull(gdf.geometry.unary_union).buffer(0.0000001)
-                        cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
-
-                    cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type, res, force_full_cover, compact)
-                    geoms, res_values = SpatialIndex.cell_poly(cells, cell_type=cell_type)
-
-                    cdf = gpd.GeoDataFrame({"id": cells, "res": res_values, "geometry": geoms}, crs="EPSG:4326")
-
-                    layer = Karta2._create_plp_layer(
-                        cdf,
-                        popup_dict={"Cell ID": "id", "Resolution": "res"},
-                        layer_name=cell_display_name,
-                        poly_fill_color=[100, 100, 255],
-                        poly_opacity=0.15,
-                    )
-                    cell_layers.append(layer)
-                    cell_display_names.append(cell_display_name)
-                except Exception as e:
-                    print(f"Error creating {cell_type} layer: {e}")
-                    continue
-
-        return cell_layers, cell_display_names
-
-    @staticmethod
-    def _add_buffer_layer(
-        gdf: gpd.GeoDataFrame,
-        buffer_r_max: int,
-        buffer_r_min: int = 0,
-    ) -> pdk.Layer:
-        """Create buffer or ring layer."""
-
-        if buffer_r_min >= buffer_r_max:
-            raise ValueError("buffer_r_min must be less than buffer_r_max")
-
-        try:
-            crs = GeomUtils.find_proj(gdf.geometry.to_list()[0])
-            gdf = gdf[["geometry"]].to_crs(crs)
-
-            if buffer_r_min == 0:  # buffer
-                gdf["geometry"] = gdf.buffer(buffer_r_max).to_crs("EPSG:4326")
-            else:  # ring
-                gdf["geometry"] = gdf.buffer(buffer_r_max).difference(gdf.buffer(buffer_r_min)).to_crs("EPSG:4326")
-
-            layer = Karta2._create_plp_layer(
-                gdf,
-                layer_name="Buffer",
-                poly_fill_color=[0, 200, 255],
-                poly_opacity=0.1,
-            )
-            return layer
-        except Exception as e:
-            print(f"Error creating buffer layer: {e}")
-            # Return an empty layer
-            return pdk.Layer("GeoJsonLayer", data=[], id="Buffer")
-
-    @staticmethod
-    def plp(
-        data_list: Union[gpd.GeoDataFrame, pd.DataFrame, set, List[Union[gpd.GeoDataFrame, pd.DataFrame, set]]],
-        geom_type: Optional[str] = None,
-        geom_col: Union[str, List[str], None] = None,
-        data_crs: int = 4326,
-        lookup_gdf: Optional[Union[pd.DataFrame, gpd.GeoDataFrame]] = None,
-        lookup_key: Optional[str] = None,
-        osm_url: str = "https://overpass-api.de/api/interpreter",
-        # Point styling
-        point_color: Union[str, List] = "blue",
-        point_radius: Union[int, str] = 5,
-        point_opacity: float = 0.8,
-        palette: Optional[List] = None,
-        heatmap: bool = False,
-        heatmap_radius: int = 30,
-        cluster: bool = False,
-        # Line styling
-        line_color: Union[str, List] = "blue",
-        line_width: int = 3,
-        # Polygon styling
-        poly_fill_color: Union[str, List] = "red",
-        poly_highlight_color: Union[str, List] = "green",
-        poly_opacity: float = 0.25,
-        centroid: bool = False,
-        # Column styling
-        height_col: str = None,
-        lat_col: str = "latitude",
-        lon_col: str = "longitude",
-        radius: int = 50,
-        elevation_scale: float = 10,
-        color_gradient: str = "blue_to_red",
-        # tooltip_fields: Optional[List[str]] = None,
-        # Cell layers
-        geohash_res: int = 0,
-        s2_res: int = -1,
-        h3_res: int = -1,
-        force_full_cover: bool = True,
-        compact: bool = False,
-        # Buffer
-        buffer_r_max: int = 0,
-        buffer_r_min: int = 0,
-        # Telematics
-        speed_field: str = "speed",
-        speed_limit_field: str = "speed_limit",
-        # Popup
-        popup_dict: Optional[Dict] = None,
-        main_layer_max_records: int = 100_000,
-        # Map settings
-        map_style: str = "light",
-        height: int = 600,
-        width: int = 800,
-        initial_view_state: Optional[Dict] = None,
-        get_elevation="speed_limit",
-    ) -> pdk.Deck:
-        """
-        Create PyDeck map with multiple layers (Points, Polygons, Lines, Cells, Buffers).
-        Uses Carto basemaps - no API key required!
-        """
-
-        # Ensure data_list is a list
-        data_list = data_list if isinstance(data_list, list) else [data_list]
-
-        all_layers = []
-        all_bounds = []
-
-        # Process each dataset
-        for data in data_list:
-            try:
-                gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
-
-                if len(gdf) == 0:
-                    continue
-
-                # Get bounds for this dataset
-                if hasattr(gdf, "total_bounds"):
-                    all_bounds.append(gdf.total_bounds)
-
-                # Heatmap layer
-                if heatmap and len(gdf) > 0 and "Point" in gdf.geometry.type.values:
-                    points_df = gdf[gdf.geometry.type == "Point"].copy()
-                    if len(points_df) > 0:
-                        points_df["lat"] = points_df.geometry.y
-                        points_df["lon"] = points_df.geometry.x
-
-                        heatmap_layer = pdk.Layer(
-                            "HeatmapLayer",
-                            data=points_df[["lat", "lon"]].dropna(),
-                            get_position="[lon, lat]",
-                            aggregation="MEAN",
-                            radius_pixels=heatmap_radius,
-                            intensity=1,
-                            threshold=0.05,
-                            color_range=[
-                                [0, 0, 255, 50],
-                                [0, 255, 255, 100],
-                                [0, 255, 0, 150],
-                                [255, 255, 0, 200],
-                                [255, 0, 0, 250],
-                            ],
-                            id="Heatmap",
-                        )
-                        all_layers.append(heatmap_layer)
-
-                # Cluster layer (for points)
-                if cluster and len(gdf) > 0 and "Point" in gdf.geometry.type.values:
-                    points_df = gdf[gdf.geometry.type == "Point"].copy()
-                    if len(points_df) > 0:
-                        points_df["lat"] = points_df.geometry.y
-                        points_df["lon"] = points_df.geometry.x
-
-                        cluster_layer = pdk.Layer(
-                            "ScatterplotLayer",
-                            data=points_df[["lat", "lon"]].dropna(),
-                            get_position="[lon, lat]",
-                            get_radius=10,
-                            get_fill_color=[30, 136, 229, 200],
-                            get_line_color=[0, 0, 0, 100],
-                            radius_min_pixels=2,
-                            radius_max_pixels=50,
-                            id="Cluster",
-                        )
-                        all_layers.append(cluster_layer)
-
-                # Cell layers
-                if geohash_res > 0 or s2_res > -1 or h3_res > -1:
-                    cell_layers, _ = Karta2._add_cell_layers(
-                        gdf,
-                        geohash_res=geohash_res,
-                        s2_res=s2_res,
-                        h3_res=h3_res,
-                        force_full_cover=force_full_cover,
-                        compact=compact,
-                    )
-                    all_layers.extend(cell_layers)
-
-                # Column layer
-                if height_col:
-                    column_layer = Karta2._create_column_layer(
-                        gdf,
-                        height_col=height_col,
-                        radius=radius,
-                        elevation_scale=elevation_scale,
-                        color_gradient=color_gradient,
-                        # tooltip_fields: Optional[List[str]] = None,
-                    )
-                    all_layers.append(column_layer)
-
-                # Main geometry layer
-                if len(gdf) <= main_layer_max_records:
-                    main_layer = Karta2._create_plp_layer(
-                        gdf,
-                        point_color=point_color,
-                        point_radius=point_radius,
-                        point_opacity=point_opacity,
-                        line_color=line_color,
-                        line_width=line_width,
-                        poly_fill_color=poly_fill_color,
-                        poly_highlight_color=poly_highlight_color,
-                        poly_opacity=poly_opacity,
-                        palette=palette,
-                        popup_dict=popup_dict,
-                        get_elevation=get_elevation,
-                        layer_name="Main",
-                    )
-                    all_layers.append(main_layer)
-
-                    # Centroid layer
-                    if centroid:
-                        try:
-                            cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs=gdf.crs)
-                            centroid_layer = Karta2._create_plp_layer(
-                                cdf,
-                                point_color=[255, 0, 0],
-                                point_radius=3,
-                                point_opacity=0.8,
-                                layer_name="Centroid",
-                            )
-                            all_layers.append(centroid_layer)
-                        except Exception as e:
-                            print(f"Error creating centroid layer: {e}")
-
-                    # Buffer layer
-                    if buffer_r_max > 0:
-                        try:
-                            buffer_layer = Karta2._add_buffer_layer(
-                                gdf,
-                                buffer_r_max=buffer_r_max,
-                                buffer_r_min=buffer_r_min,
-                            )
-                            all_layers.append(buffer_layer)
-                        except Exception as e:
-                            print(f"Error creating buffer layer: {e}")
-                else:
-                    print(
-                        f"Dataset size ({len(gdf):,} records) exceeds threshold "
-                        f"(main_layer_max_records={main_layer_max_records:,})",
-                        flush=True,
-                    )
-                    print("Main layer hidden to maintain interactive performance.")
-
-            except Exception as e:
-                print(f"Error processing dataset: {e}")
-                continue
-
-        # Calculate initial view state from bounds
-        if initial_view_state is None:
-            try:
-                if all_bounds:
-                    # Combine all bounds
-                    all_bounds = np.array(all_bounds)
-                    minx = np.min(all_bounds[:, 0])
-                    miny = np.min(all_bounds[:, 1])
-                    maxx = np.max(all_bounds[:, 2])
-                    maxy = np.max(all_bounds[:, 3])
-
-                    # Calculate center and zoom
-                    center_lat = (miny + maxy) / 2
-                    center_lon = (minx + maxx) / 2
-
-                    # Calculate zoom level based on bounds
-                    lat_diff = maxy - miny
-                    lon_diff = maxx - minx
-                    zoom = 5.5
-
-                    if lat_diff > 0 and lon_diff > 0:
-                        # Rough zoom calculation
-                        max_diff = max(lat_diff, lon_diff)
-                        if max_diff > 10:
-                            zoom = 4
-                        elif max_diff > 5:
-                            zoom = 5
-                        elif max_diff > 2:
-                            zoom = 6
-                        elif max_diff > 1:
-                            zoom = 7
-                        elif max_diff > 0.5:
-                            zoom = 8
-                        elif max_diff > 0.1:
-                            zoom = 9
-                        else:
-                            zoom = 10
-
-                    initial_view_state = {
-                        "latitude": center_lat,
-                        "longitude": center_lon,
-                        "zoom": zoom,
-                        "pitch": 60,
-                        "bearing": 0,
-                    }
-                else:
-                    # Default UK view
-                    initial_view_state = {
-                        "latitude": 54.5,
-                        "longitude": -2.5,
-                        "zoom": 5.5,
-                        "pitch": 0,
-                        "bearing": 0,
-                    }
-            except Exception as e:
-                print(f"Error calculating view state: {e}")
-                initial_view_state = {
-                    "latitude": 54.5,
-                    "longitude": -2.5,
-                    "zoom": 5.5,
-                    "pitch": 0,
-                    "bearing": 0,
-                }
-
-        # Create the deck with explicit map style
-        deck = Karta2._base_map(
-            initial_view_state=initial_view_state,
-            map_style=map_style,
-            height=height,
-            width=width,
-        )
-
-        # Add all layers
-        deck.layers = all_layers
-
-        return deck
-
-    @staticmethod
-    def choropleth(
-        mdf: gpd.GeoDataFrame,
-        columns: List[str],
-        legend: str,
-        bins: Optional[List] = None,
-        palette: str = "YlOrRd",
-        map_style: str = "light",
-        height: int = 600,
-        width: int = 800,
-    ) -> pdk.Deck:
-        """
-        Create a choropleth map using PyDeck.
-        """
-
-        if bins is None:
-            bins = np.quantile(mdf[columns[1]].dropna(), [0, 0.25, 0.5, 0.75, 0.98, 1])
-
-        # Create color scale
-        color_scale = []
-        for i in range(len(bins) - 1):
-            # Generate colors from YlOrRd palette
-            r = min(255, 200 + i * 20)
-            g = min(255, 100 + i * 30)
-            b = min(255, 50 + i * 10)
-            color_scale.append([r, g, b, 200])
-
-        # Prepare features
-        features = []
-        for _idx, row in mdf.iterrows():
-            try:
-                value = row[columns[1]]
-
-                # Determine color based on bin
-                color_idx = 0
-                for i, bin_val in enumerate(bins[1:]):
-                    if value <= bin_val:
-                        color_idx = i
-                        break
-                color = color_scale[min(color_idx, len(color_scale) - 1)]
-
-                feature = {
-                    "type": "Feature",
-                    "geometry": mapping(row.geometry),
-                    "properties": {
-                        columns[0]: row[columns[0]],
-                        columns[1]: value,
-                        "tooltip": f"{columns[0]}: {row[columns[0]]}\n{columns[1]}: {value:,.0f}",
-                        "fill_color": color,
-                    },
-                }
-                features.append(feature)
-            except Exception:
-                continue
-
-        # Calculate initial view state
-        bounds = mdf.total_bounds
-        initial_view_state = {
-            "latitude": (bounds[1] + bounds[3]) / 2,
-            "longitude": (bounds[0] + bounds[2]) / 2,
-            "zoom": 7,
-            "pitch": 0,
-            "bearing": 0,
-        }
-
-        # Create choropleth layer
-        choropleth_layer = pdk.Layer(
-            "GeoJsonLayer",
-            data={"type": "FeatureCollection", "features": features},
-            get_fill_color="properties.fill_color",
-            get_line_color=[0, 0, 0, 100],
-            line_width_min_pixels=0.5,
-            pickable=True,
-            auto_highlight=True,
-            highlight_color=[0, 255, 0, 100],
-            id="Choropleth",
-        )
-
-        # Create deck with basemap
-        deck = Karta2._base_map(
-            initial_view_state=initial_view_state,
-            map_style=map_style,
-            height=height,
-            width=width,
-        )
-        deck.layers = [choropleth_layer]
-
-        return deck
-
-    @staticmethod
-    def joint_choropleth(
-        mdf: gpd.GeoDataFrame,
-        gdf: gpd.GeoDataFrame,
-        poly_id: str,
-        legend: str,
-        bins: Optional[List] = None,
-        min_observations: int = 1,
-        palette: str = "YlOrRd",
-        cell_type: Optional[str] = None,
-        res: Optional[int] = None,
-        map_style: str = "light",
-        height: int = 600,
-        width: int = 800,
-    ) -> pdk.Deck:
-        """
-        Create a joint choropleth map counting points within polygons.
-        """
-
-        try:
-            if cell_type is not None:
-                cell_list, _ = SpatialIndex.ppoly_cell(mdf, cell_type=cell_type, res=res)
-                cells, _ = SpatialIndex.cell_poly(cell_list, cell_type=cell_type)
-                mdf = gpd.GeoDataFrame({poly_id: cell_list}, geometry=cells, crs="EPSG:4326")
-
-            # Spatial join to count points in polygons
-            gdf = gpd.sjoin(gdf[["geometry"]], mdf[[poly_id, "geometry"]], predicate="within")
-
-            # Count points per polygon
-            counts = gdf[poly_id].value_counts().reset_index()
-            counts.columns = [poly_id, "count"]
-
-            # Merge counts back
-            mdf = pd.merge(mdf, counts, on=poly_id, how="left")
-            mdf["count"] = mdf["count"].fillna(0)
-            mdf = mdf[mdf["count"] >= min_observations]
-
-            if bins is None:
-                bins = np.quantile(mdf["count"].dropna(), [0, 0.25, 0.5, 0.75, 0.98, 1])
-
-            return Karta2.choropleth(
-                mdf,
-                columns=[poly_id, "count"],
-                bins=bins,
-                legend=legend,
-                palette=palette,
-                map_style=map_style,
-                height=height,
-                width=width,
-            )
-        except Exception as e:
-            print(f"Error creating joint choropleth: {e}")
-            # Return a default map
-            return Karta2._base_map(map_style=map_style, height=height, width=width)
-
-
 class SnabbKarta:
     @staticmethod
     def _get_color(col: int | float | str) -> list:
@@ -1802,6 +961,8 @@ class SnabbKarta:
     def _create_poly_layer(
         gdf: gpd.GeoDataFrame,
         fill_color="red",
+        height_col=None,
+        elevation_scale=100,
         opacity: float = 0.5,
         poly_highlight=True,
         pickable=True,
@@ -1815,15 +976,59 @@ class SnabbKarta:
             rgb_color = [int(c * 255) for c in matplotlib.colors.to_rgb(fill_color)]
             get_fill_color = np.array([[*rgb_color, opacity]] * len(gdf), dtype=np.uint8)
 
-        return lb.PolygonLayer.from_geopandas(
+        common_args = {
+            "get_fill_color": get_fill_color,
+            "auto_highlight": poly_highlight,
+            "highlight_color": [0, 255, 0, 255],
+            "get_line_color": [0, 0, 0, 255],
+            "line_width_min_pixels": 1,
+            "line_width_max_pixels": 1,
+            "pickable": pickable,
+        }
+
+        if height_col:
+            return lb.PolygonLayer.from_geopandas(
+                gdf, get_elevation=gdf[height_col], elevation_scale=elevation_scale, extruded=True, **common_args
+            )
+
+        return lb.PolygonLayer.from_geopandas(gdf, **common_args)
+
+    @staticmethod
+    def _create_column_layer(
+        gdf: gpd.GeoDataFrame,
+        height_col=None,
+        elevation_scale=100,
+        radius: int = 100,
+        opacity: float = 128,
+        poly_highlight=True,
+        pickable=True,
+    ) -> lb.PolygonLayer:
+        max_val = gdf[height_col].max()
+        min_val = gdf[height_col].min()
+        val_range = max_val - min_val if max_val > min_val else 1  # Avoid division by zero
+
+        norm = (gdf[height_col] - min_val) / val_range
+
+        get_fill_color = np.array(
+            [
+                [
+                    int(255 * v),  # R
+                    0,  # G
+                    int(255 * (1 - v)),  # B
+                    opacity,  # A
+                ]
+                for v in norm.fillna(0)
+            ],
+            dtype=np.uint8,
+        )
+        return lb.ColumnLayer.from_geopandas(
             gdf,
             get_fill_color=get_fill_color,
-            auto_highlight=poly_highlight,
-            highlight_color=[0, 255, 0, 255],
-            get_line_color=[0, 0, 0, 255],
-            line_width_min_pixels=1,
-            line_width_max_pixels=1,
+            get_elevation=gdf[height_col],
+            elevation_scale=elevation_scale,
+            radius=radius,
             pickable=pickable,
+            extruded=True,
         )
 
     @staticmethod
@@ -1836,22 +1041,39 @@ class SnabbKarta:
         fill_color: str = None,
         speed_field: str = None,
         speed_limit_field: str = None,
+        height_col: str = None,
+        elevation_scale: int = None,
+        radius: int = None,
     ):
         """Factory function to create appropriate layer based on geometry type."""
         geom_type = gdf.geometry.type.to_list()[0]
         if geom_type in {"Point", "MultiPoint"}:
-            return SnabbKarta._create_point_layer(
-                gdf,
-                color=point_color,
-                opacity=point_opacity,
-                speed_field=speed_field,
-                speed_limit_field=speed_limit_field,
-                get_radius=point_radius,
-            )
+            if not height_col:
+                return SnabbKarta._create_point_layer(
+                    gdf,
+                    color=point_color,
+                    opacity=point_opacity,
+                    speed_field=speed_field,
+                    speed_limit_field=speed_limit_field,
+                    get_radius=point_radius,
+                )
+            else:
+                return SnabbKarta._create_column_layer(
+                    gdf,
+                    height_col=height_col,
+                    elevation_scale=elevation_scale,
+                    radius=radius,
+                    opacity=200,
+                    poly_highlight=True,
+                    pickable=True,
+                )
+
         elif geom_type in {"LineString", "MultiLineString"}:
             return SnabbKarta._create_line_layer(gdf, line_color=line_color)
         elif geom_type in {"Polygon", "MultiPolygon"}:
-            return SnabbKarta._create_poly_layer(gdf, fill_color=fill_color)
+            return SnabbKarta._create_poly_layer(
+                gdf, fill_color=fill_color, height_col=height_col, elevation_scale=elevation_scale
+            )
         else:
             raise ValueError(
                 f"Unsupported geometry type: {geom_type}. "
@@ -2006,6 +1228,9 @@ class SnabbKarta:
         point_radius: int | str = 1,
         radius_min_pixels: int = 1,
         radius_max_pixels: int = 10,
+        height_col=None,
+        elevation_scale=100,
+        radius=1000,
         # LineString
         line_color: str = "blue",
         line_opacity: float = 0.5,
@@ -2048,6 +1273,9 @@ class SnabbKarta:
                         fill_color,
                         speed_field,
                         speed_limit_field,
+                        height_col,
+                        elevation_scale,
+                        radius,
                     )
                 )
                 # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
@@ -5591,6 +4819,842 @@ class GamlaKarta:
             legend=legend,
             palette=palette,
         )
+
+
+class Karta2:
+    """PyDeck-based geospatial visualization class with H3, S2, and geohash support"""
+
+    # Default color palette for categorical data
+    DEFAULT_PALETTE = [
+        [230, 25, 75],  # red
+        [67, 99, 216],  # blue
+        [60, 180, 75],  # green
+        [128, 0, 0],  # maroon
+        [0, 128, 128],  # teal
+        [0, 0, 128],  # navy
+        [245, 130, 49],  # orange
+        [145, 30, 180],  # purple
+        [128, 128, 0],  # olive
+        [154, 99, 36],  # brown
+        [240, 50, 230],  # magenta
+        [223, 177, 25],  # dark yellow
+        [66, 212, 244],  # cyan
+        [128, 128, 128],  # grey
+        [225, 35, 72],  # Bright Red
+        [220, 44, 70],  # Strong Red
+        [215, 54, 68],  # Vivid Red
+        [205, 74, 64],  # Deep Red
+        [200, 84, 62],  # Intense Red
+        [193, 104, 58],  # Fire Red
+        [190, 104, 56],  # Scarlet
+        [183, 114, 54],  # Fiery Orange
+        [178, 124, 52],  # Tangerine
+        [173, 134, 50],  # Burnt Orange
+    ]
+
+    # Base map styles - using Carto styles which don't require API keys
+    MAP_STYLES = {
+        "light": "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+        "dark": "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+    }
+
+    @staticmethod
+    def _base_map(
+        initial_view_state: Optional[Dict] = None,
+        map_style: str = "light",
+        height: int = 600,
+        width: int = 800,
+    ) -> pdk.Deck:
+        """
+        Creates a base PyDeck map with Carto basemap (no API key required).
+        """
+        if initial_view_state is None:
+            initial_view_state = {
+                "latitude": 54.5,
+                "longitude": -2.5,
+                "zoom": 5.5,
+                "pitch": 70,
+                "bearing": 0,
+            }
+
+        # Ensure we have a valid map style URL
+        map_style_url = Karta2.MAP_STYLES.get(map_style, Karta2.MAP_STYLES["light"])
+
+        return pdk.Deck(
+            initial_view_state=initial_view_state,
+            map_style=map_style_url,
+            tooltip={"text": "{tooltip}"},
+            height=height,
+            width=width,
+        )
+
+    @staticmethod
+    def _select_color(
+        col: Union[int, float, str],
+        head: Optional[int] = None,
+        tail: Optional[int] = None,
+        palette: Optional[List] = None,
+    ) -> List[int]:
+        """
+        Generates a consistent RGB color based on the input column value.
+        """
+        if not palette:
+            palette = Karta2.DEFAULT_PALETTE
+
+        # Handle NaN (return black)
+        if col is None or (isinstance(col, float) and math.isnan(col)):
+            return [0, 0, 0]
+
+        if isinstance(col, (int, float)):
+            idx = int(col) % len(palette)
+        else:
+            col = str(col)
+            col = re.sub(r"[\W_]+", "", col)
+            substr = col[head:tail] if head is not None and tail is not None else col[:6]
+            if not substr:
+                substr = "0"
+            idx = int(substr, 36) % len(palette) if substr else 0
+
+        return palette[idx]
+
+    @staticmethod
+    def _geo_to_pydeck_features(
+        gdf: gpd.GeoDataFrame,
+        properties: List[str],
+    ) -> List[Dict]:
+        """
+        Convert GeoDataFrame to PyDeck feature collection format.
+        """
+        features = []
+
+        for _idx, row in gdf.iterrows():
+            geom = row.geometry
+            if geom is None or geom.is_empty:
+                continue
+
+            try:
+                # Convert shapely geometry to GeoJSON format
+                geojson_geom = mapping(geom)
+
+                # Extract properties
+                props = {}
+                for prop in properties:
+                    if prop in row and prop != "geometry":
+                        value = row[prop]
+                        # Convert numpy types to Python native types
+                        if hasattr(value, "item"):
+                            value = value.item()
+                        props[prop] = value
+
+                # Add tooltip string
+                tooltip_parts = []
+                for key, value in props.items():
+                    if key not in ["geometry"] and value is not None:
+                        tooltip_parts.append(f"{key}: {value}")
+                props["tooltip"] = "\n".join(tooltip_parts)
+
+                feature = {"type": "Feature", "geometry": geojson_geom, "properties": props}
+                features.append(feature)
+            except Exception:
+                continue
+
+        return features
+
+    @staticmethod
+    def _create_plp_layer(
+        gdf: gpd.GeoDataFrame,
+        point_color: Union[str, List] = "blue",
+        point_radius: Union[int, str] = 5,
+        point_opacity: float = 0.8,
+        line_color: Union[str, List] = "blue",
+        line_width: int = 3,
+        poly_fill_color: Union[str, List] = None,
+        poly_highlight_color: Union[str, List] = None,
+        poly_opacity: float = 0.25,
+        palette: Optional[List] = None,
+        popup_dict: Optional[Dict] = None,
+        get_elevation: str = None,
+        layer_name: str = "Main Layer",
+    ) -> pdk.Layer:
+        """
+        Create a PyDeck layer for geometries with styling.
+        """
+
+        if poly_highlight_color is None:
+            poly_highlight_color = [0, 255, 0]
+        if poly_fill_color is None:
+            poly_fill_color = [255, 0, 0]
+
+        # Prepare properties list for popup
+        if popup_dict:
+            properties = list(popup_dict.values())
+        else:
+            properties = [col for col in gdf.columns if col not in ["geometry"]][:10]
+
+        # Convert to PyDeck features
+        features = Karta2._geo_to_pydeck_features(gdf, properties)
+
+        if not features:
+            # Return an empty layer if no features
+            return pdk.Layer("GeoJsonLayer", data=[], id=layer_name)
+
+        # Style function based on geometry type
+        def get_fill_color(feature):
+            props = feature.get("properties", {})
+            geom_type = feature.get("geometry", {}).get("type", "")
+
+            # For points with categorical coloring
+            if geom_type in ["Point", "MultiPoint"]:
+                if isinstance(point_color, str) and point_color in props:
+                    color = Karta2._select_color(props[point_color], palette=palette)
+                    return color + [int(point_opacity * 255)]
+                elif isinstance(point_color, list):
+                    return point_color + [int(point_opacity * 255)]
+                else:
+                    # Default blue
+                    return [30, 136, 229, int(point_opacity * 255)]
+
+            # For polygons
+            elif geom_type in ["Polygon", "MultiPolygon"]:
+                if isinstance(poly_fill_color, list):
+                    return poly_fill_color + [int(poly_opacity * 255)]
+                else:
+                    # Default red with opacity
+                    return [255, 0, 0, int(poly_opacity * 255)]
+
+            # For lines
+            elif geom_type in ["LineString", "MultiLineString"]:
+                if isinstance(line_color, list):
+                    return line_color + [255]
+                else:
+                    return [0, 0, 255, 255]
+
+            return [0, 0, 0, 255]
+
+        def get_line_color(feature):
+            geom_type = feature.get("geometry", {}).get("type", "")
+            if geom_type in ["Polygon", "MultiPolygon"]:
+                return [0, 0, 0, 255]  # Black border
+            elif geom_type in ["LineString", "MultiLineString"]:
+                if isinstance(line_color, list):
+                    return line_color + [255]
+                else:
+                    return [0, 0, 255, 255]
+            return [0, 0, 0, 255]
+
+        def get_radius(feature):
+            props = feature.get("properties", {})
+            if isinstance(point_radius, str) and point_radius in props:
+                try:
+                    return float(props[point_radius])
+                except (ValueError, TypeError):
+                    return 5
+            return point_radius
+
+        def get_line_width(feature):
+            geom_type = feature.get("geometry", {}).get("type", "")
+            if geom_type in ["LineString", "MultiLineString"]:
+                return line_width
+            return 0
+
+        # Create GeoJsonLayer
+        layer = pdk.Layer(
+            "GeoJsonLayer",
+            data={"type": "FeatureCollection", "features": features},
+            get_fill_color=get_fill_color,
+            get_line_color=get_line_color,
+            get_radius=get_radius,
+            get_line_width=get_line_width,
+            get_elevation=get_elevation,
+            pickable=True,
+            auto_highlight=True,
+            highlight_color=[0, 255, 0, 100],
+            line_width_min_pixels=1,
+            point_radius_min_pixels=1,
+            id=layer_name,
+        )
+
+        return layer
+
+    @staticmethod
+    def _create_column_layer(
+        gdf: gpd.GeoDataFrame,
+        height_col: str = "value",
+        radius: int = 50,
+        elevation_scale: float = 10,
+        color_gradient: str = "blue_to_red",
+        tooltip_fields: Optional[List[str]] = None,
+    ) -> pdk.Layer:
+        """
+        Create a 3D column map where column height represents value.
+        Colors transition from blue (low values) to red (high values).
+
+        Parameters
+        ----------
+        gdf : gpd.GeoDataFrame
+            Input data
+        height_col : str
+            Column containing values for height
+        radius : int
+            Column radius in meters
+        elevation_scale : float
+            Scale factor for height
+        color_gradient : str
+            Name of color gradient ('blue_to_red', 'purple_to_yellow', 'heatmap', 'terrain')
+        pitch : float
+            Camera tilt angle (0-90°)
+        bearing : float
+            Camera rotation (0-360°)
+        zoom : float
+            Initial zoom level
+        tooltip_fields : List[str], optional
+            Fields to show in tooltip
+
+        Returns
+        -------
+        pdk.Layer
+            PyDeck Layer object
+        """
+        # Prepare data
+        gdf["lon"] = gdf.geometry.x
+        gdf["lat"] = gdf.geometry.y
+        df = gdf.drop(columns="geometry")
+        df["height"] = df[height_col] * elevation_scale
+
+        max_val = df[height_col].max()
+        min_val = df[height_col].min()
+        val_range = max_val - min_val if max_val > min_val else 1  # Avoid division by zero
+
+        # Create column layer with blue (low) to red (high) color gradient
+        column_layer = pdk.Layer(
+            "ColumnLayer",
+            df.to_dict("records"),  # important for serialization
+            get_position="[lon, lat]",
+            get_elevation="height",
+            elevation_scale=elevation_scale,
+            radius=radius,
+            get_fill_color=[
+                f"255 * ({height_col} - {min_val}) / {val_range}",  # Red component increases with value
+                "0",  # Green component (minimal)
+                f"255 * (1 - ({height_col} - {min_val}) / {val_range})",  # Blue component decreases with value
+                "200",  # Alpha (transparency)
+            ],
+            pickable=True,
+            auto_highlight=True,
+            extruded=True,
+            coverage=1,
+            id="column_layer",
+        )
+        return column_layer
+
+        ## Prepare tooltip
+        # if tooltip_fields:
+        #    tooltip_text = "<br/>".join([f"{field}: {{{field}}}" for field in tooltip_fields])
+        # else:
+        #    tooltip_text = f"Value: {{{height_col}}}<br/>Height: {{{height_col}}}"
+
+    @staticmethod
+    def _add_cell_layers(
+        gdf: gpd.GeoDataFrame,
+        geohash_res: int = 0,
+        s2_res: int = -1,
+        h3_res: int = -1,
+        force_full_cover: bool = True,
+        compact: bool = False,
+    ) -> Tuple[List[pdk.Layer], List[str]]:
+        """Create cell visualization layers for specified resolutions."""
+
+        cell_configs = [
+            ("geohash", "Geohash", geohash_res, lambda x: x > 0),
+            ("s2", "S2", s2_res, lambda x: x > -1),
+            ("h3", "H3", h3_res, lambda x: x > -1),
+        ]
+
+        gdf = gdf.reset_index(drop=True)
+        cell_layers = []
+        cell_display_names = []
+
+        for cell_type, cell_display_name, res, condition in cell_configs:
+            if condition(res):
+                try:
+                    if gdf.geometry.type[0] in ("Polygon", "MultiPolygon"):
+                        cdf = gdf[["geometry"]]
+                    else:
+                        tight_polygon = shapely.convex_hull(gdf.geometry.unary_union).buffer(0.0000001)
+                        cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
+
+                    cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type, res, force_full_cover, compact)
+                    geoms, res_values = SpatialIndex.cell_poly(cells, cell_type=cell_type)
+
+                    cdf = gpd.GeoDataFrame({"id": cells, "res": res_values, "geometry": geoms}, crs="EPSG:4326")
+
+                    layer = Karta2._create_plp_layer(
+                        cdf,
+                        popup_dict={"Cell ID": "id", "Resolution": "res"},
+                        layer_name=cell_display_name,
+                        poly_fill_color=[100, 100, 255],
+                        poly_opacity=0.15,
+                    )
+                    cell_layers.append(layer)
+                    cell_display_names.append(cell_display_name)
+                except Exception as e:
+                    print(f"Error creating {cell_type} layer: {e}")
+                    continue
+
+        return cell_layers, cell_display_names
+
+    @staticmethod
+    def _add_buffer_layer(
+        gdf: gpd.GeoDataFrame,
+        buffer_r_max: int,
+        buffer_r_min: int = 0,
+    ) -> pdk.Layer:
+        """Create buffer or ring layer."""
+
+        if buffer_r_min >= buffer_r_max:
+            raise ValueError("buffer_r_min must be less than buffer_r_max")
+
+        try:
+            crs = GeomUtils.find_proj(gdf.geometry.to_list()[0])
+            gdf = gdf[["geometry"]].to_crs(crs)
+
+            if buffer_r_min == 0:  # buffer
+                gdf["geometry"] = gdf.buffer(buffer_r_max).to_crs("EPSG:4326")
+            else:  # ring
+                gdf["geometry"] = gdf.buffer(buffer_r_max).difference(gdf.buffer(buffer_r_min)).to_crs("EPSG:4326")
+
+            layer = Karta2._create_plp_layer(
+                gdf,
+                layer_name="Buffer",
+                poly_fill_color=[0, 200, 255],
+                poly_opacity=0.1,
+            )
+            return layer
+        except Exception as e:
+            print(f"Error creating buffer layer: {e}")
+            # Return an empty layer
+            return pdk.Layer("GeoJsonLayer", data=[], id="Buffer")
+
+    @staticmethod
+    def plp(
+        data_list: Union[gpd.GeoDataFrame, pd.DataFrame, set, List[Union[gpd.GeoDataFrame, pd.DataFrame, set]]],
+        geom_type: Optional[str] = None,
+        geom_col: Union[str, List[str], None] = None,
+        data_crs: int = 4326,
+        lookup_gdf: Optional[Union[pd.DataFrame, gpd.GeoDataFrame]] = None,
+        lookup_key: Optional[str] = None,
+        osm_url: str = "https://overpass-api.de/api/interpreter",
+        # Point styling
+        point_color: Union[str, List] = "blue",
+        point_radius: Union[int, str] = 5,
+        point_opacity: float = 0.8,
+        palette: Optional[List] = None,
+        heatmap: bool = False,
+        heatmap_radius: int = 30,
+        cluster: bool = False,
+        # Line styling
+        line_color: Union[str, List] = "blue",
+        line_width: int = 3,
+        # Polygon styling
+        poly_fill_color: Union[str, List] = "red",
+        poly_highlight_color: Union[str, List] = "green",
+        poly_opacity: float = 0.25,
+        centroid: bool = False,
+        # Column styling
+        height_col: str = None,
+        lat_col: str = "latitude",
+        lon_col: str = "longitude",
+        radius: int = 50,
+        elevation_scale: float = 10,
+        color_gradient: str = "blue_to_red",
+        # tooltip_fields: Optional[List[str]] = None,
+        # Cell layers
+        geohash_res: int = 0,
+        s2_res: int = -1,
+        h3_res: int = -1,
+        force_full_cover: bool = True,
+        compact: bool = False,
+        # Buffer
+        buffer_r_max: int = 0,
+        buffer_r_min: int = 0,
+        # Telematics
+        speed_field: str = "speed",
+        speed_limit_field: str = "speed_limit",
+        # Popup
+        popup_dict: Optional[Dict] = None,
+        main_layer_max_records: int = 100_000,
+        # Map settings
+        map_style: str = "light",
+        height: int = 600,
+        width: int = 800,
+        initial_view_state: Optional[Dict] = None,
+        get_elevation="speed_limit",
+    ) -> pdk.Deck:
+        """
+        Create PyDeck map with multiple layers (Points, Polygons, Lines, Cells, Buffers).
+        Uses Carto basemaps - no API key required!
+        """
+
+        # Ensure data_list is a list
+        data_list = data_list if isinstance(data_list, list) else [data_list]
+
+        all_layers = []
+        all_bounds = []
+
+        # Process each dataset
+        for data in data_list:
+            gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
+
+            if len(gdf) == 0:
+                continue
+
+            # Get bounds for this dataset
+            if hasattr(gdf, "total_bounds"):
+                all_bounds.append(gdf.total_bounds)
+
+            # Heatmap layer
+            if heatmap and len(gdf) > 0 and "Point" in gdf.geometry.type.values:
+                points_df = gdf[gdf.geometry.type == "Point"].copy()
+                if len(points_df) > 0:
+                    points_df["lat"] = points_df.geometry.y
+                    points_df["lon"] = points_df.geometry.x
+
+                    heatmap_layer = pdk.Layer(
+                        "HeatmapLayer",
+                        data=points_df[["lat", "lon"]].dropna(),
+                        get_position="[lon, lat]",
+                        aggregation="MEAN",
+                        radius_pixels=heatmap_radius,
+                        intensity=1,
+                        threshold=0.05,
+                        color_range=[
+                            [0, 0, 255, 50],
+                            [0, 255, 255, 100],
+                            [0, 255, 0, 150],
+                            [255, 255, 0, 200],
+                            [255, 0, 0, 250],
+                        ],
+                        id="Heatmap",
+                    )
+                    all_layers.append(heatmap_layer)
+
+            # Cluster layer (for points)
+            if cluster and len(gdf) > 0 and "Point" in gdf.geometry.type.values:
+                points_df = gdf[gdf.geometry.type == "Point"].copy()
+                if len(points_df) > 0:
+                    points_df["lat"] = points_df.geometry.y
+                    points_df["lon"] = points_df.geometry.x
+
+                    cluster_layer = pdk.Layer(
+                        "ScatterplotLayer",
+                        data=points_df[["lat", "lon"]].dropna(),
+                        get_position="[lon, lat]",
+                        get_radius=10,
+                        get_fill_color=[30, 136, 229, 200],
+                        get_line_color=[0, 0, 0, 100],
+                        radius_min_pixels=2,
+                        radius_max_pixels=50,
+                        id="Cluster",
+                    )
+                    all_layers.append(cluster_layer)
+
+            # Cell layers
+            if geohash_res > 0 or s2_res > -1 or h3_res > -1:
+                cell_layers, _ = Karta2._add_cell_layers(
+                    gdf,
+                    geohash_res=geohash_res,
+                    s2_res=s2_res,
+                    h3_res=h3_res,
+                    force_full_cover=force_full_cover,
+                    compact=compact,
+                )
+                all_layers.extend(cell_layers)
+
+            # Column layer
+            if height_col:
+                column_layer = Karta2._create_column_layer(
+                    gdf,
+                    height_col=height_col,
+                    radius=radius,
+                    elevation_scale=elevation_scale,
+                    color_gradient=color_gradient,
+                    # tooltip_fields: Optional[List[str]] = None,
+                )
+                all_layers.append(column_layer)
+
+            # Main geometry layer
+            if len(gdf) <= main_layer_max_records:
+                main_layer = Karta2._create_plp_layer(
+                    gdf,
+                    point_color=point_color,
+                    point_radius=point_radius,
+                    point_opacity=point_opacity,
+                    line_color=line_color,
+                    line_width=line_width,
+                    poly_fill_color=poly_fill_color,
+                    poly_highlight_color=poly_highlight_color,
+                    poly_opacity=poly_opacity,
+                    palette=palette,
+                    popup_dict=popup_dict,
+                    get_elevation=get_elevation,
+                    layer_name="Main",
+                )
+                all_layers.append(main_layer)
+
+                # Centroid layer
+                if centroid:
+                    try:
+                        cdf = gpd.GeoDataFrame({"geometry": gdf.centroid}, crs=gdf.crs)
+                        centroid_layer = Karta2._create_plp_layer(
+                            cdf,
+                            point_color=[255, 0, 0],
+                            point_radius=3,
+                            point_opacity=0.8,
+                            layer_name="Centroid",
+                        )
+                        all_layers.append(centroid_layer)
+                    except Exception as e:
+                        print(f"Error creating centroid layer: {e}")
+
+                # Buffer layer
+                if buffer_r_max > 0:
+                    try:
+                        buffer_layer = Karta2._add_buffer_layer(
+                            gdf,
+                            buffer_r_max=buffer_r_max,
+                            buffer_r_min=buffer_r_min,
+                        )
+                        all_layers.append(buffer_layer)
+                    except Exception as e:
+                        print(f"Error creating buffer layer: {e}")
+            else:
+                print(
+                    f"Dataset size ({len(gdf):,} records) exceeds threshold "
+                    f"(main_layer_max_records={main_layer_max_records:,})",
+                    flush=True,
+                )
+                print("Main layer hidden to maintain interactive performance.")
+
+        # Calculate initial view state from bounds
+        if initial_view_state is None:
+            try:
+                if all_bounds:
+                    # Combine all bounds
+                    all_bounds = np.array(all_bounds)
+                    minx = np.min(all_bounds[:, 0])
+                    miny = np.min(all_bounds[:, 1])
+                    maxx = np.max(all_bounds[:, 2])
+                    maxy = np.max(all_bounds[:, 3])
+
+                    # Calculate center and zoom
+                    center_lat = (miny + maxy) / 2
+                    center_lon = (minx + maxx) / 2
+
+                    # Calculate zoom level based on bounds
+                    lat_diff = maxy - miny
+                    lon_diff = maxx - minx
+                    zoom = 5.5
+
+                    if lat_diff > 0 and lon_diff > 0:
+                        # Rough zoom calculation
+                        max_diff = max(lat_diff, lon_diff)
+                        if max_diff > 10:
+                            zoom = 4
+                        elif max_diff > 5:
+                            zoom = 5
+                        elif max_diff > 2:
+                            zoom = 6
+                        elif max_diff > 1:
+                            zoom = 7
+                        elif max_diff > 0.5:
+                            zoom = 8
+                        elif max_diff > 0.1:
+                            zoom = 9
+                        else:
+                            zoom = 10
+
+                    initial_view_state = {
+                        "latitude": center_lat,
+                        "longitude": center_lon,
+                        "zoom": zoom,
+                        "pitch": 60,
+                        "bearing": 0,
+                    }
+                else:
+                    # Default UK view
+                    initial_view_state = {
+                        "latitude": 54.5,
+                        "longitude": -2.5,
+                        "zoom": 5.5,
+                        "pitch": 0,
+                        "bearing": 0,
+                    }
+            except Exception as e:
+                print(f"Error calculating view state: {e}")
+                initial_view_state = {
+                    "latitude": 54.5,
+                    "longitude": -2.5,
+                    "zoom": 5.5,
+                    "pitch": 0,
+                    "bearing": 0,
+                }
+
+        # Create the deck with explicit map style
+        deck = Karta2._base_map(
+            initial_view_state=initial_view_state,
+            map_style=map_style,
+            height=height,
+            width=width,
+        )
+
+        # Add all layers
+        deck.layers = all_layers
+
+        return deck
+
+    @staticmethod
+    def choropleth(
+        mdf: gpd.GeoDataFrame,
+        columns: List[str],
+        legend: str,
+        bins: Optional[List] = None,
+        palette: str = "YlOrRd",
+        map_style: str = "light",
+        height: int = 600,
+        width: int = 800,
+    ) -> pdk.Deck:
+        """
+        Create a choropleth map using PyDeck.
+        """
+
+        if bins is None:
+            bins = np.quantile(mdf[columns[1]].dropna(), [0, 0.25, 0.5, 0.75, 0.98, 1])
+
+        # Create color scale
+        color_scale = []
+        for i in range(len(bins) - 1):
+            # Generate colors from YlOrRd palette
+            r = min(255, 200 + i * 20)
+            g = min(255, 100 + i * 30)
+            b = min(255, 50 + i * 10)
+            color_scale.append([r, g, b, 200])
+
+        # Prepare features
+        features = []
+        for _idx, row in mdf.iterrows():
+            try:
+                value = row[columns[1]]
+
+                # Determine color based on bin
+                color_idx = 0
+                for i, bin_val in enumerate(bins[1:]):
+                    if value <= bin_val:
+                        color_idx = i
+                        break
+                color = color_scale[min(color_idx, len(color_scale) - 1)]
+
+                feature = {
+                    "type": "Feature",
+                    "geometry": mapping(row.geometry),
+                    "properties": {
+                        columns[0]: row[columns[0]],
+                        columns[1]: value,
+                        "tooltip": f"{columns[0]}: {row[columns[0]]}\n{columns[1]}: {value:,.0f}",
+                        "fill_color": color,
+                    },
+                }
+                features.append(feature)
+            except Exception:
+                continue
+
+        # Calculate initial view state
+        bounds = mdf.total_bounds
+        initial_view_state = {
+            "latitude": (bounds[1] + bounds[3]) / 2,
+            "longitude": (bounds[0] + bounds[2]) / 2,
+            "zoom": 7,
+            "pitch": 0,
+            "bearing": 0,
+        }
+
+        # Create choropleth layer
+        choropleth_layer = pdk.Layer(
+            "GeoJsonLayer",
+            data={"type": "FeatureCollection", "features": features},
+            get_fill_color="properties.fill_color",
+            get_line_color=[0, 0, 0, 100],
+            line_width_min_pixels=0.5,
+            pickable=True,
+            auto_highlight=True,
+            highlight_color=[0, 255, 0, 100],
+            id="Choropleth",
+        )
+
+        # Create deck with basemap
+        deck = Karta2._base_map(
+            initial_view_state=initial_view_state,
+            map_style=map_style,
+            height=height,
+            width=width,
+        )
+        deck.layers = [choropleth_layer]
+
+        return deck
+
+    @staticmethod
+    def joint_choropleth(
+        mdf: gpd.GeoDataFrame,
+        gdf: gpd.GeoDataFrame,
+        poly_id: str,
+        legend: str,
+        bins: Optional[List] = None,
+        min_observations: int = 1,
+        palette: str = "YlOrRd",
+        cell_type: Optional[str] = None,
+        res: Optional[int] = None,
+        map_style: str = "light",
+        height: int = 600,
+        width: int = 800,
+    ) -> pdk.Deck:
+        """
+        Create a joint choropleth map counting points within polygons.
+        """
+
+        try:
+            if cell_type is not None:
+                cell_list, _ = SpatialIndex.ppoly_cell(mdf, cell_type=cell_type, res=res)
+                cells, _ = SpatialIndex.cell_poly(cell_list, cell_type=cell_type)
+                mdf = gpd.GeoDataFrame({poly_id: cell_list}, geometry=cells, crs="EPSG:4326")
+
+            # Spatial join to count points in polygons
+            gdf = gpd.sjoin(gdf[["geometry"]], mdf[[poly_id, "geometry"]], predicate="within")
+
+            # Count points per polygon
+            counts = gdf[poly_id].value_counts().reset_index()
+            counts.columns = [poly_id, "count"]
+
+            # Merge counts back
+            mdf = pd.merge(mdf, counts, on=poly_id, how="left")
+            mdf["count"] = mdf["count"].fillna(0)
+            mdf = mdf[mdf["count"] >= min_observations]
+
+            if bins is None:
+                bins = np.quantile(mdf["count"].dropna(), [0, 0.25, 0.5, 0.75, 0.98, 1])
+
+            return Karta2.choropleth(
+                mdf,
+                columns=[poly_id, "count"],
+                bins=bins,
+                legend=legend,
+                palette=palette,
+                map_style=map_style,
+                height=height,
+                width=width,
+            )
+        except Exception as e:
+            print(f"Error creating joint choropleth: {e}")
+            # Return a default map
+            return Karta2._base_map(map_style=map_style, height=height, width=width)
 
 
 plp = Karta.plp
