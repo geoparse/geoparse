@@ -1830,6 +1830,44 @@ class SnabbKarta:
         return lb.PolygonLayer.from_geopandas(gdf, **common_args)
 
     @staticmethod
+    def _create_column_layer(
+        gdf: gpd.GeoDataFrame,
+        height_col=None,
+        elevation_scale=100,
+        radius: int = 100,
+        opacity: float = 128,
+        poly_highlight=True,
+        pickable=True,
+    ) -> lb.PolygonLayer:
+        max_val = gdf[height_col].max()
+        min_val = gdf[height_col].min()
+        val_range = max_val - min_val if max_val > min_val else 1  # Avoid division by zero
+
+        norm = (gdf[height_col] - min_val) / val_range
+
+        get_fill_color = np.array(
+            [
+                [
+                    int(255 * v),  # R
+                    0,  # G
+                    int(255 * (1 - v)),  # B
+                    opacity,  # A
+                ]
+                for v in norm.fillna(0)
+            ],
+            dtype=np.uint8,
+        )
+        return lb.ColumnLayer.from_geopandas(
+            gdf,
+            get_fill_color=get_fill_color,
+            get_elevation=gdf[height_col],
+            elevation_scale=elevation_scale,
+            radius=radius,
+            pickable=pickable,
+            extruded=True,
+        )
+
+    @staticmethod
     def _create_plp_layer(
         gdf,
         point_color: str = None,
@@ -1837,22 +1875,35 @@ class SnabbKarta:
         point_radius: int | str = None,
         line_color: str = None,
         fill_color: str = None,
-        height_col=None,
-        elevation_scale=100,
         speed_field: str = None,
         speed_limit_field: str = None,
+        height_col: str = None,
+        elevation_scale: int = None,
+        radius: int = None,
     ):
         """Factory function to create appropriate layer based on geometry type."""
         geom_type = gdf.geometry.type.to_list()[0]
         if geom_type in {"Point", "MultiPoint"}:
-            return SnabbKarta._create_point_layer(
-                gdf,
-                color=point_color,
-                opacity=point_opacity,
-                speed_field=speed_field,
-                speed_limit_field=speed_limit_field,
-                get_radius=point_radius,
-            )
+            if not height_col:
+                return SnabbKarta._create_point_layer(
+                    gdf,
+                    color=point_color,
+                    opacity=point_opacity,
+                    speed_field=speed_field,
+                    speed_limit_field=speed_limit_field,
+                    get_radius=point_radius,
+                )
+            else:
+                return SnabbKarta._create_column_layer(
+                    gdf,
+                    height_col=height_col,
+                    elevation_scale=elevation_scale,
+                    radius=radius,
+                    opacity=200,
+                    poly_highlight=True,
+                    pickable=True,
+                )
+
         elif geom_type in {"LineString", "MultiLineString"}:
             return SnabbKarta._create_line_layer(gdf, line_color=line_color)
         elif geom_type in {"Polygon", "MultiPolygon"}:
@@ -2013,6 +2064,9 @@ class SnabbKarta:
         point_radius: int | str = 1,
         radius_min_pixels: int = 1,
         radius_max_pixels: int = 10,
+        height_col=None,
+        elevation_scale=100,
+        radius=1000,
         # LineString
         line_color: str = "blue",
         line_opacity: float = 0.5,
@@ -2021,8 +2075,6 @@ class SnabbKarta:
         highlight_color: str = "green",
         fill_opacity: float = 0.25,
         highlight_opacity: float = 0.5,
-        height_col=None,
-        elevation_scale=100,
         centroid: bool = False,  # if True it shows centroids of polygons on the map
         # Cell
         geohash_res: int = 0,
@@ -2055,10 +2107,11 @@ class SnabbKarta:
                         point_radius,
                         line_color,
                         fill_color,
-                        height_col,
-                        elevation_scale,
                         speed_field,
                         speed_limit_field,
+                        height_col,
+                        elevation_scale,
+                        radius,
                     )
                 )
                 # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
