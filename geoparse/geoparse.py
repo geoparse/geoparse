@@ -994,44 +994,6 @@ class SnabbKarta:
         return lb.PolygonLayer.from_geopandas(gdf, **common_args)
 
     @staticmethod
-    def _create_column_layer(
-        gdf: gpd.GeoDataFrame,
-        height_col=None,
-        elevation_scale=100,
-        radius: int = 100,
-        opacity: float = 128,
-        poly_highlight=True,
-        pickable=True,
-    ) -> lb.PolygonLayer:
-        max_val = gdf[height_col].max()
-        min_val = gdf[height_col].min()
-        val_range = max_val - min_val if max_val > min_val else 1  # Avoid division by zero
-
-        norm = (gdf[height_col] - min_val) / val_range
-
-        get_fill_color = np.array(
-            [
-                [
-                    int(255 * v),  # R
-                    0,  # G
-                    int(255 * (1 - v)),  # B
-                    opacity,  # A
-                ]
-                for v in norm.fillna(0)
-            ],
-            dtype=np.uint8,
-        )
-        return lb.ColumnLayer.from_geopandas(
-            gdf,
-            get_fill_color=get_fill_color,
-            get_elevation=gdf[height_col],
-            elevation_scale=elevation_scale,
-            radius=radius,
-            pickable=pickable,
-            extruded=True,
-        )
-
-    @staticmethod
     def _create_plp_layer(
         gdf,
         point_color: str = None,
@@ -1081,6 +1043,44 @@ class SnabbKarta:
                 f"LineString', 'MultiLineString', "
                 f"'Polygon', 'MultiPolygon'"
             )
+
+    @staticmethod
+    def _create_column_layer(
+        gdf: gpd.GeoDataFrame,
+        height_col=None,
+        elevation_scale=100,
+        radius: int = 100,
+        opacity: float = 128,
+        poly_highlight=True,
+        pickable=True,
+    ) -> lb.PolygonLayer:
+        max_val = gdf[height_col].max()
+        min_val = gdf[height_col].min()
+        val_range = max_val - min_val if max_val > min_val else 1  # Avoid division by zero
+
+        norm = (gdf[height_col] - min_val) / val_range
+
+        get_fill_color = np.array(
+            [
+                [
+                    int(255 * v),  # R
+                    0,  # G
+                    int(255 * (1 - v)),  # B
+                    opacity,  # A
+                ]
+                for v in norm.fillna(0)
+            ],
+            dtype=np.uint8,
+        )
+        return lb.ColumnLayer.from_geopandas(
+            gdf,
+            get_fill_color=get_fill_color,
+            get_elevation=gdf[height_col],
+            elevation_scale=elevation_scale,
+            radius=radius,
+            pickable=pickable,
+            extruded=True,
+        )
 
     @staticmethod
     def _add_cell_layers(
