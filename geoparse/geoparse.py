@@ -1025,8 +1025,6 @@ class SnabbKarta:
                     height_col=height_col,
                     elevation_scale=elevation_scale,
                     radius=radius,
-                    opacity=200,
-                    poly_highlight=True,
                     pickable=True,
                 )
 
@@ -1048,10 +1046,9 @@ class SnabbKarta:
     def _create_column_layer(
         gdf: gpd.GeoDataFrame,
         height_col=None,
-        elevation_scale=100,
+        elevation_scale: int = 100,
         radius: int = 100,
-        opacity: float = 128,
-        poly_highlight=True,
+        opacity: int = 200,
         pickable=True,
     ) -> lb.PolygonLayer:
         max_val = gdf[height_col].max()
