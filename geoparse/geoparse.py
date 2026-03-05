@@ -25,6 +25,7 @@ import requests
 import shapely
 from branca.element import MacroElement, Template
 from folium import plugins
+from ipywidgets import HTML, VBox
 from lonboard.basemap import CartoStyle
 from s2 import s2
 from scipy.spatial import KDTree
@@ -1314,7 +1315,7 @@ class SnabbKarta:
         else:  # smaller area (e.g. London)
             zoom = 11 - math.log(max_length * 2, 1.5)
 
-        return lb.Map(
+        snabb_karta = lb.Map(
             layers=layers,
             basemap_style=tiles,
             height=map_height,
@@ -1326,6 +1327,30 @@ class SnabbKarta:
                 "bearing": 0,
             },
         )
+
+        # Create the watermark/attribution HTML widget
+        geoparse_html = HTML("""
+        <div style="
+            position: relative;
+            bottom: 0px;
+            left: 0px;
+            z-index: 9999;
+            background: rgba(255,255,255,0.8);
+            padding: 4px 8px;
+            font-size: 11px;
+            border-radius: 4px;
+            width: fit-content;
+            margin-top: 5px;
+        ">
+            Created by <b>GeoParse</b>:
+            <a href="https://github.com/geoparse/geoparse" target="_blank">
+                https://github.com/geoparse/geoparse
+            </a>
+        </div>
+        """)
+
+        # Combine the map and attribution using VBox
+        return VBox([snabb_karta, geoparse_html])
 
 
 class GeomUtils:
