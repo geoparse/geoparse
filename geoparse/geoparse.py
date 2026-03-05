@@ -1046,8 +1046,8 @@ class SnabbKarta:
     def _create_column_layer(
         gdf: gpd.GeoDataFrame,
         height_col=None,
-        elevation_scale: int = 100,
-        radius: int = 100,
+        elevation_scale: int = 1,
+        radius: int = 2,
         opacity: int = 200,
         pickable=True,
     ) -> lb.PolygonLayer:
@@ -1226,8 +1226,8 @@ class SnabbKarta:
         radius_min_pixels: int = 1,
         radius_max_pixels: int = 10,
         height_col=None,
-        elevation_scale=100,
-        radius=1000,
+        elevation_scale=1,
+        radius=2,
         # LineString
         line_color: str = "blue",
         line_opacity: float = 0.5,
