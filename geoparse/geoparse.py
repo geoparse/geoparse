@@ -17,6 +17,7 @@ import ipywidgets
 import lonboard as lb
 import matplotlib
 import matplotlib.colors
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pydeck as pdk
@@ -997,16 +998,17 @@ class SnabbKarta:
     @staticmethod
     def _create_plp_layer(
         gdf,
-        point_color: str = None,
-        point_opacity: float = None,
-        point_radius: int | str = None,
-        line_color: str = None,
-        fill_color: str = None,
-        speed_field: str = None,
-        speed_limit_field: str = None,
-        height_col: str = None,
-        elevation_scale: int = None,
-        radius: int = None,
+        point_color: str,
+        point_opacity: float,
+        point_radius: int | str,
+        line_color: str,
+        fill_color: str,
+        speed_field: str,
+        speed_limit_field: str,
+        height_col: str,
+        elevation_scale: int,
+        radius: int,
+        color_map: str,
     ):
         """Factory function to create appropriate layer based on geometry type."""
         geom_type = gdf.geometry.type.to_list()[0]
@@ -1026,6 +1028,7 @@ class SnabbKarta:
                     height_col=height_col,
                     elevation_scale=elevation_scale,
                     radius=radius,
+                    color_map=color_map,
                     pickable=True,
                 )
 
@@ -1046,11 +1049,12 @@ class SnabbKarta:
     @staticmethod
     def _create_column_layer(
         gdf: gpd.GeoDataFrame,
-        height_col=None,
-        elevation_scale: int = 1,
-        radius: int = 2,
+        height_col: str,
+        elevation_scale: int,
+        radius: int,
+        color_map: str,
         opacity: int = 200,
-        pickable=True,
+        pickable: bool = True,
     ) -> lb.PolygonLayer:
         max_val = gdf[height_col].max()
         min_val = gdf[height_col].min()
@@ -1058,18 +1062,22 @@ class SnabbKarta:
 
         norm = (gdf[height_col] - min_val) / val_range
 
-        get_fill_color = np.array(
+        # Apply colormap to normalized values (handling NaN)
+        norm_clean = norm.fillna(0).values
+
+        # Get colormap
+        cmap = plt.cm.get_cmap(color_map)
+
+        colors_rgba = cmap(1 - norm_clean)
+
+        # Convert to uint8 format with your opacity
+        get_fill_color = np.column_stack(
             [
-                [
-                    int(255 * v),  # R
-                    0,  # G
-                    int(255 * (1 - v)),  # B
-                    opacity,  # A
-                ]
-                for v in norm.fillna(0)
-            ],
-            dtype=np.uint8,
+                (colors_rgba[:, :3] * 255).astype(np.uint8),  # RGB channels
+                np.full(len(colors_rgba), opacity, dtype=np.uint8),  # Alpha channel
+            ]
         )
+
         return lb.ColumnLayer.from_geopandas(
             gdf,
             get_fill_color=get_fill_color,
@@ -1226,9 +1234,10 @@ class SnabbKarta:
         point_radius: int | str = 1,
         radius_min_pixels: int = 1,
         radius_max_pixels: int = 10,
-        height_col=None,
-        elevation_scale=1,
-        radius=2,
+        height_col: str = None,
+        elevation_scale: int = 1,
+        radius: int = 2,
+        color_map: str = "RdYlGn",
         # LineString
         line_color: str = "blue",
         line_opacity: float = 0.5,
@@ -1274,6 +1283,7 @@ class SnabbKarta:
                         height_col,
                         elevation_scale,
                         radius,
+                        color_map,
                     )
                 )
                 # Generate cell visualization layers (geohash, S2, H3) if any resolution is specified
