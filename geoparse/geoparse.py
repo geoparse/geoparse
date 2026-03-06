@@ -13,7 +13,6 @@ from typing import Dict, List, Optional, Tuple, Union
 import folium  # Folium is a Python library used for visualizing geospatial data. Actually, it's a Python wrapper for Leaflet which is a leading open-source JavaScript library for plotting interactive maps.
 import geopandas as gpd
 import h3
-import ipywidgets
 import lonboard as lb
 import matplotlib
 import matplotlib.colors
@@ -1337,30 +1336,98 @@ class SnabbKarta:
                 "bearing": 0,
             },
         )
-
         # Create the watermark/attribution HTML widget
-        geoparse_html = ipywidgets.HTML("""
+        # geoparse_html = ipywidgets.HTML("""
+        # <div style="
+        #    position: relative;
+        #    bottom: 0px;
+        #    left: 0px;
+        #    z-index: 9999;
+        #    background: rgba(255,255,255,0.8);
+        #    padding: 4px 8px;
+        #    font-size: 11px;
+        #    border-radius: 4px;
+        #    width: fit-content;
+        #    margin-top: 5px;
+        # ">
+        #    Created by <b>GeoParse</b>:
+        #    <a href="https://github.com/geoparse/geoparse" target="_blank">
+        #        https://github.com/geoparse/geoparse
+        #    </a>
+        # </div>
+        # """)
+
+        ## Combine the map and attribution using VBox
+        # return ipywidgets.VBox([snabb_karta, geoparse_html])
+        return snabb_karta
+
+    @staticmethod
+    def export_map(lonboard_map, map_path, title="GeoParse Map"):
+        """
+        Embed a GeoParse watermark inside an exported map HTML.
+
+        Parameters
+        ----------
+        lonboard_map : lb.Map
+            lonboard Map object.
+        map_path : str
+            Path where the final HTML will be saved.
+        title : str
+            Title of the HTML page.
+        """
+
+        map_html = lonboard_map.to_html()
+
+        geoparse_html = """
         <div style="
-            position: relative;
-            bottom: 0px;
-            left: 0px;
+            position: absolute;
+            bottom: 10px;
+            left: 120px;
             z-index: 9999;
             background: rgba(255,255,255,0.8);
             padding: 4px 8px;
             font-size: 11px;
             border-radius: 4px;
             width: fit-content;
-            margin-top: 5px;
         ">
             Created by <b>GeoParse</b>:
             <a href="https://github.com/geoparse/geoparse" target="_blank">
                 https://github.com/geoparse/geoparse
             </a>
         </div>
-        """)
+        """
 
-        # Combine the map and attribution using VBox
-        return ipywidgets.VBox([snabb_karta, geoparse_html])
+        final_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="utf-8">
+    <title>{title}</title>
+    <style>
+    .map-container {{
+      position: relative;
+      width: 100%;
+      height: 100vh;
+    }}
+    </style>
+    </head>
+
+    <body>
+
+    <div class="map-container">
+
+    {map_html}
+
+    {geoparse_html}
+
+    </div>
+
+    </body>
+    </html>
+    """
+
+        with open(map_path, "w", encoding="utf-8") as f:
+            f.write(final_html)
 
 
 class GeomUtils:
