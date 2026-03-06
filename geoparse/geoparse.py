@@ -17,6 +17,7 @@ import ipywidgets
 import lonboard as lb
 import matplotlib
 import matplotlib.colors
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pydeck as pdk
@@ -1058,18 +1059,21 @@ class SnabbKarta:
 
         norm = (gdf[height_col] - min_val) / val_range
 
-        get_fill_color = np.array(
+        # Apply colormap to normalized values (handling NaN)
+        norm_clean = norm.fillna(0).values
+
+        # Get RdYlGn colormap
+        cmap = plt.cm.RdYlGn
+        colors_rgba = cmap(1 - norm_clean)
+
+        # Convert to uint8 format with your opacity
+        get_fill_color = np.column_stack(
             [
-                [
-                    int(255 * v),  # R
-                    0,  # G
-                    int(255 * (1 - v)),  # B
-                    opacity,  # A
-                ]
-                for v in norm.fillna(0)
-            ],
-            dtype=np.uint8,
+                (colors_rgba[:, :3] * 255).astype(np.uint8),  # RGB channels
+                np.full(len(colors_rgba), opacity, dtype=np.uint8),  # Alpha channel
+            ]
         )
+
         return lb.ColumnLayer.from_geopandas(
             gdf,
             get_fill_color=get_fill_color,
