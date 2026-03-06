@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import folium  # Folium is a Python library used for visualizing geospatial data. Actually, it's a Python wrapper for Leaflet which is a leading open-source JavaScript library for plotting interactive maps.
 import geopandas as gpd
 import h3
+import ipywidgets
 import lonboard as lb
 import matplotlib
 import matplotlib.colors
@@ -25,7 +26,6 @@ import requests
 import shapely
 from branca.element import MacroElement, Template
 from folium import plugins
-from ipywidgets import HTML, VBox
 from lonboard.basemap import CartoStyle
 from s2 import s2
 from scipy.spatial import KDTree
@@ -1329,7 +1329,7 @@ class SnabbKarta:
         )
 
         # Create the watermark/attribution HTML widget
-        geoparse_html = HTML("""
+        geoparse_html = ipywidgets.HTML("""
         <div style="
             position: relative;
             bottom: 0px;
@@ -1350,7 +1350,7 @@ class SnabbKarta:
         """)
 
         # Combine the map and attribution using VBox
-        return VBox([snabb_karta, geoparse_html])
+        return ipywidgets.VBox([snabb_karta, geoparse_html])
 
 
 class GeomUtils:
