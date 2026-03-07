@@ -1324,7 +1324,7 @@ class SnabbKarta:
         else:  # smaller area (e.g. London)
             zoom = 11 - math.log(max_length * 2, 1.5)
 
-        snabb_karta = lb.Map(
+        snabbkarta = lb.Map(
             layers=layers,
             basemap_style=tiles,
             height=map_height,
@@ -1336,98 +1336,101 @@ class SnabbKarta:
                 "bearing": 0,
             },
         )
-        # Create the watermark/attribution HTML widget
+
+        # Add export functionality to the map object
+        def export_html(html_path, title="GeoParse Map"):
+            """
+            Embed a GeoParse watermark inside an exported map HTML.
+
+            Parameters
+            ----------
+            html_path : str
+                Path where the final HTML will be saved.
+            title : str
+                Title of the HTML page.
+            """
+            map_html = snabbkarta.to_html()
+
+            geoparse_html = """
+            <div style="
+                position: absolute;
+                bottom: 10px;
+                left: 120px;
+                z-index: 9999;
+                background: rgba(255,255,255,0.8);
+                padding: 4px 8px;
+                font-size: 11px;
+                border-radius: 4px;
+                width: fit-content;
+            ">
+                Created by <b>GeoParse</b>:
+                <a href="https://github.com/geoparse/geoparse" target="_blank">
+                    https://github.com/geoparse/geoparse
+                </a>
+            </div>
+            """
+
+            final_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+        <meta charset="utf-8">
+        <title>{title}</title>
+        <style>
+        .map-container {{
+          position: relative;
+          width: 100%;
+          height: 100vh;
+        }}
+        </style>
+        </head>
+
+        <body>
+
+        <div class="map-container">
+
+        {map_html}
+
+        {geoparse_html}
+
+        </div>
+
+        </body>
+        </html>
+        """
+
+            with open(html_path, "w", encoding="utf-8") as f:
+                f.write(final_html)
+
+        # Attach the export method to the map object
+        snabbkarta.export_html = export_html
+
+        ## Create the watermark/attribution HTML widget
+        # import ipywidgets
         # geoparse_html = ipywidgets.HTML("""
         # <div style="
-        #    position: relative;
-        #    bottom: 0px;
-        #    left: 0px;
-        #    z-index: 9999;
-        #    background: rgba(255,255,255,0.8);
-        #    padding: 4px 8px;
-        #    font-size: 11px;
-        #    border-radius: 4px;
-        #    width: fit-content;
-        #    margin-top: 5px;
+        #   position: relative;
+        #   bottom: 0px;
+        #   left: 0px;
+        #   z-index: 9999;
+        #   background: rgba(255,255,255,0.8);
+        #   padding: 4px 8px;
+        #   font-size: 11px;
+        #   border-radius: 4px;
+        #   width: fit-content;
+        #   margin-top: 5px;
         # ">
-        #    Created by <b>GeoParse</b>:
-        #    <a href="https://github.com/geoparse/geoparse" target="_blank">
-        #        https://github.com/geoparse/geoparse
-        #    </a>
+        #   Created by <b>GeoParse</b>:
+        #   <a href="https://github.com/geoparse/geoparse" target="_blank">
+        #       https://github.com/geoparse/geoparse
+        #   </a>
         # </div>
         # """)
 
         ## Combine the map and attribution using VBox
-        # return ipywidgets.VBox([snabb_karta, geoparse_html])
-        return snabb_karta
+        # return ipywidgets.VBox([snabbkarta, geoparse_html])
 
-    @staticmethod
-    def export_map(lonboard_map, map_path, title="GeoParse Map"):
-        """
-        Embed a GeoParse watermark inside an exported map HTML.
-
-        Parameters
-        ----------
-        lonboard_map : lb.Map
-            lonboard Map object.
-        map_path : str
-            Path where the final HTML will be saved.
-        title : str
-            Title of the HTML page.
-        """
-
-        map_html = lonboard_map.to_html()
-
-        geoparse_html = """
-        <div style="
-            position: absolute;
-            bottom: 10px;
-            left: 120px;
-            z-index: 9999;
-            background: rgba(255,255,255,0.8);
-            padding: 4px 8px;
-            font-size: 11px;
-            border-radius: 4px;
-            width: fit-content;
-        ">
-            Created by <b>GeoParse</b>:
-            <a href="https://github.com/geoparse/geoparse" target="_blank">
-                https://github.com/geoparse/geoparse
-            </a>
-        </div>
-        """
-
-        final_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <meta charset="utf-8">
-    <title>{title}</title>
-    <style>
-    .map-container {{
-      position: relative;
-      width: 100%;
-      height: 100vh;
-    }}
-    </style>
-    </head>
-
-    <body>
-
-    <div class="map-container">
-
-    {map_html}
-
-    {geoparse_html}
-
-    </div>
-
-    </body>
-    </html>
-    """
-
-        with open(map_path, "w", encoding="utf-8") as f:
-            f.write(final_html)
+        return snabbkarta
 
 
 class GeomUtils:
