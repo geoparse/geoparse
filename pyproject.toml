@@ -29,9 +29,9 @@ dependencies = [
     "jupyterlab>=4.0.5",
     "pydeck>=0.9.1",
 ]
-[tool.uv]
-exclude-newer = "2026-03-01T00:00:00Z"
-dev-dependencies = [
+
+[dependency-groups]
+dev = [
     "ruff>=0.6.9",
     "pytest>=8.3.3",
     "pytest-cov>=5.0.0",
@@ -40,4 +40,7 @@ dev-dependencies = [
     "sphinx>=7.4.7",
     "sphinx-rtd-theme>=3.0.1",
 ]
+
+[tool.uv]
+exclude-newer = "2026-03-01T00:00:00Z"
 
