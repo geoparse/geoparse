@@ -964,6 +964,7 @@ class SnabbKarta:
         fill_color="red",
         height_col=None,
         elevation_scale=100,
+        color_map: str = "RdYlGn",
         opacity: float = 0.5,
         poly_highlight=True,
         pickable=True,
@@ -971,7 +972,26 @@ class SnabbKarta:
         # Convert opacity to 0-255 range
         opacity = int(opacity * 255)
 
-        if fill_color in gdf.columns:
+        if height_col:
+            max_val = gdf[height_col].max()
+            min_val = gdf[height_col].min()
+            val_range = max_val - min_val if max_val > min_val else 1  # Avoid division by zero
+            norm = (gdf[height_col] - min_val) / val_range
+            norm_clean = norm.fillna(0).values
+
+            # Get colormap
+            cmap = plt.cm.get_cmap(color_map)
+            colors_rgba = cmap(1 - norm_clean)
+
+            # Convert to uint8 format with your opacity
+            get_fill_color = np.column_stack(
+                [
+                    (colors_rgba[:, :3] * 255).astype(np.uint8),  # RGB channels
+                    np.full(len(colors_rgba), opacity, dtype=np.uint8),  # Alpha channel
+                ]
+            )
+
+        elif fill_color in gdf.columns:
             get_fill_color = np.array([SnabbKarta._get_color(item) + [opacity] for item in gdf[fill_color]], dtype=np.uint8)
         else:
             rgb_color = [int(c * 255) for c in matplotlib.colors.to_rgb(fill_color)]
@@ -1035,7 +1055,11 @@ class SnabbKarta:
             return SnabbKarta._create_line_layer(gdf, line_color=line_color)
         elif geom_type in {"Polygon", "MultiPolygon"}:
             return SnabbKarta._create_poly_layer(
-                gdf, fill_color=fill_color, height_col=height_col, elevation_scale=elevation_scale
+                gdf,
+                fill_color=fill_color,
+                height_col=height_col,
+                elevation_scale=elevation_scale,
+                color_map=color_map,
             )
         else:
             raise ValueError(
