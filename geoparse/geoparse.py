@@ -7,7 +7,7 @@ from collections import deque
 from datetime import datetime
 from math import atan2, cos, radians, sin, sqrt
 from multiprocessing import Pool, cpu_count
-from time import time
+from time import sleep, time
 
 import folium  # Folium is a Python library used for visualizing geospatial data. Actually, it's a Python wrapper for Leaflet which is a leading open-source JavaScript library for plotting interactive maps.
 import geopandas as gpd
@@ -3849,6 +3849,53 @@ class SpatialOps:
                     if "postal_code" in component.get("types", []) and len(component["types"]) == 1:
                         return component.get("long_name", None)
         return None
+
+    @staticmethod
+    def get_altitude(lat, lon):
+        """Query Open-Elevation API for a single coordinate."""
+        url = f"https://api.open-elevation.com/api/v1/lookup?locations={lat},{lon}"
+
+        try:
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            return data["results"][0]["elevation"]
+        except Exception:
+            return None
+
+    @staticmethod
+    def get_altitudes(lats, lons, chunk_size=100, pause=0.1):
+        """
+        Fetch altitudes from Open-Elevation API in batches.
+
+        Parameters
+        ----------
+        lats : iterable
+        lons : iterable
+        chunk_size : int
+            Maximum number of coordinates per API request
+        pause : float
+            Delay between requests to avoid rate limits
+        """
+
+        alts = []
+        coords = list(zip(lats, lons))
+
+        for i in range(0, len(coords), chunk_size):
+            chunk = coords[i : i + chunk_size]
+
+            locations = "|".join(f"{lat},{lon}" for lat, lon in chunk)
+            url = f"https://api.open-elevation.com/api/v1/lookup?locations={locations}"
+
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+
+            data = response.json()
+            alts.extend(r["elevation"] for r in data["results"])
+
+            sleep(pause)  # avoid API rate limits
+
+        return alts
 
 
 class GamlaKarta:
