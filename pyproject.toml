@@ -27,7 +27,6 @@ dependencies = [
     "s2>=0.1.9",
     "h3>=4.3.0",
     "jupyterlab>=4.0.5",
-    "pydeck>=0.9.1",
 ]
 
 [dependency-groups]
