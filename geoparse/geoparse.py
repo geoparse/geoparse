@@ -3867,7 +3867,7 @@ class SpatialOps:
     @staticmethod
     def get_altitudes(lats, lons, raster_path: str = None, chunk_size=100, pause=0.1) -> list[float]:
         if raster_path:
-            print(f"Using raster file:{raster_path} ...")
+            print("Using a local raster file ...")
             coords = list(zip(lons, lats))
             with rasterio.open(raster_path) as src:
                 alts = [v[0] for v in src.sample(coords)]
