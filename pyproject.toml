@@ -27,6 +27,7 @@ dependencies = [
     "s2>=0.1.9",
     "h3>=4.3.0",
     "jupyterlab>=4.0.5",
+    "rasterio>=1.4.4",
 ]
 
 [dependency-groups]
