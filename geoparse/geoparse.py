@@ -3872,7 +3872,7 @@ class SpatialOps:
                 alts = [v[0] for v in src.sample(coords)]
         else:
             print("Using the Open Elevation API...")
-            print("For faster, unlimited elevation retrieval, use a local raster file.")
+            print("For faster, unlimited elevation retrieval, use a local raster file.\n")
             coords = list(zip(lats, lons))
             alts = []
             for i in range(0, len(coords), chunk_size):
