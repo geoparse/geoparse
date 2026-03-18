@@ -20,6 +20,7 @@ import numpy as np
 import pandas as pd
 import pygeohash
 import pyproj
+import rasterio
 import requests
 import shapely
 from branca.element import MacroElement, Template
@@ -3864,36 +3865,29 @@ class SpatialOps:
             return None
 
     @staticmethod
-    def get_altitudes(lats, lons, chunk_size=100, pause=0.1):
-        """
-        Fetch altitudes from Open-Elevation API in batches.
+    def get_altitudes(lats, lons, raster_path: str = None, chunk_size=100, pause=0.1) -> list[float]:
+        if raster_path:
+            print(f"Using raster file:{raster_path} ...")
+            coords = list(zip(lons, lats))
+            with rasterio.open(raster_path) as src:
+                alts = [v[0] for v in src.sample(coords)]
+        else:
+            print("Using Open Elevation API ...")
+            coords = list(zip(lats, lons))
+            alts = []
+            for i in range(0, len(coords), chunk_size):
+                chunk = coords[i : i + chunk_size]
 
-        Parameters
-        ----------
-        lats : iterable
-        lons : iterable
-        chunk_size : int
-            Maximum number of coordinates per API request
-        pause : float
-            Delay between requests to avoid rate limits
-        """
+                locations = "|".join(f"{lat},{lon}" for lat, lon in chunk)
+                url = f"https://api.open-elevation.com/api/v1/lookup?locations={locations}"
 
-        alts = []
-        coords = list(zip(lats, lons))
+                response = requests.get(url, timeout=30)
+                response.raise_for_status()
 
-        for i in range(0, len(coords), chunk_size):
-            chunk = coords[i : i + chunk_size]
+                data = response.json()
+                alts.extend(r["elevation"] for r in data["results"])
 
-            locations = "|".join(f"{lat},{lon}" for lat, lon in chunk)
-            url = f"https://api.open-elevation.com/api/v1/lookup?locations={locations}"
-
-            response = requests.get(url, timeout=30)
-            response.raise_for_status()
-
-            data = response.json()
-            alts.extend(r["elevation"] for r in data["results"])
-
-            sleep(pause)  # avoid API rate limits
+                sleep(pause)  # avoid API rate limits
 
         return alts
 
