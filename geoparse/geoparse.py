@@ -3867,12 +3867,12 @@ class SpatialOps:
     @staticmethod
     def get_altitudes(lats, lons, raster_path: str = None, chunk_size=100, pause=0.1) -> list[float]:
         if raster_path:
-            print(f"Using raster file:{raster_path} ...")
             coords = list(zip(lons, lats))
             with rasterio.open(raster_path) as src:
                 alts = [v[0] for v in src.sample(coords)]
         else:
-            print("Using Open Elevation API ...")
+            print("Using the Open Elevation API...")
+            print("For faster, unlimited elevation retrieval, use a local raster file.\n")
             coords = list(zip(lats, lons))
             alts = []
             for i in range(0, len(coords), chunk_size):
