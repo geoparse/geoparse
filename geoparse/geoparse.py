@@ -1,3 +1,4 @@
+import base64
 import collections
 import json
 import math
@@ -5,6 +6,7 @@ import os
 import re
 from collections import deque
 from datetime import datetime
+from io import BytesIO
 from math import atan2, cos, radians, sin, sqrt
 from multiprocessing import Pool, cpu_count
 from time import sleep, time
@@ -1112,10 +1114,10 @@ class SnabbKarta:
 
     @staticmethod
     def _create_color_legend(
-        color_map: str = "RdYlGn",
-        min_val: float = None,
-        max_val: float = None,
-        title: str = "Elevation (m)",
+        color_map: str,
+        min_val: float,
+        max_val: float,
+        title: str,
     ) -> str:
         """
         Create a color legend HTML string for the map when height_col is provided.
@@ -1165,9 +1167,6 @@ class SnabbKarta:
         plt.tight_layout()
 
         # Convert to HTML
-        import base64
-        from io import BytesIO
-
         buf = BytesIO()
         fig.savefig(buf, format="png", dpi=100, bbox_inches="tight", facecolor="white", edgecolor="none")
         buf.seek(0)
@@ -1177,8 +1176,8 @@ class SnabbKarta:
         legend_html = f"""
         <div style="
             position: absolute;
-            bottom: 20px;
-            right: 20px;
+            top: 40%;
+            right: 2px;
             z-index: 9999;
             background: rgba(255,255,255,0.95);
             padding: 8px;
