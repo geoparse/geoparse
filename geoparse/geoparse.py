@@ -1112,50 +1112,38 @@ class SnabbKarta:
 
     @staticmethod
     def _create_color_legend(
-        height_col: str = None,
         color_map: str = "RdYlGn",
         min_val: float = None,
         max_val: float = None,
-        gdf: gpd.GeoDataFrame = None,
         title: str = "Elevation (m)",
-        orientation: str = "vertical",
     ) -> str:
         """
         Create a color legend HTML string for the map when height_col is provided.
 
         Parameters
         ----------
-        height_col : str, optional
-            Name of the column used for elevation/height values.
         color_map : str, default="RdYlGn"
             Matplotlib colormap name.
         min_val : float, optional
-            Minimum value for the legend. If None, calculated from gdf.
+            Minimum value for the legend. If None, uses 0.
         max_val : float, optional
-            Maximum value for the legend. If None, calculated from gdf.
-        gdf : gpd.GeoDataFrame, optional
-            GeoDataFrame containing the height column data.
+            Maximum value for the legend. If None, uses 1.
         title : str, default="Elevation (m)"
             Title for the legend.
-        orientation : str, default="vertical"
-            Legend orientation: "vertical" or "horizontal".
 
         Returns
         -------
         str
             HTML string containing the color legend.
         """
-        if height_col is None or gdf is None:
-            return ""
-
-        # Calculate min/max if not provided
+        # Set default min/max if not provided
         if min_val is None:
-            min_val = gdf[height_col].min()
+            min_val = 0
         if max_val is None:
-            max_val = gdf[height_col].max()
+            max_val = 1
 
         # Create figure for legend
-        fig, ax = plt.subplots(figsize=(1.2, 3.5) if orientation == "vertical" else (6, 0.5))
+        fig, ax = plt.subplots(figsize=(1.2, 3.5))
 
         # Create normalization and colormap
         norm = Normalize(vmin=min_val, vmax=max_val)
@@ -1165,14 +1153,14 @@ class SnabbKarta:
         sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
         sm.set_array([])
 
-        cbar = plt.colorbar(sm, cax=ax, orientation=orientation)
+        cbar = plt.colorbar(sm, cax=ax, orientation="vertical")
         cbar.set_label(title, fontsize=8)
 
         # Format tick labels
         if max_val - min_val > 100:
-            cbar.ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f"{int(x):,}"))
+            cbar.ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f"{int(x):,}"))
         else:
-            cbar.ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f"{x:.1f}"))
+            cbar.ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f"{x:.1f}"))
 
         plt.tight_layout()
 
@@ -1480,13 +1468,12 @@ class SnabbKarta:
         legend_html = ""
         if show_legend and height_col is not None and all_height_values:
             # Create a dummy gdf for legend
-            dummy_gdf = gpd.GeoDataFrame({height_col: all_height_values})
+            gpd.GeoDataFrame({height_col: all_height_values})
             legend_html = SnabbKarta._create_color_legend(
-                height_col=height_col,
                 color_map=color_map,
-                gdf=dummy_gdf,
+                min_val=min(all_height_values),
+                max_val=max(all_height_values),
                 title=legend_title,
-                orientation=legend_orientation,
             )
 
         # Add export functionality to the map object
