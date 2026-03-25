@@ -1372,10 +1372,8 @@ class SnabbKarta:
         # Vehicle speed and applicable speed limit fields from telematics data
         speed_field: str = "speed",
         speed_limit_field: str = "speed_limit",
-        # Legend options
-        show_legend: bool = True,
-        legend_title: str = "Elevation (m)",
-        legend_orientation: str = "vertical",
+        # Color legend
+        color_legend_title: str = "Elevation (m)",
     ) -> lb.Map:
         minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
         layers = []
@@ -1465,16 +1463,15 @@ class SnabbKarta:
         )
 
         # Generate legend HTML if needed
-        legend_html = ""
-        if show_legend and height_col is not None and all_height_values:
-            # Create a dummy gdf for legend
-            gpd.GeoDataFrame({height_col: all_height_values})
+        if height_col:
             legend_html = SnabbKarta._create_color_legend(
                 color_map=color_map,
                 min_val=min(all_height_values),
                 max_val=max(all_height_values),
-                title=legend_title,
+                title=color_legend_title,
             )
+        else:
+            legend_html = ""
 
         # Add export functionality to the map object
         def export_html(html_path, title="GeoParse Map"):
