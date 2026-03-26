@@ -1,3 +1,4 @@
+import base64
 import collections
 import json
 import math
@@ -5,6 +6,7 @@ import os
 import re
 from collections import deque
 from datetime import datetime
+from io import BytesIO
 from math import atan2, cos, radians, sin, sqrt
 from multiprocessing import Pool, cpu_count
 from time import sleep, time
@@ -26,6 +28,7 @@ import shapely
 from branca.element import MacroElement, Template
 from folium import plugins
 from lonboard.basemap import CartoStyle
+from matplotlib.colors import Normalize
 from s2 import s2
 from scipy.spatial import KDTree
 from shapely.geometry import (
@@ -1110,6 +1113,88 @@ class SnabbKarta:
         )
 
     @staticmethod
+    def _create_color_legend(
+        color_map: str,
+        min_val: float,
+        max_val: float,
+        title: str,
+    ) -> str:
+        """
+        Create a color legend HTML string for the map when height_col is provided.
+
+        Parameters
+        ----------
+        color_map : str, default="RdYlGn"
+            Matplotlib colormap name.
+        min_val : float, optional
+            Minimum value for the legend. If None, uses 0.
+        max_val : float, optional
+            Maximum value for the legend. If None, uses 1.
+        title : str, default="Elevation (m)"
+            Title for the legend.
+
+        Returns
+        -------
+        str
+            HTML string containing the color legend.
+        """
+        # Create figure for legend
+        fig, ax = plt.subplots(figsize=(1.2, 3.5))
+
+        # Create normalization and colormap
+        norm = Normalize(vmin=min_val, vmax=max_val)
+        cmap = plt.cm.get_cmap(color_map).reversed()  # Reverse color order
+
+        # Create colorbar
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])
+
+        cbar = plt.colorbar(sm, cax=ax, orientation="vertical")
+        cbar.set_label(title, fontsize=8)
+
+        # Format tick labels
+        if max_val - min_val > 100:
+            cbar.ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f"{int(x):,}"))
+        else:
+            cbar.ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f"{x:.1f}"))
+
+        plt.tight_layout()
+
+        # Convert to HTML
+        buf = BytesIO()
+        fig.savefig(buf, format="png", dpi=100, bbox_inches="tight", facecolor="white", edgecolor="none")
+        buf.seek(0)
+        img_data = base64.b64encode(buf.read()).decode("utf-8")
+        plt.close(fig)
+
+        legend_html = f"""
+        <div style="
+            position: absolute;
+            top: 40%;
+            right: 2px;
+            z-index: 9999;
+            background: rgba(255,255,255,0.95);
+            padding: 8px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            border: 1px solid #ddd;
+            font-family: sans-serif;
+            width: 80px;
+        ">
+            <div style="
+                font-weight: bold;
+                margin-bottom: 8px;
+                text-align: center;
+                font-size: 11px;
+            ">{title}</div>
+            <img src="data:image/png;base64,{img_data}"
+                 style="width: 100%; height: auto;">
+        </div>
+        """
+
+        return legend_html
+
+    @staticmethod
     def _add_cell_layers(
         gdf: gpd.GeoDataFrame,
         geohash_res: int = 0,
@@ -1245,7 +1330,7 @@ class SnabbKarta:
         osm_url: str | None = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
         # Map tiles
         tiles: str = CartoStyle.Positron,  # DarkMatter
-        pitch: int = 30,
+        pitch: int = 0,
         map_height: int = 800,
         # Point
         cluster: bool = False,
@@ -1280,14 +1365,20 @@ class SnabbKarta:
         # Vehicle speed and applicable speed limit fields from telematics data
         speed_field: str = "speed",
         speed_limit_field: str = "speed_limit",
+        # Color legend
+        color_legend_title: str = "Elevation (m)",
     ) -> lb.Map:
         minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
         layers = []
+        height_values = []  # Store all height values for legend
         # Ensure `data_list` is always a list (of gpd.GeoDataFrames, df.DataFrames or set)
         data_list = data_list if isinstance(data_list, list) else [data_list]
         # Iterate through each set, pd.DataFrame or gpd.GeoDataFrame in the list to add layers to the map
         for data in data_list:
             gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
+            # Collect height values for legend
+            if height_col:
+                height_values.extend(gdf[height_col].dropna().tolist())
             # Create layers
             for geom in gdf.geometry.type.unique():
                 gdf_subset = gdf[gdf.geometry.type == geom]
@@ -1326,9 +1417,10 @@ class SnabbKarta:
                     layers.append(buffer_layer)
 
             # Update overall bounding box
-            gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
-            minlat, minlon = min(minlat, gminlat), min(minlon, gminlon)  # minlat: total minlat
-            maxlat, maxlon = max(maxlat, gmaxlat), max(maxlon, gmaxlon)
+            if len(gdf) > 0:
+                gminlon, gminlat, gmaxlon, gmaxlat = gdf.total_bounds  # gminlon: gdf minlon
+                minlat, minlon = min(minlat, gminlat), min(minlon, gminlon)  # minlat: total minlat
+                maxlat, maxlon = max(maxlat, gmaxlat), max(maxlon, gmaxlon)
         # Create a base map using the bounding box
         sw = [minlat, minlon]  # South West (bottom left corner)
         ne = [maxlat, maxlon]  # North East (top right corner)
@@ -1358,6 +1450,17 @@ class SnabbKarta:
                 "bearing": 0,
             },
         )
+
+        # Generate legend HTML if needed
+        if height_col:
+            legend_html = SnabbKarta._create_color_legend(
+                color_map=color_map,
+                min_val=min(height_values),
+                max_val=max(height_values),
+                title=color_legend_title,
+            )
+        else:
+            legend_html = ""
 
         # Add export functionality to the map object
         def export_html(html_path, title="GeoParse Map"):
@@ -1414,6 +1517,8 @@ class SnabbKarta:
         {map_html}
 
         {geoparse_html}
+
+        {legend_html}
 
         </div>
 
