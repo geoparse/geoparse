@@ -1138,12 +1138,6 @@ class SnabbKarta:
         str
             HTML string containing the color legend.
         """
-        # Set default min/max if not provided
-        if min_val is None:
-            min_val = 0
-        if max_val is None:
-            max_val = 1
-
         # Create figure for legend
         fig, ax = plt.subplots(figsize=(1.2, 3.5))
 
@@ -1336,7 +1330,7 @@ class SnabbKarta:
         osm_url: str | None = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
         # Map tiles
         tiles: str = CartoStyle.Positron,  # DarkMatter
-        pitch: int = 30,
+        pitch: int = 0,
         map_height: int = 800,
         # Point
         cluster: bool = False,
@@ -1376,15 +1370,15 @@ class SnabbKarta:
     ) -> lb.Map:
         minlat, maxlat, minlon, maxlon = 90, -90, 180, -180
         layers = []
-        all_height_values = []  # Store all height values for legend
+        height_values = []  # Store all height values for legend
         # Ensure `data_list` is always a list (of gpd.GeoDataFrames, df.DataFrames or set)
         data_list = data_list if isinstance(data_list, list) else [data_list]
         # Iterate through each set, pd.DataFrame or gpd.GeoDataFrame in the list to add layers to the map
         for data in data_list:
             gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
             # Collect height values for legend
-            if height_col is not None and height_col in gdf.columns:
-                all_height_values.extend(gdf[height_col].dropna().tolist())
+            if height_col:
+                height_values.extend(gdf[height_col].dropna().tolist())
             # Create layers
             for geom in gdf.geometry.type.unique():
                 gdf_subset = gdf[gdf.geometry.type == geom]
@@ -1444,10 +1438,6 @@ class SnabbKarta:
         else:  # smaller area (e.g. London)
             zoom = 11 - math.log(max_length * 2, 1.5)
 
-        # Increase pitch for better 3D visualization when height_col is provided
-        if height_col is not None and pitch == 30:
-            pitch = 45
-
         snabbkarta = lb.Map(
             layers=layers,
             basemap_style=tiles,
@@ -1465,8 +1455,8 @@ class SnabbKarta:
         if height_col:
             legend_html = SnabbKarta._create_color_legend(
                 color_map=color_map,
-                min_val=min(all_height_values),
-                max_val=max(all_height_values),
+                min_val=min(height_values),
+                max_val=max(height_values),
                 title=color_legend_title,
             )
         else:
