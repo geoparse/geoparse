@@ -3996,6 +3996,22 @@ class SpatialOps:
 
         return alts
 
+    @staticmethod
+    def pget_altitudes(lats: list[float], lons: list[float], raster_path: str = None) -> list[float]:
+        n_cores = cpu_count()
+
+        # Prepare arguments for parallel processing
+        lat_chunks = np.array_split(lats, 4 * n_cores)
+        lon_chunks = np.array_split(lons, 4 * n_cores)
+        args = zip(lat_chunks, lon_chunks, [raster_path] * 4 * n_cores)
+
+        # Parallelize the conversion using Pool.starmap
+        with Pool(n_cores) as pool:
+            alts = pool.starmap(SpatialOps.get_altitudes, args)
+        alts = [item for sublist in alts for item in sublist]  # Flatten the list of cells
+
+        return alts
+
 
 class GamlaKarta:
     @staticmethod
