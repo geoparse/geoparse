@@ -4008,7 +4008,7 @@ class SpatialOps:
         # Parallelize the conversion using Pool.starmap
         with Pool(n_cores) as pool:
             alts = pool.starmap(SpatialOps.get_altitudes, args)
-        alts = [item for sublist in alts for item in sublist]  # Flatten the list of cells
+        alts = [item for sublist in alts for item in sublist]  # Flatten the list
 
         return alts
 
