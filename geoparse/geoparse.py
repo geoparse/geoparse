@@ -3997,7 +3997,7 @@ class SpatialOps:
         return alts
 
     @staticmethod
-    def pget_altitudes(lats: list[float], lons: list[float], raster_path: str = None) -> list[float]:
+    def pget_altitudes(lats: list[float], lons: list[float], raster_path: str) -> list[float]:
         n_cores = cpu_count()
 
         # Prepare arguments for parallel processing
