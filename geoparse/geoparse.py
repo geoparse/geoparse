@@ -20,6 +20,7 @@ import matplotlib.colors
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import polars as pl
 import pygeohash
 import pyproj
 import rasterio
@@ -1637,7 +1638,9 @@ class GeomUtils:
         if isinstance(data, gpd.GeoDataFrame):
             gdf = data.copy()
         # Convert pd.DataFrame to gpd.GeoDataFrame
-        elif isinstance(data, pd.DataFrame):
+        elif isinstance(data, (pd.DataFrame, pl.DataFrame)):
+            if isinstance(data, pl.DataFrame):
+                data = data.to_pandas()
             if geom_type in ["geohash", "s2", "s2_int", "h3"]:
                 df = data.dropna(subset=geom_col)
                 cells = df[geom_col].values
