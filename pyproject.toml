@@ -29,6 +29,7 @@ dependencies = [
     "jupyterlab>=4.0.5",
     "rasterio>=1.4.4",
     "polars>=1.38.1",
+    "duckdb>=1.4.4",
 ]
 
 [dependency-groups]
