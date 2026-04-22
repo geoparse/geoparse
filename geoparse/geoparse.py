@@ -1330,7 +1330,7 @@ class SnabbKarta:
         # lon_col: str = "lon",  # Longitude column name in lookup_gdf
         osm_url: str | None = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
         # Map tiles
-        tiles: str = CartoStyle.Positron,  # DarkMatter
+        tiles: str = CartoStyle.Positron,  # DarkMatter, DarMatterNoLabels, PositronNoLabels
         pitch: int = 0,
         map_height: int = 800,
         # Point
@@ -3714,6 +3714,82 @@ class SpatialOps:
         # Count neighbors excluding self
         neighbor_counts = [len(nbrs) - 1 for nbrs in indices]
         return neighbor_counts
+
+    @staticmethod
+    def nearest_geom(
+        from_gdf: gpd.GeoDataFrame,
+        to_gdf: gpd.GeoDataFrame,
+        distance_col: str = "distance_m",
+        crs_meters: int | str = 27700,
+    ) -> gpd.GeoDataFrame:
+        """
+        For each geometry in from_gdf, find the nearest geometry in to_gdf.
+
+        Performs a spatial join that matches each geometry in from_gdf to the
+        nearest geometry in to_gdf, calculating the distance in meters. The
+        function transforms to a projected CRS (meters) for accurate distance
+        calculations, then returns to WGS84 (EPSG:4326). Duplicate indices in
+        the result are removed, keeping only the first occurrence.
+
+        Parameters
+        ----------
+        from_gdf : gpd.GeoDataFrame
+            Source GeoDataFrame where each geometry will be matched to its
+            nearest neighbor in to_gdf. Index is preserved in the output.
+        to_gdf : gpd.GeoDataFrame
+            Target GeoDataFrame containing the geometries to match against.
+            The nearest geometry from this GeoDataFrame is found for each
+            geometry in from_gdf.
+        distance_col : str, default='distance_m'
+            Name of the column to store the calculated distance between
+            matched geometries in meters.
+        crs_meters : int | str, default=27700
+            Projected CRS code (EPSG) or string with linear units in meters.
+            Used for accurate distance calculations. Default 27700 is
+            OSGB36 / British National Grid. Must be a projected CRS.
+
+        Returns
+        -------
+        gpd.GeoDataFrame
+            GeoDataFrame with the same index as from_gdf, containing all
+            columns from from_gdf and to_gdf (except 'index_right'),
+            plus a distance column. Duplicate indices are removed (keeps
+            first occurrence). CRS is transformed back to WGS84 (EPSG:4326).
+
+        Notes
+        -----
+        - Uses `gpd.sjoin_nearest` for the spatial join operation
+        - Removes duplicate indices, keeping only the first occurrence
+        - The 'index_right' column from the spatial join is dropped
+        - Output CRS is always EPSG:4326 (WGS84, degrees)
+
+        Examples
+        --------
+        >>> import geopandas as gpd
+        >>> points = gpd.read_file("points.geojson")
+        >>> buildings = gpd.read_file("buildings.geojson")
+        >>> nearest = nearest_geom(points, buildings, distance_col="dist_m")
+        >>> nearest[["geometry", "dist_m"]].head()
+        """
+
+        # Transform both GeoDataFrames to the specified projected CRS (meters)
+        # This ensures accurate distance calculations in meters
+        gdf = gpd.sjoin_nearest(from_gdf.to_crs(crs_meters), to_gdf.to_crs(crs_meters), distance_col=distance_col)
+
+        # Drop the 'index_right' column created by sjoin_nearest
+        # This column contains the index from to_gdf and is usually not needed
+        gdf = gdf.drop(columns="index_right")
+
+        # Remove duplicate indices, keeping only the first occurrence
+        # This can happen if multiple rows in from_gdf have the same index
+        # or if sjoin_nearest returns multiple matches per geometry
+        gdf = gdf[~gdf.index.duplicated(keep="first")]
+
+        # Transform back to WGS84 (EPSG:4326, degrees) for standard geographic use
+        # Most plotting libraries and web maps expect this CRS
+        gdf = gdf.to_crs(4326)
+
+        return gdf
 
     @staticmethod
     def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
