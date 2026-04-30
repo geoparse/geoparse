@@ -3593,7 +3593,11 @@ class SpatialOps:
         return gdf
 
     @staticmethod
-    def proximity_counts(coords: np.ndarray, coords_crs: int | str | pyproj.CRS = 4326, radius: int = 100) -> list[int]:
+    def proximity_counts(
+        coords: np.ndarray,
+        coords_crs: int | str | pyproj.CRS = 4326,
+        radius: int = 200,  # Search radius in meters (default: 200m, based on Solvency II guideline
+    ) -> list[int]:
         """
         Calculate the number of neighboring points within a specified radius for each point.
 
