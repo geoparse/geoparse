@@ -31,7 +31,7 @@ from folium import plugins
 from lonboard.basemap import CartoStyle
 from matplotlib.colors import Normalize
 from s2 import s2
-from scipy.spatial import KDTree
+from scipy.spatial import cKDTree
 from shapely.geometry import (
     GeometryCollection,
     LineString,
@@ -3678,12 +3678,6 @@ class SpatialOps:
         >>> counts
         [0, 0, 0]  # No points within 10cm
 
-        See Also
-        --------
-        sklearn.neighbors.KDTree : KD-Tree implementation used for spatial queries.
-        pyproj.Transformer : Coordinate transformation utility.
-        scipy.spatial.cKDTree : Alternative KD-Tree implementation (faster for pure queries).
-
         Warnings
         --------
         - Using geographic coordinates (lon/lat) with metric radius without projection
@@ -3708,9 +3702,11 @@ class SpatialOps:
         # Transform coordinates from WGS84 to British National Grid (27700)
         transformer = pyproj.Transformer.from_crs(coords_crs, 27700, always_xy=True).transform
         coords = np.array(transformer(coords[:, 0], coords[:, 1])).T
+
         # Build KDTree and query neighbors
-        tree = KDTree(coords)
+        tree = cKDTree(coords)
         indices = tree.query_ball_tree(tree, r=radius)
+
         # Count neighbors excluding self
         neighbor_counts = [len(nbrs) - 1 for nbrs in indices]
         return neighbor_counts
