@@ -468,6 +468,8 @@ class Karta:
                 # Create polygon for bounding box if input is not a polygon
                 if gdf.geometry.type[0] in ("Polygon", "MultiPolygon"):
                     cdf = gdf[["geometry"]]
+                elif gdf.geometry.type[0] in ("LineString", "MultiLineString"):
+                    cdf = gdf[["geometry"]].assign(geometry=gdf["geometry"].buffer(0.0001))
                 else:  # Create convex hull polygon for points and lines
                     # Apply tiny buffer to avoid degenerate geometries from collinear points
                     tight_polygon = shapely.convex_hull(gdf.geometry.unary_union).buffer(0.0000001)
