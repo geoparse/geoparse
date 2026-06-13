@@ -465,19 +465,17 @@ class Karta:
 
         for cell_type, cell_display_name, res, condition in cell_configs:
             if condition(res):
-                # Create polygon for bounding box if input is not a polygon
                 if gdf.geometry.type[0] in ("Polygon", "MultiPolygon"):
-                    cdf = gdf[["geometry"]]
-                else:  # Create convex hull polygon for points and lines
-                    # Apply tiny buffer to avoid degenerate geometries from collinear points
-                    tight_polygon = shapely.convex_hull(gdf.geometry.unary_union).buffer(0.0000001)
-                    cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
-                cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type, res, force_full_cover, compact)
+                    cells, _ = SpatialIndex.ppoly_cell(gdf[["geometry"]], cell_type, res, force_full_cover, compact)
+                elif gdf.geometry.type[0] in ("LineString", "MultiLineString"):
+                    gdf["geometry"] = gdf.geometry.buffer(0.0001)
+                    cells, _ = SpatialIndex.ppoly_cell(gdf[["geometry"]], cell_type, res, force_full_cover, compact)
+                else:  # Point or MultiPoin
+                    cells = SpatialIndex.point_cell(gdf.geometry.y, gdf.geometry.x, cell_type, res)
+
                 geoms, res_values = SpatialIndex.cell_poly(cells, cell_type=cell_type)
-
-                cdf = gpd.GeoDataFrame({"id": cells, "res": res_values, "geometry": geoms}, crs="EPSG:4326")
-
-                layer = Karta._create_plp_layer(cdf, popup_dict={"Cell ID": "id", "Resolution": "res"})
+                gdf = gpd.GeoDataFrame({"id": cells, "res": res_values, "geometry": geoms}, crs="EPSG:4326")
+                layer = Karta._create_plp_layer(gdf, popup_dict={"Cell ID": "id", "Resolution": "res"})
                 cell_layers.append(layer)
                 cell_display_names.append(cell_display_name)
 
