@@ -1,11 +1,11 @@
 import base64
 import collections
+import datetime
 import json
 import math
 import os
 import re
 from collections import deque
-from datetime import datetime
 from io import BytesIO
 from math import atan2, cos, radians, sin, sqrt
 from multiprocessing import Pool, cpu_count
@@ -1673,6 +1673,11 @@ class GeomUtils:
         else:
             raise TypeError("Invalid input type: data must be gpd.GeoDataFrame, pd.DataFrame or a set")
         gdf = gdf[gdf.geometry.is_valid]
+
+        # Convert date/time data type to string to avoid JSON serialization errors
+        for col in gdf.select_dtypes(include=[datetime.date, datetime.time]).columns:
+            gdf[col] = gdf[col].astype(str)
+
         return gdf
 
     @staticmethod
@@ -2929,7 +2934,7 @@ class SpatialIndex:
             # Create the directories if they don't exist
             cells_path = os.path.expanduser(f"{dump_path}/{cell_type}/{res}")
             os.makedirs(cells_path, exist_ok=True)
-            with open(f"{cells_path}/{datetime.now()}.txt", "w") as json_file:
+            with open(f"{cells_path}/{datetime.datetime.now()}.txt", "w") as json_file:
                 json.dump(cell_ids, json_file)
             return None
 
@@ -3072,7 +3077,7 @@ class SpatialIndex:
             print(f"Writing cell IDs in parallel to {4 * n_cores} files in {cells_path} directory ...")
 
         if verbose:
-            print(datetime.now())
+            print(datetime.datetime.now())
             print("\nSlicing the bounding box of polygons ...")
             start_time = time()
 
