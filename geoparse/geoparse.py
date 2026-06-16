@@ -5079,7 +5079,7 @@ class GamlaKarta:
         minlon, minlat, maxlon, maxlat = mdf.total_bounds  # Get the total bounds of the GeoDataFrame
         sw = [minlat, minlon]  # South-west corner
         ne = [maxlat, maxlon]  # North-east corner
-        karta = GamlaKarta._base_map(sw, ne)  # Create a base map using the bounding coordinates
+        karta = Karta._base_map(sw, ne)  # Create a base map using the bounding coordinates
 
         if bins is None:
             bins = np.quantile(mdf[columns[1]].dropna(), [0, 0.25, 0.5, 0.75, 0.98, 1])
@@ -5174,7 +5174,7 @@ class GamlaKarta:
 
         if bins is None:
             bins = np.quantile(mdf["count"].dropna(), [0, 0.25, 0.5, 0.75, 0.98, 1])
-        return GamlaKarta.choropleth(
+        return Karta.choropleth(
             mdf,
             columns=[poly_id, "count"],
             bins=bins,
