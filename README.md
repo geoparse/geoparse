@@ -215,15 +215,15 @@ For large datasets, you may consider using [lonboard](https://github.com/develop
   <tr>
     <td style="vertical-align: bottom;">
       <pre><code>
-plp(df, buffer_radius=100)
+plp(df, buffer_r_max=100)
       </code></pre>
     </td>
     <td style="vertical-align: bottom;">
       <pre><code>
 plp(
     df, 
-    ring_inner_radius=100,
-    ring_outer_radius=200
+    buffer_r_min=100,
+    buffer_r_max=200
 )
       </code></pre>
     </td>
