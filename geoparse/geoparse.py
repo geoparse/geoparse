@@ -3598,7 +3598,7 @@ class SpatialOps:
     def proximity_counts(
         coords: np.ndarray,
         coords_crs: int | str | pyproj.CRS = 4326,
-        radius: int = 200,  # Search radius in meters
+        radius: int = 200,  # Search radius in meters (default: 200m, based on Solvency II guideline)
         counts_only: bool = True,  # NEW: return only counts if True, else (counts, indices)
     ) -> list[int] | tuple[list[int], list[list[int]]]:
         """
