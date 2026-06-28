@@ -133,7 +133,7 @@ To apply custom colors, you can also use RGB hex codes (right figure).
 
 To enhance interpretability, `plp` allows grouping and coloring points based on the values of a specific feature such as `number_of_casualties`. 
 In the visualizations below, crash points are color-coded: blue for 1 casualty, green for 2, and red for 3. 
-Additionally, by using the `point_popup` argument, hovering over a point reveals a popup with detailed contextual information, 
+Additionally, by using the `popup_dict` argument, hovering over a point reveals a popup with detailed contextual information, 
 as illustrated in the image on the right.
 
 <table width="100%">
@@ -149,7 +149,7 @@ as illustrated in the image on the right.
       <pre><code>plp(
     df,
     point_color="number_of_casualties",
-    point_popup={
+    popup_dict={
         "Date": "date",
         "Casualties": "number_of_casualties"
     }
@@ -305,7 +305,7 @@ By passing the name of the speed column (`speed_mph` in the above example) to th
     Black: Speeding ≥ 40%
     Purple: Speed limit unavailable
     
-Using the `point_popup` argument, when a user hovers over a point on the map, a popup will display relevant information for that location. This feature supports exploratory analysis of driving behavior in relation to road regulations. Combined with the visual encoding of speeding severity, it allows users to quickly identify areas of excessive speeding, compliance, or missing speed limit data.
+Using the `popup_dict` argument, when a user hovers over a point on the map, a popup will display relevant information for that location. This feature supports exploratory analysis of driving behavior in relation to road regulations. Combined with the visual encoding of speeding severity, it allows users to quickly identify areas of excessive speeding, compliance, or missing speed limit data.
 <table>
   <tr>
     <td style="vertical-align: bottom;">
@@ -325,7 +325,7 @@ plp(
     speed_field="speed_mph",
     speed_limit_field="speedlimit_mph",
     point_color="speed_mph",
-    point_popup={
+    popup_dict={
         "Time": "dt", 
         "Speed (mile/h)": "speed_mph", 
         "Speed Limit (mile/h)": "speedlimit_mph"
