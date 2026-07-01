@@ -1630,6 +1630,7 @@ class GeomUtils:
         # lat_col: str = "lat",  # Latitude column name in lookup_gdf
         # lon_col: str = "lon",  # Longitude column name in lookup_gdf
         osm_url: str | None = "https://overpass-api.de/api/interpreter",  # OpenStreetMap server URL
+        bbox: set = None,  # (minx, miny, maxx, maxy)
     ) -> gpd.GeoDataFrame:
         # if data is a gpd.GeoDataFrame, simply copy it
         if isinstance(data, gpd.GeoDataFrame):
@@ -1672,6 +1673,10 @@ class GeomUtils:
         else:
             raise TypeError("Invalid input type: data must be gpd.GeoDataFrame, pd.DataFrame or a set")
         gdf = gdf[gdf.geometry.is_valid]
+
+        if bbox:
+            minx, miny, maxx, maxy = bbox
+            gdf = gdf.cx[minx:maxx, miny:maxy]
 
         # Convert date/time data type to string to avoid JSON serialization errors
         for col in gdf.select_dtypes(include=[datetime.date, datetime.time]).columns:
