@@ -576,6 +576,8 @@ class Karta:
         # Buffer and ring radius parameters (in meters)
         buffer_r_max: int = 0,
         buffer_r_min: int = 0,
+        # Bounding box
+        bbox: set = None,  # (minx, miny, maxx, maxy)
         # Vehicle speed and applicable speed limit fields from telematics data
         speed_field: str = "speed",
         speed_limit_field: str = "speed_limit",
@@ -591,7 +593,7 @@ class Karta:
         layer_names = []  # Corresponding display names for layer controls
         # Iterate through each set, pd.DataFrame or gpd.GeoDataFrame in the list to add layers to the map
         for data in data_list:
-            gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
+            gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key, bbox=bbox)
             if cluster:
                 # Create a cluster layer
                 cluster_layer = plugins.MarkerCluster(locations=list(zip(gdf.geometry.y, gdf.geometry.x)))
@@ -1360,6 +1362,8 @@ class SnabbKarta:
         # Buffer and ring radius parameters (in meters)
         buffer_r_max: int = 0,
         buffer_r_min: int = 0,
+        # Bounding box
+        bbox: set = None,  # (minx, miny, maxx, maxy)
         # Vehicle speed and applicable speed limit fields from telematics data
         speed_field: str = "speed",
         speed_limit_field: str = "speed_limit",
@@ -1373,7 +1377,7 @@ class SnabbKarta:
         data_list = data_list if isinstance(data_list, list) else [data_list]
         # Iterate through each set, pd.DataFrame or gpd.GeoDataFrame in the list to add layers to the map
         for data in data_list:
-            gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key)
+            gdf = GeomUtils.data_to_geoms(data, geom_type, geom_col, data_crs, lookup_gdf, lookup_key, bbox=bbox)
             # Collect height values for legend
             if height_col:
                 height_values.extend(gdf[height_col].dropna().tolist())
