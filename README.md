@@ -24,6 +24,7 @@ GeoParse builds on top of popular tools and libraries like
 [GDAL](https://gdal.org/en/stable/), 
 [GeoPandas](https://geopandas.org/en/stable/), 
 [Folium](https://python-visualization.github.io/folium/latest/), 
+[Lonboard](https://developmentseed.org/lonboard/latest/),
 and [Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API) 
 providing a powerful toolkit for working with geospatial data.
 It focuses on straightforward visualization, efficient spatial indexing, advanced geometry manipulations, and user-friendly utilities for handling OpenStreetMap data effortlessly.
