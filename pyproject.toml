@@ -50,5 +50,5 @@ dev = [
 ]
 
 [tool.uv]
-exclude-newer = "2026-06-18T00:00:00Z"
+exclude-newer = "2026-07-10T00:00:00Z"
 
