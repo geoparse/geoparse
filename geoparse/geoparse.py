@@ -1090,7 +1090,7 @@ class SnabbKarta:
         norm_clean = norm.fillna(0).values
 
         # Get colormap
-        cmap = plt.cm.get_cmap(color_map)
+        cmap = plt.get_cmap(color_map)
 
         colors_rgba = cmap(1 - norm_clean)
 
@@ -1143,7 +1143,7 @@ class SnabbKarta:
 
         # Create normalization and colormap
         norm = Normalize(vmin=min_val, vmax=max_val)
-        cmap = plt.cm.get_cmap(color_map).reversed()  # Reverse color order
+        cmap = plt.get_cmap(color_map).reversed()  # Reverse color order
 
         # Create colorbar
         sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
