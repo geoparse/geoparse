@@ -2075,6 +2075,28 @@ class GeomUtils:
         gdf.loc[:, row.index.drop("geometry")] = row[row.index.drop("geometry")].values
         return gdf
 
+    @staticmethod
+    def explode_geometry_collections(gdf):
+        """
+        Explode rows containing a GeometryCollection into separate rows,
+        one per constituent geometry, and remove the original GeometryCollection rows.
+        Other geometry types (Point, LineString, Polygon, Multi*, etc.) remain unchanged.
+        """
+        # Identify rows where the geometry is a GeometryCollection
+        gc_mask = gdf.geometry.geom_type == "GeometryCollection"
+
+        if gc_mask.any():
+            # Keep rows that are NOT GeometryCollections
+            non_gc = gdf[~gc_mask].copy()
+
+            # Explode the GeometryCollection rows
+            gc_exploded = gdf[gc_mask].explode(index_parts=False, ignore_index=True)
+
+            # Combine both parts, resetting the index
+            gdf = pd.concat([non_gc, gc_exploded], ignore_index=True)
+
+        return gdf
+
 
 class CellUtils:
     """
