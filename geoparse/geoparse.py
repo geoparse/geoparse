@@ -1678,6 +1678,13 @@ class GeomUtils:
             raise TypeError("Invalid input type: data must be gpd.GeoDataFrame, pd.DataFrame or a set")
         gdf = gdf[gdf.geometry.is_valid]
 
+        # Explode GeometryCollection (seen in spain-lands.parquet)
+        gc_mask = gdf.geometry.geom_type == "GeometryCollection"
+        if gc_mask.any():
+            non_gc = gdf[~gc_mask].copy()
+            gc_exploded = gdf[gc_mask].explode(index_parts=False, ignore_index=True)
+            gdf = pd.concat([non_gc, gc_exploded], ignore_index=True)
+
         if bbox:
             minx, miny, maxx, maxy = bbox
             gdf = gdf.cx[minx:maxx, miny:maxy]
@@ -2073,59 +2080,6 @@ class GeomUtils:
         )  # create new GeoDataFrame with all columns and Point geometry
         gdf.loc[:, "geometry"] = points
         gdf.loc[:, row.index.drop("geometry")] = row[row.index.drop("geometry")].values
-        return gdf
-
-    @staticmethod
-    def explode_geometry_collections(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-        """
-        Explode rows containing a GeometryCollection into separate rows.
-
-        For each row where the geometry is a Shapely GeometryCollection,
-        this function extracts all constituent geometries and creates one new
-        row per geometry. The original GeometryCollection row is removed.
-        All other geometry types (Point, LineString, Polygon, Multi* etc.)
-        remain unchanged.
-
-        Parameters
-        ----------
-        gdf : geopandas.GeoDataFrame
-            Input GeoDataFrame that may contain one or more rows with a
-            GeometryCollection geometry.
-
-        Returns
-        -------
-        geopandas.GeoDataFrame
-            A new GeoDataFrame with all GeometryCollection rows exploded into
-            their components. The original index is reset (0, 1, 2, …).
-
-        Examples
-        --------
-        >>> from shapely.geometry import Point, LineString, GeometryCollection
-        >>> gc = GeometryCollection([Point(1, 2), LineString([(0, 0), (1, 1)])])
-        >>> gdf = gpd.GeoDataFrame({"id": [1, 2], "geometry": [gc, Point(3, 4)]})
-        >>> exploded = explode_geometry_collections(gdf)
-        >>> exploded
-           id                   geometry
-        0   2  POINT (3.00000 4.00000)
-        1   1  POINT (1.00000 2.00000)
-        2   1  LINESTRING (0 0, 1 1)
-
-        Notes
-        -----
-        - This function only processes GeometryCollection rows. To explode other
-          multi‑geometry types (MultiPoint, MultiLineString, etc.), use
-          `gdf.explode(ignore_index=True)` instead.
-        - Attribute values from the original row are duplicated for each new row.
-        - The GeoDataFrame's CRS is preserved (if any).
-        - Empty GeometryCollections are dropped (they produce no rows).
-        """
-        gc_mask = gdf.geometry.geom_type == "GeometryCollection"
-
-        if gc_mask.any():
-            non_gc = gdf[~gc_mask].copy()
-            gc_exploded = gdf[gc_mask].explode(index_parts=False, ignore_index=True)
-            gdf = pd.concat([non_gc, gc_exploded], ignore_index=True)
-
         return gdf
 
 
