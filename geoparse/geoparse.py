@@ -96,6 +96,9 @@ class Karta:
         for item in tiles:
             folium.TileLayer(item, name=tiles[item], max_zoom=21).add_to(karta)
 
+        # Display coordinates
+        plugins.MousePosition().add_to(karta)
+
         # Add fullscreen button
         plugins.Fullscreen().add_to(karta)
 
