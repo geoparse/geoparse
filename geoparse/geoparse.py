@@ -1435,7 +1435,7 @@ class SnabbKarta:
         max_length = max(ne[0] - sw[0], ne[1] - sw[1])  # max(delta_lat, delta_lon)
         # Adjust zoom baseline depending on map extent
         if max_length < 0:  # if no data available, show lat, lon = (0, 0)
-            zoom = 5
+            zoom = 1
         elif max_length == 0:  # if only one point available, set the zoom level to 20
             zoom = 20
         elif max_length > 5:  # large area (e.g. whole UK)
