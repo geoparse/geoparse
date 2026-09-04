@@ -86,15 +86,21 @@ class Karta:
             attr='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://opentopomap.org/">OpenTopoMap</a>',
         ).add_to(karta)
 
-        # Dictionary of tile layers to be added
-        tiles = {
-            "cartodbdark_matter": "Dark",
-            "cartodbpositron": "Light",
-        }
+        # Add Carto Dark Matter (dark tile layer)
+        folium.TileLayer(
+            name="Dark",
+            tiles="https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?key=cb1_26zs_1_f808f122c46ed8d67d4db10c",
+            attr='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/">CARTO</a>',
+            max_zoom=21,
+        ).add_to(karta)
 
-        # Add each tile layer to the map
-        for item in tiles:
-            folium.TileLayer(item, name=tiles[item], max_zoom=21).add_to(karta)
+        # Add Carto Positron (light tile layer)
+        folium.TileLayer(
+            name="Light",
+            tiles="https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png?key=cb1_26zs_1_f808f122c46ed8d67d4db10c",
+            attr='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/">CARTO</a>',
+            max_zoom=21,
+        ).add_to(karta)
 
         # Display coordinates
         plugins.MousePosition().add_to(karta)
