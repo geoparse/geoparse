@@ -26,7 +26,9 @@ import pyproj
 import rasterio
 import requests
 import shapely
+from branca.element import MacroElement
 from folium import plugins
+from jinja2 import Template
 from lonboard.basemap import CartoStyle
 from matplotlib.colors import Normalize
 from s2 import s2
@@ -48,7 +50,11 @@ from shapely.prepared import prep
 
 class Karta:
     @staticmethod
-    def _base_map() -> folium.Map:
+    def _base_map(
+        circle_tool: bool = True,
+        default_radius_km: float = 1.0,
+        max_radius_km: float = 50.0,
+    ) -> folium.Map:
         """
         Creates a base map with multiple tile layers and fits the map to the specified bounding box.
 
@@ -57,6 +63,19 @@ class Karta:
         - `Dark Mode` (CartoDB Dark Matter)
         - `Satellite` (Esri World Imagery)
         - `OpenStreetMap` (OSM)
+
+        It also adds an optional draggable "count points in circle" tool: a red handle
+        you can drag anywhere on the map, with a slider to control its radius, and a
+        live label showing how many point markers currently fall inside it.
+
+        Parameters
+        ----------
+        circle_tool : bool, default=True
+            Whether to add the draggable radius-selection / point-count tool.
+        default_radius_km : float, default=1.0
+            Initial radius of the tool's circle, in kilometres.
+        max_radius_km : float, default=50.0
+            Maximum value on the radius slider, in kilometres.
 
         Returns
         -------
@@ -130,6 +149,145 @@ class Karta:
         </div>
         """)
         karta.get_root().html.add_child(attribution)
+
+        # ── Draggable "count points in circle" tool ─────────────────────
+        # Implemented as a MacroElement (not a plain Element) so its
+        # `script` macro lands in Folium's script bucket alongside the
+        # map's own creation script, guaranteeing `mapObj` already exists
+        # by the time our code runs.
+        if circle_tool:
+            uid = karta.get_name()  # this map's JS variable name, e.g. "map_1a2b3c"; also used to
+            # namespace the DOM ids so multiple Karta maps on one page don't clash.
+
+            circle_tool_macro = MacroElement()
+            circle_tool_macro._template = Template(
+                """
+                {% macro html(this, kwargs) %}
+                <div id="circle-panel-__UID__" style="
+                    position: absolute; z-index: 9999; bottom: 90px; left: 12px;
+                    background: rgba(255,255,255,0.95); padding: 8px 12px; border-radius: 8px;
+                    font-family: sans-serif; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                ">
+                    <div id="circle-count-__UID__" style="margin-bottom: 4px; font-weight: bold;">
+                        0 points in circle
+                    </div>
+                    Radius: <span id="circle-radius-val-__UID__">__DEFAULT_RADIUS__</span> km
+                    <br>
+                    <input type="range" id="circle-radius-slider-__UID__"
+                        min="0.05" max="__MAX_RADIUS__" step="0.05" value="__DEFAULT_RADIUS__"
+                        style="width: 140px;">
+                </div>
+                {% endmacro %}
+
+                {% macro script(this, kwargs) %}
+                (function () {
+                    var mapObj = __UID__;
+                    var radiusM = __DEFAULT_RADIUS__ * 1000;
+                    var circleHandle, circleOverlay, initialized = false;
+
+                    function haversineMeters(lat1, lon1, lat2, lon2) {
+                        var R = 6371000;
+                        function toRad(d) { return d * Math.PI / 180; }
+                        var dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+                        var a = Math.sin(dLat / 2) ** 2 +
+                                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+                        return 2 * R * Math.asin(Math.sqrt(a));
+                    }
+
+                    // Recursively walk every layer on the map (through
+                    // FeatureGroups / GeoJson / MarkerCluster) collecting
+                    // point-like markers. Polygons/lines never match the
+                    // CircleMarker/Marker checks, so buffers, chorop-
+                    // leths, etc. are correctly left out of the count.
+
+                    function collectPointLatLngs(layer, out, seen) {
+                        var id = L.Util.stamp(layer);
+                        if (seen.has(id)) return;  // already visited this exact layer via another
+                                                    // parent path -- this is what was tripling the count
+                        seen.add(id);
+
+                        if ((layer instanceof L.CircleMarker || layer instanceof L.Marker) &&
+                            layer !== circleHandle && layer !== circleOverlay) {
+                            out.push(layer.getLatLng());
+                        }
+                        if (typeof layer.getAllChildMarkers === "function") {
+                            layer.getAllChildMarkers().forEach(function (m) {
+                                var mid = L.Util.stamp(m);
+                                if (!seen.has(mid)) { seen.add(mid); out.push(m.getLatLng()); }
+                            });
+                            return;
+                        }
+                        if (typeof layer.eachLayer === "function") {
+                            layer.eachLayer(function (child) { collectPointLatLngs(child, out, seen); });
+                        }
+                    }
+
+                    function countPointsInCircle(center, radius) {
+                        var pts = [];
+                        var seen = new Set();
+                        mapObj.eachLayer(function (l) { collectPointLatLngs(l, pts, seen); });
+                        var n = 0;
+                        for (var i = 0; i < pts.length; i++) {
+                            if (haversineMeters(center.lat, center.lng, pts[i].lat, pts[i].lng) <= radius) n++;
+                        }
+                        return n;
+                    }
+                    var countLabel = document.getElementById("circle-count-__UID__");
+                    var slider = document.getElementById("circle-radius-slider-__UID__");
+                    var radiusVal = document.getElementById("circle-radius-val-__UID__");
+
+                    function render(center) {
+                        var n = countPointsInCircle(center, radiusM);
+                        countLabel.textContent = n + (n === 1 ? " point" : " points") + " in circle";
+                    }
+
+                    function initCircleTool(center) {
+                        if (initialized) return;
+                        initialized = true;
+
+                        var circleIcon = L.divIcon({
+                            className: "",
+                            html: '<div style="width:16px;height:16px;border-radius:50%;background:#e53e3e;' +
+                                  'border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,0.45);"></div>',
+                            iconSize: [16, 16], iconAnchor: [8, 8]
+                        });
+                        circleHandle = L.marker(center, { icon: circleIcon, draggable: true })
+                            .addTo(mapObj).bindTooltip("Drag to move");
+                        circleOverlay = L.circle(center, {
+                            radius: radiusM, color: "#e53e3e", weight: 2,
+                            fillColor: "#feb2b2", fillOpacity: 0.2
+                        }).addTo(mapObj);
+
+                        circleHandle.on("drag", function (e) {
+                            var latlng = e.target.getLatLng();
+                            circleOverlay.setLatLng(latlng);
+                            render(latlng);
+                        });
+
+                        slider.addEventListener("input", function () {
+                            radiusM = parseFloat(slider.value) * 1000;
+                            radiusVal.textContent = slider.value;
+                            circleOverlay.setRadius(radiusM);
+                            render(circleHandle.getLatLng());
+                        });
+
+                        render(center);
+                    }
+
+                    // Defer placing the circle until the map's initial
+                    // fit_bounds (called later, after _base_map returns,
+                    // once layers/data are added) has settled -- otherwise
+                    // we'd grab Leaflet's pre-fit default center. Falls
+                    // back to a timeout for maps with nothing to fit.
+                    mapObj.once("moveend", function () { initCircleTool(mapObj.getCenter()); });
+                    setTimeout(function () { initCircleTool(mapObj.getCenter()); }, 800);
+                })();
+                {% endmacro %}
+                """.replace("__UID__", uid)
+                .replace("__DEFAULT_RADIUS__", str(default_radius_km))
+                .replace("__MAX_RADIUS__", str(max_radius_km))
+            )
+            karta.get_root().add_child(circle_tool_macro)
 
         return karta
 
