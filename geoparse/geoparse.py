@@ -52,7 +52,7 @@ class Karta:
     @staticmethod
     def _base_map(
         circle_tool: bool = True,
-        default_radius_km: float = 100.0,
+        default_radius_px: float = 25,
         max_radius_km: float = 5000.0,
     ) -> folium.Map:
         """
@@ -60,8 +60,13 @@ class Karta:
 
         It also adds an optional draggable "count points in circle" tool: a red circle
         you can drag to move, whose border you can drag in/out to resize (with a live
-        radius readout following the cursor), with a rectangular badge over its centre
-        showing how many point markers currently fall inside it.
+        radius readout following the cursor), with a rectangular badge hovering just
+        above the circle showing how many point markers currently fall inside it.
+        A small dot marks the circle's centre.
+
+        The circle starts in the top-left corner of the map, tucked just below the
+        measurement control (with enough clearance that the badge never covers it),
+        instead of at the map's centre.
 
         The radius snaps to a step that scales with the current radius:
             10 m   below 100 m
@@ -74,9 +79,10 @@ class Karta:
         ----------
         circle_tool : bool, default=True
             Whether to add the draggable radius-selection / point-count tool.
-        default_radius_km : float, default=1.0
-            Initial radius of the tool's circle, in kilometres.
-        max_radius_km : float, default=50.0
+        default_radius_px : float, default=25.0
+            Initial radius of the tool's circle, in screen pixels. Converted to
+            metres at the map's current zoom / latitude when the tool is created.
+        max_radius_km : float, default=5000.0
             Maximum radius the circle can be resized to, in kilometres.
 
         Returns
@@ -171,10 +177,11 @@ class Karta:
                 {% macro script(this, kwargs) %}
                 (function () {
                     var mapObj = __UID__;
-                    var radiusM = __DEFAULT_RADIUS__ * 1000;
+                    var defaultRadiusPx = __DEFAULT_RADIUS_PX__;
+                    var radiusM = 0;
                     var maxRadiusM = __MAX_RADIUS__ * 1000;
                     var minRadiusM = 50;
-                    var circleOverlay, badge, radiusLabel, initialized = false;
+                    var circleOverlay, centerDot, badge, radiusLabel, initialized = false;
                     var isResizing = false;
                     var isMoving = false;
                     var moveOffset = null;
@@ -186,6 +193,51 @@ class Karta:
                         var a = Math.sin(dLat / 2) ** 2 +
                                 Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
                         return 2 * R * Math.asin(Math.sqrt(a));
+                    }
+
+                    // Convert a screen-pixel distance at `center` into metres,
+                    // at the current zoom / latitude of the map.
+                    function pixelsToMeters(center, px) {
+                        var cp = mapObj.latLngToContainerPoint(center);
+                        var ep = L.point(cp.x + px, cp.y);
+                        var el = mapObj.containerPointToLatLng(ep);
+                        return haversineMeters(center.lat, center.lng, el.lat, el.lng);
+                    }
+
+                    // Work out where the circle should start: tucked into the
+                    // top-left corner, just below the measurement control.
+                    // We measure the control's actual bounding box so this
+                    // works regardless of Leaflet version / control size.
+                    function getStartCenter() {
+                        var container = mapObj.getContainer();
+                        var containerRect = container.getBoundingClientRect();
+
+                        // Extra vertical gap so the badge -- which hovers ~24 px
+                        // above the circle's top edge -- clears the measurement
+                        // control instead of covering it.
+                        var badgeClearance = 40;
+
+                        // Prefer the measurement control's real position.
+                        var measureEl = container.querySelector(".leaflet-control-measure")
+                                     || container.querySelector(".leaflet-control.leaflet-bar");
+                        var belowY, leftX;
+                        if (measureEl) {
+                            var r = measureEl.getBoundingClientRect();
+                            leftX = (r.left - containerRect.left) + r.width / 2;
+                            belowY = (r.bottom - containerRect.top) + defaultRadiusPx + badgeClearance;
+                        } else {
+                            // Fallback if the control isn't found: sit just
+                            // inside the top-left with the usual 10 px margin.
+                            leftX = 10 + defaultRadiusPx;
+                            belowY = 10 + 34 + defaultRadiusPx + badgeClearance;
+                        }
+
+                        // Make sure the whole circle fits on screen; if not,
+                        // nudge its centre right/down as needed.
+                        leftX = Math.max(leftX, defaultRadiusPx + 4);
+                        belowY = Math.max(belowY, defaultRadiusPx + 4);
+
+                        return mapObj.containerPointToLatLng(L.point(leftX, belowY));
                     }
 
                     // Snap a raw metre value to the step that matches its
@@ -213,13 +265,14 @@ class Karta:
                     // point-like markers. Polygons/lines never match the
                     // CircleMarker/Marker checks, so buffers, chorop-
                     // leths, etc. are correctly left out of the count.
+                    // The tool's own circle and centre dot are excluded too.
                     function collectPointLatLngs(layer, out, seen) {
                         var id = L.Util.stamp(layer);
                         if (seen.has(id)) return;
                         seen.add(id);
 
                         if ((layer instanceof L.CircleMarker || layer instanceof L.Marker) &&
-                            layer !== circleOverlay) {
+                            layer !== circleOverlay && layer !== centerDot) {
                             out.push(layer.getLatLng());
                         }
                         if (typeof layer.getAllChildMarkers === "function") {
@@ -265,13 +318,23 @@ class Karta:
                         return Math.abs(dist - pr) < tolerance;
                     }
 
+                    // Refresh the badge (text + position) and keep the centre
+                    // dot glued to the circle's centre.
                     function updateBadge() {
-                        if (!badge || !circleOverlay) return;
+                        if (!circleOverlay) return;
                         var c = circleOverlay.getLatLng();
+
+                        if (centerDot) centerDot.setLatLng(c);
+
+                        if (!badge) return;
                         var n = countPointsInCircle(c, radiusM);
                         var pt = mapObj.latLngToContainerPoint(c);
+                        var pr = getPixelRadius();
+
+                        // Sit just above the circle's top edge (extra 8 px gap
+                        // so the badge clears the stroke).
                         badge.style.left = pt.x + "px";
-                        badge.style.top = pt.y + "px";
+                        badge.style.top  = (pt.y - pr - 8) + "px";
                         badge.textContent = n + (n === 1 ? " point" : " points");
                     }
 
@@ -303,9 +366,16 @@ class Karta:
                         setCursor("move");
                     }
 
-                    function initCircleTool(center) {
+                    function initCircleTool() {
                         if (initialized) return;
                         initialized = true;
+
+                        // Start under the measurement control, not map centre.
+                        var center = getStartCenter();
+
+                        // Default radius: 25 px at the current zoom / latitude,
+                        // converted to metres so Leaflet can draw it geographically.
+                        radiusM = pixelsToMeters(center, defaultRadiusPx);
 
                         circleOverlay = L.circle(center, {
                             radius: radiusM,
@@ -316,7 +386,19 @@ class Karta:
                             interactive: true
                         }).addTo(mapObj);
 
-                        // Rectangular badge over the circle's centre.
+                        // Small marker at the exact centre of the circle.
+                        // Non-interactive so clicks fall through to the
+                        // circle's fill (which drives the drag-to-move logic).
+                        centerDot = L.circleMarker(center, {
+                            radius: 4,
+                            color: "#ffffff",
+                            weight: 1.5,
+                            fillColor: "#e53e3e",
+                            fillOpacity: 1.0,
+                            interactive: false
+                        }).addTo(mapObj);
+
+                        // Rectangular badge hovering above the circle's top edge.
                         badge = L.DomUtil.create("div", "", mapObj.getContainer());
                         badge.style.cssText =
                             "position:absolute; z-index:1000; background:rgba(255,255,255,0.95);" +
@@ -324,7 +406,7 @@ class Karta:
                             "font-size:12px; font-weight:bold; color:#c53030;" +
                             "pointer-events:none; white-space:nowrap;" +
                             "box-shadow:0 1px 4px rgba(0,0,0,0.25);" +
-                            "transform:translate(-50%,-50%); border:1px solid #e53e3e;";
+                            "transform:translate(-50%,-100%); border:1px solid #e53e3e;";
                         badge.textContent = "0 points";
 
                         // Floating radius readout, shown only while resizing.
@@ -397,8 +479,17 @@ class Karta:
                         // Safety net in case the mouse is released off-map.
                         document.addEventListener("mouseup", endDrag);
 
-                        // Keep the badge glued to the circle through pans / zooms.
-                        mapObj.on("move zoom viewreset", updateBadge);
+                        // Keep the badge and centre dot glued to the circle through
+                        // pans / zooms.
+                        //
+                        // Note: we deliberately listen to `zoomend`, NOT `zoom`.
+                        // During the zoom animation the map's projection has already
+                        // jumped to the final zoom, but the SVG overlay pane is still
+                        // being CSS-scaled mid-flight -- so latLngToContainerPoint()
+                        // and the circle's cached pixel radius would return values
+                        // that don't match what's on screen. Updating only after the
+                        // animation finishes keeps badge and circle aligned.
+                        mapObj.on("move zoomend viewreset", updateBadge);
 
                         updateBadge();
                     }
@@ -408,12 +499,12 @@ class Karta:
                     // once layers/data are added) has settled -- otherwise
                     // we'd grab Leaflet's pre-fit default center. Falls
                     // back to a timeout for maps with nothing to fit.
-                    mapObj.once("moveend", function () { initCircleTool(mapObj.getCenter()); });
-                    setTimeout(function () { initCircleTool(mapObj.getCenter()); }, 800);
+                    mapObj.once("moveend", function () { initCircleTool(); });
+                    setTimeout(function () { initCircleTool(); }, 800);
                 })();
                 {% endmacro %}
                 """.replace("__UID__", uid)
-                .replace("__DEFAULT_RADIUS__", str(default_radius_km))
+                .replace("__DEFAULT_RADIUS_PX__", str(default_radius_px))
                 .replace("__MAX_RADIUS__", str(max_radius_km))
             )
             karta.get_root().add_child(circle_tool_macro)
