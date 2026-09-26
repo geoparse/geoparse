@@ -58,15 +58,17 @@ class Karta:
         """
         Creates a base map with multiple tile layers and fits the map to the specified bounding box.
 
-        This function initializes a Folium map object with multiple tile layers, including:
-        - `Bright Mode` (CartoDB Positron)
-        - `Dark Mode` (CartoDB Dark Matter)
-        - `Satellite` (Esri World Imagery)
-        - `OpenStreetMap` (OSM)
+        It also adds an optional draggable "count points in circle" tool: a red circle
+        you can drag to move, whose border you can drag in/out to resize (with a live
+        radius readout following the cursor), with a rectangular badge over its centre
+        showing how many point markers currently fall inside it.
 
-        It also adds an optional draggable "count points in circle" tool: a red handle
-        you can drag anywhere on the map, with a slider to control its radius, and a
-        live label showing how many point markers currently fall inside it.
+        The radius snaps to a step that scales with the current radius:
+            10 m   below 100 m
+            50 m   below 1 km
+            500 m  below 10 km
+            5 km   below 100 km
+            50 km  below 1000 km
 
         Parameters
         ----------
@@ -75,7 +77,7 @@ class Karta:
         default_radius_km : float, default=1.0
             Initial radius of the tool's circle, in kilometres.
         max_radius_km : float, default=50.0
-            Maximum value on the radius slider, in kilometres.
+            Maximum radius the circle can be resized to, in kilometres.
 
         Returns
         -------
@@ -150,40 +152,32 @@ class Karta:
         """)
         karta.get_root().html.add_child(attribution)
 
-        # ── Draggable "count points in circle" tool ─────────────────────
+        # ── Draggable / resizable "count points in circle" tool ──────────
         # Implemented as a MacroElement (not a plain Element) so its
         # `script` macro lands in Folium's script bucket alongside the
         # map's own creation script, guaranteeing `mapObj` already exists
         # by the time our code runs.
         if circle_tool:
-            uid = karta.get_name()  # this map's JS variable name, e.g. "map_1a2b3c"; also used to
-            # namespace the DOM ids so multiple Karta maps on one page don't clash.
+            uid = karta.get_name()  # this map's JS variable name, also used
+            # to namespace DOM ids so multiple Karta
+            # maps on one page don't clash.
 
             circle_tool_macro = MacroElement()
             circle_tool_macro._template = Template(
                 """
                 {% macro html(this, kwargs) %}
-                <div id="circle-panel-__UID__" style="
-                    position: absolute; z-index: 9999; bottom: 90px; left: 12px;
-                    background: rgba(255,255,255,0.95); padding: 8px 12px; border-radius: 8px;
-                    font-family: sans-serif; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                ">
-                    <div id="circle-count-__UID__" style="margin-bottom: 4px; font-weight: bold;">
-                        0 points in circle
-                    </div>
-                    Radius: <span id="circle-radius-val-__UID__">__DEFAULT_RADIUS__</span> km
-                    <br>
-                    <input type="range" id="circle-radius-slider-__UID__"
-                        min="0.05" max="__MAX_RADIUS__" step="0.05" value="__DEFAULT_RADIUS__"
-                        style="width: 140px;">
-                </div>
                 {% endmacro %}
 
                 {% macro script(this, kwargs) %}
                 (function () {
                     var mapObj = __UID__;
                     var radiusM = __DEFAULT_RADIUS__ * 1000;
-                    var circleHandle, circleOverlay, initialized = false;
+                    var maxRadiusM = __MAX_RADIUS__ * 1000;
+                    var minRadiusM = 50;
+                    var circleOverlay, badge, radiusLabel, initialized = false;
+                    var isResizing = false;
+                    var isMoving = false;
+                    var moveOffset = null;
 
                     function haversineMeters(lat1, lon1, lat2, lon2) {
                         var R = 6371000;
@@ -194,20 +188,38 @@ class Karta:
                         return 2 * R * Math.asin(Math.sqrt(a));
                     }
 
+                    // Snap a raw metre value to the step that matches its
+                    // magnitude. The bucket is chosen from the raw value,
+                    // so the step changes smoothly as you cross thresholds.
+                    function snapRadius(rawM) {
+                        var step;
+                        if (rawM < 100)         step = 10;
+                        else if (rawM < 1000)   step = 50;
+                        else if (rawM < 10000)  step = 500;
+                        else if (rawM < 100000) step = 5000;
+                        else                    step = 50000;
+                        return Math.round(rawM / step) * step;
+                    }
+
+                    function formatRadius(m) {
+                        if (m < 1000) return Math.round(m) + " m";
+                        var km = m / 1000;
+                        if (km === Math.round(km)) return km.toFixed(0) + " km";
+                        return km.toFixed(1) + " km";
+                    }
+
                     // Recursively walk every layer on the map (through
                     // FeatureGroups / GeoJson / MarkerCluster) collecting
                     // point-like markers. Polygons/lines never match the
                     // CircleMarker/Marker checks, so buffers, chorop-
                     // leths, etc. are correctly left out of the count.
-
                     function collectPointLatLngs(layer, out, seen) {
                         var id = L.Util.stamp(layer);
-                        if (seen.has(id)) return;  // already visited this exact layer via another
-                                                    // parent path -- this is what was tripling the count
+                        if (seen.has(id)) return;
                         seen.add(id);
 
                         if ((layer instanceof L.CircleMarker || layer instanceof L.Marker) &&
-                            layer !== circleHandle && layer !== circleOverlay) {
+                            layer !== circleOverlay) {
                             out.push(layer.getLatLng());
                         }
                         if (typeof layer.getAllChildMarkers === "function") {
@@ -232,46 +244,163 @@ class Karta:
                         }
                         return n;
                     }
-                    var countLabel = document.getElementById("circle-count-__UID__");
-                    var slider = document.getElementById("circle-radius-slider-__UID__");
-                    var radiusVal = document.getElementById("circle-radius-val-__UID__");
 
-                    function render(center) {
-                        var n = countPointsInCircle(center, radiusM);
-                        countLabel.textContent = n + (n === 1 ? " point" : " points") + " in circle";
+                    // Circle radius in screen pixels, derived from its bounds.
+                    function getPixelRadius() {
+                        if (!circleOverlay) return 0;
+                        var b = circleOverlay.getBounds();
+                        var ne = mapObj.latLngToContainerPoint(b.getNorthEast());
+                        var sw = mapObj.latLngToContainerPoint(b.getSouthWest());
+                        return (ne.x - sw.x) / 2;
+                    }
+
+                    // True if the given container point is close enough to the
+                    // circle's stroke to count as "grabbing the border".
+                    function isNearBorder(containerPoint) {
+                        var c = circleOverlay.getLatLng();
+                        var centerPt = mapObj.latLngToContainerPoint(c);
+                        var dist = containerPoint.distanceTo(centerPt);
+                        var pr = getPixelRadius();
+                        var tolerance = Math.min(10, Math.max(3, pr * 0.4));
+                        return Math.abs(dist - pr) < tolerance;
+                    }
+
+                    function updateBadge() {
+                        if (!badge || !circleOverlay) return;
+                        var c = circleOverlay.getLatLng();
+                        var n = countPointsInCircle(c, radiusM);
+                        var pt = mapObj.latLngToContainerPoint(c);
+                        badge.style.left = pt.x + "px";
+                        badge.style.top = pt.y + "px";
+                        badge.textContent = n + (n === 1 ? " point" : " points");
+                    }
+
+                    function showRadiusLabel(containerPoint) {
+                        if (!radiusLabel) return;
+                        radiusLabel.textContent = formatRadius(radiusM);
+                        radiusLabel.style.left = (containerPoint.x + 14) + "px";
+                        radiusLabel.style.top = (containerPoint.y + 14) + "px";
+                        radiusLabel.style.display = "block";
+                    }
+
+                    function hideRadiusLabel() {
+                        if (radiusLabel) radiusLabel.style.display = "none";
+                    }
+
+                    function setCursor(cursor) {
+                        if (circleOverlay && circleOverlay._path) {
+                            circleOverlay._path.style.cursor = cursor;
+                        }
+                    }
+
+                    function endDrag() {
+                        if (!isResizing && !isMoving) return;
+                        isResizing = false;
+                        isMoving = false;
+                        moveOffset = null;
+                        hideRadiusLabel();
+                        mapObj.dragging.enable();
+                        setCursor("move");
                     }
 
                     function initCircleTool(center) {
                         if (initialized) return;
                         initialized = true;
 
-                        var circleIcon = L.divIcon({
-                            className: "",
-                            html: '<div style="width:16px;height:16px;border-radius:50%;background:#e53e3e;' +
-                                  'border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,0.45);"></div>',
-                            iconSize: [16, 16], iconAnchor: [8, 8]
-                        });
-                        circleHandle = L.marker(center, { icon: circleIcon, draggable: true })
-                            .addTo(mapObj).bindTooltip("Drag to move");
                         circleOverlay = L.circle(center, {
-                            radius: radiusM, color: "#e53e3e", weight: 2,
-                            fillColor: "#feb2b2", fillOpacity: 0.2
+                            radius: radiusM,
+                            color: "#e53e3e",
+                            weight: 2,
+                            fillColor: "#feb2b2",
+                            fillOpacity: 0.2,
+                            interactive: true
                         }).addTo(mapObj);
 
-                        circleHandle.on("drag", function (e) {
-                            var latlng = e.target.getLatLng();
-                            circleOverlay.setLatLng(latlng);
-                            render(latlng);
+                        // Rectangular badge over the circle's centre.
+                        badge = L.DomUtil.create("div", "", mapObj.getContainer());
+                        badge.style.cssText =
+                            "position:absolute; z-index:1000; background:rgba(255,255,255,0.95);" +
+                            "padding:3px 8px; border-radius:4px; font-family:sans-serif;" +
+                            "font-size:12px; font-weight:bold; color:#c53030;" +
+                            "pointer-events:none; white-space:nowrap;" +
+                            "box-shadow:0 1px 4px rgba(0,0,0,0.25);" +
+                            "transform:translate(-50%,-50%); border:1px solid #e53e3e;";
+                        badge.textContent = "0 points";
+
+                        // Floating radius readout, shown only while resizing.
+                        radiusLabel = L.DomUtil.create("div", "", mapObj.getContainer());
+                        radiusLabel.style.cssText =
+                            "position:absolute; z-index:1001; display:none;" +
+                            "background:rgba(229,62,62,0.95); color:white;" +
+                            "padding:2px 7px; border-radius:4px;" +
+                            "font-family:sans-serif; font-size:12px; font-weight:bold;" +
+                            "pointer-events:none; white-space:nowrap;" +
+                            "box-shadow:0 1px 4px rgba(0,0,0,0.3);";
+                        radiusLabel.textContent = formatRadius(radiusM);
+
+                        // Cursor feedback: resize over the border, move over the fill.
+                        circleOverlay.on("mouseover", function () {
+                            if (!isResizing && !isMoving) setCursor("move");
+                        });
+                        circleOverlay.on("mouseout", function () {
+                            if (!isResizing && !isMoving) setCursor("");
+                        });
+                        circleOverlay.on("mousemove", function (e) {
+                            if (isResizing || isMoving) return;
+                            setCursor(isNearBorder(e.containerPoint) ? "ew-resize" : "move");
                         });
 
-                        slider.addEventListener("input", function () {
-                            radiusM = parseFloat(slider.value) * 1000;
-                            radiusVal.textContent = slider.value;
-                            circleOverlay.setRadius(radiusM);
-                            render(circleHandle.getLatLng());
+                        // Decide on mousedown whether we are resizing or moving.
+                        circleOverlay.on("mousedown", function (e) {
+                            L.DomEvent.stopPropagation(e);
+                            var c = circleOverlay.getLatLng();
+
+                            if (isNearBorder(e.containerPoint)) {
+                                isResizing = true;
+                                setCursor("ew-resize");
+                                showRadiusLabel(e.containerPoint);
+                            } else {
+                                isMoving = true;
+                                setCursor("move");
+                                var centerPt = mapObj.latLngToContainerPoint(c);
+                                moveOffset = L.point(
+                                    centerPt.x - e.containerPoint.x,
+                                    centerPt.y - e.containerPoint.y
+                                );
+                            }
+                            mapObj.dragging.disable();
                         });
 
-                        render(center);
+                        mapObj.on("mousemove", function (e) {
+                            if (isResizing) {
+                                var c = circleOverlay.getLatLng();
+                                var rawR = haversineMeters(c.lat, c.lng, e.latlng.lat, e.latlng.lng);
+                                // Clamp before snapping so we never land outside
+                                // [minRadiusM, maxRadiusM] after the round.
+                                rawR = Math.max(minRadiusM, Math.min(rawR, maxRadiusM));
+                                radiusM = snapRadius(rawR);
+                                circleOverlay.setRadius(radiusM);
+                                updateBadge();
+                                showRadiusLabel(e.containerPoint);
+                            } else if (isMoving) {
+                                var newPt = L.point(
+                                    e.containerPoint.x + moveOffset.x,
+                                    e.containerPoint.y + moveOffset.y
+                                );
+                                var newLatLng = mapObj.containerPointToLatLng(newPt);
+                                circleOverlay.setLatLng(newLatLng);
+                                updateBadge();
+                            }
+                        });
+
+                        mapObj.on("mouseup", endDrag);
+                        // Safety net in case the mouse is released off-map.
+                        document.addEventListener("mouseup", endDrag);
+
+                        // Keep the badge glued to the circle through pans / zooms.
+                        mapObj.on("move zoom viewreset", updateBadge);
+
+                        updateBadge();
                     }
 
                     // Defer placing the circle until the map's initial
