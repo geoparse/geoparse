@@ -52,8 +52,8 @@ class Karta:
     @staticmethod
     def _base_map(
         circle_tool: bool = True,
-        default_radius_km: float = 1.0,
-        max_radius_km: float = 50.0,
+        default_radius_km: float = 100.0,
+        max_radius_km: float = 5000.0,
     ) -> folium.Map:
         """
         Creates a base map with multiple tile layers and fits the map to the specified bounding box.
