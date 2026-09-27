@@ -54,15 +54,17 @@ class Karta:
         circle_tool: bool = True,
         default_radius_px: float = 25,
         max_radius_km: float = 5000.0,
+        aggregation_dict: dict = None,
     ) -> folium.Map:
         """
         Creates a base map with multiple tile layers and fits the map to the specified bounding box.
 
-        It also adds an optional draggable "count points in circle" tool: a red circle
-        you can drag to move, whose border you can drag in/out to resize (with a live
-        radius readout following the cursor), with a rectangular badge hovering just
-        above the circle showing how many point markers currently fall inside it.
-        A small dot marks the circle's centre.
+        It also adds an optional draggable "aggregate points in circle" tool: a red
+        circle you can drag to move, whose border you can drag in/out to resize
+        (with a live radius readout following the cursor), with a rectangular badge
+        hovering just above the circle showing the number of point markers inside it
+        and, for every entry in `aggregation_dict`, the aggregated value of a chosen
+        field over those same points.
 
         The circle starts in the top-left corner of the map, tucked just below the
         measurement control (with enough clearance that the badge never covers it),
@@ -78,17 +80,37 @@ class Karta:
         Parameters
         ----------
         circle_tool : bool, default=True
-            Whether to add the draggable radius-selection / point-count tool.
+            Whether to add the draggable radius-selection / aggregation tool.
         default_radius_px : float, default=25.0
             Initial radius of the tool's circle, in screen pixels. Converted to
             metres at the map's current zoom / latitude when the tool is created.
         max_radius_km : float, default=5000.0
             Maximum radius the circle can be resized to, in kilometres.
+        aggregation_dict : dict, optional
+            Mapping of ``{alias: [field_name, func]}`` describing what to
+            aggregate over the points inside the circle. ``func`` is a
+            case-insensitive string, one of:
+
+                * ``"sum"``    -- sum of numeric values
+                * ``"mean"`` / ``"avg"`` -- arithmetic mean of numeric values
+                * ``"max"``    -- maximum numeric value
+                * ``"min"``    -- minimum numeric value
+                * ``"count"``  -- number of points that have a non-empty value
+                * ``"unique"`` -- number of distinct values
+
+            Example::
+
+                aggregation_dict = {
+                    "Total Casualties": ["casualty", "sum"],
+                    "Max speed": ["speedlimit", "max"],
+                }
+
+            If ``None``, the badge shows only the point count.
 
         Returns
         -------
         folium.Map
-            A Folium map object with multiple tile layers and optional measurement tools.
+            A folium Map object with multiple tile layers and optional measurement tools.
         """
         # Initialize the base map without any default tiles
         karta = folium.Map(tiles=None, control_scale=True)
@@ -158,7 +180,7 @@ class Karta:
         """)
         karta.get_root().html.add_child(attribution)
 
-        # ── Draggable / resizable "count points in circle" tool ──────────
+        # ── Draggable / resizable "aggregate points in circle" tool ──────
         # Implemented as a MacroElement (not a plain Element) so its
         # `script` macro lands in Folium's script bucket alongside the
         # map's own creation script, guaranteeing `mapObj` already exists
@@ -167,6 +189,19 @@ class Karta:
             uid = karta.get_name()  # this map's JS variable name, also used
             # to namespace DOM ids so multiple Karta
             # maps on one page don't clash.
+
+            # Normalise the aggregation dict so every value is a [field, func]
+            # pair with a lower-cased func string. This is what gets embedded
+            # into the JS below.
+            norm_agg = {}
+            if aggregation_dict:
+                for alias, spec in aggregation_dict.items():
+                    if isinstance(spec, (list, tuple)) and len(spec) >= 2:
+                        field, func = spec[0], spec[1]
+                    else:
+                        # Be forgiving: {"alias": "field"} defaults to sum
+                        field, func = spec, "sum"
+                    norm_agg[str(alias)] = [str(field), str(func).lower()]
 
             circle_tool_macro = MacroElement()
             circle_tool_macro._template = Template(
@@ -181,10 +216,16 @@ class Karta:
                     var radiusM = 0;
                     var maxRadiusM = __MAX_RADIUS__ * 1000;
                     var minRadiusM = 50;
+                    // { alias: [fieldName, func] }
+                    //   func in {"sum","mean"/"avg","max","min","count","unique"}
+                    var aggDict = __AGG_DICT_JSON__;
+                    var aggAliases = Object.keys(aggDict);
                     var circleOverlay, centerDot, badge, radiusLabel, initialized = false;
                     var isResizing = false;
                     var isMoving = false;
                     var moveOffset = null;
+
+                    console.debug("[Karta] circle-tool aggregation_dict =", aggDict);
 
                     function haversineMeters(lat1, lon1, lat2, lon2) {
                         var R = 6371000;
@@ -193,6 +234,50 @@ class Karta:
                         var a = Math.sin(dLat / 2) ** 2 +
                                 Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
                         return 2 * R * Math.asin(Math.sqrt(a));
+                    }
+
+                    // Extract the GeoJSON properties attached to a marker.
+                    // Folium normally sets them on `layer.feature`; other
+                    // constructions (custom pointToLayer, MarkerCluster
+                    // passthrough, etc.) can leave them on options instead.
+                    function getProps(layer) {
+                        if (!layer) return {};
+                        if (layer.feature && layer.feature.properties) {
+                            return layer.feature.properties;
+                        }
+                        if (layer.options && layer.options.feature && layer.options.feature.properties) {
+                            return layer.options.feature.properties;
+                        }
+                        if (layer.defaultOptions && layer.defaultOptions.feature &&
+                            layer.defaultOptions.feature.properties) {
+                            return layer.defaultOptions.feature.properties;
+                        }
+                        return {};
+                    }
+
+                    // Coerce a property value to a number, stripping thousands
+                    // separators if present. Returns null for anything that
+                    // shouldn't contribute to a numeric aggregation (blank,
+                    // boolean, non-numeric string).
+                    function toNumber(v) {
+                        if (v === null || v === undefined || v === "") return null;
+                        if (typeof v === "number") return isNaN(v) ? null : v;
+                        if (typeof v === "boolean") return null;
+                        if (typeof v === "string") {
+                            var cleaned = v.replace(/,/g, "").trim();
+                            if (cleaned === "") return null;
+                            var n = Number(cleaned);
+                            return isNaN(n) ? null : n;
+                        }
+                        return null;
+                    }
+
+                    function formatNumber(n) {
+                        if (n === null || n === undefined || !isFinite(n)) return "-";
+                        if (Math.abs(n) >= 1000) {
+                            return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+                        }
+                        return String(Math.round(n * 100) / 100);
                     }
 
                     // Convert a screen-pixel distance at `center` into metres,
@@ -262,40 +347,116 @@ class Karta:
 
                     // Recursively walk every layer on the map (through
                     // FeatureGroups / GeoJson / MarkerCluster) collecting
-                    // point-like markers. Polygons/lines never match the
-                    // CircleMarker/Marker checks, so buffers, chorop-
-                    // leths, etc. are correctly left out of the count.
+                    // point-like markers together with their GeoJSON props.
+                    // Polygons/lines never match the CircleMarker/Marker
+                    // checks, so buffers, choropleths, etc. are left out.
                     // The tool's own circle and centre dot are excluded too.
-                    function collectPointLatLngs(layer, out, seen) {
+                    // `seen` dedupes by Leaflet layer id so a marker reached
+                    // through more than one parent path is only counted once.
+                    function collectPoints(layer, out, seen) {
                         var id = L.Util.stamp(layer);
                         if (seen.has(id)) return;
                         seen.add(id);
 
                         if ((layer instanceof L.CircleMarker || layer instanceof L.Marker) &&
                             layer !== circleOverlay && layer !== centerDot) {
-                            out.push(layer.getLatLng());
+                            out.push({ latlng: layer.getLatLng(), props: getProps(layer) });
                         }
                         if (typeof layer.getAllChildMarkers === "function") {
                             layer.getAllChildMarkers().forEach(function (m) {
                                 var mid = L.Util.stamp(m);
-                                if (!seen.has(mid)) { seen.add(mid); out.push(m.getLatLng()); }
+                                if (!seen.has(mid)) {
+                                    seen.add(mid);
+                                    out.push({ latlng: m.getLatLng(), props: getProps(m) });
+                                }
                             });
                             return;
                         }
                         if (typeof layer.eachLayer === "function") {
-                            layer.eachLayer(function (child) { collectPointLatLngs(child, out, seen); });
+                            layer.eachLayer(function (child) { collectPoints(child, out, seen); });
                         }
                     }
 
-                    function countPointsInCircle(center, radius) {
+                    // Collect the values for one aggregation entry over the
+                    // points currently inside the circle, then reduce them
+                    // according to the requested func.
+                    function aggregateOne(values, func) {
+                        if (func === "count") {
+                            // count of points that actually have a value
+                            var n = 0;
+                            for (var i = 0; i < values.length; i++) {
+                                if (values[i] !== null && values[i] !== undefined && values[i] !== "") n++;
+                            }
+                            return n;
+                        }
+                        if (func === "unique") {
+                            var seen = new Set();
+                            for (var j = 0; j < values.length; j++) {
+                                var v = values[j];
+                                if (v === null || v === undefined || v === "") continue;
+                                seen.add(String(v));
+                            }
+                            return seen.size;
+                        }
+
+                        // Numeric-only aggregations: strip non-numeric values
+                        var nums = [];
+                        for (var k = 0; k < values.length; k++) {
+                            var num = toNumber(values[k]);
+                            if (num !== null) nums.push(num);
+                        }
+                        if (!nums.length) return null;
+                        if (func === "sum") {
+                            var s = 0;
+                            for (var a = 0; a < nums.length; a++) s += nums[a];
+                            return s;
+                        }
+                        if (func === "mean" || func === "avg") {
+                            var tot = 0;
+                            for (var b = 0; b < nums.length; b++) tot += nums[b];
+                            return tot / nums.length;
+                        }
+                        if (func === "max") {
+                            var mx = nums[0];
+                            for (var c = 1; c < nums.length; c++) if (nums[c] > mx) mx = nums[c];
+                            return mx;
+                        }
+                        if (func === "min") {
+                            var mn = nums[0];
+                            for (var d = 1; d < nums.length; d++) if (nums[d] < mn) mn = nums[d];
+                            return mn;
+                        }
+                        return null;
+                    }
+
+                    // Counts points inside the circle and aggregates every
+                    // entry in aggDict over those same points.
+                    function summarizeCircle(center, radius) {
                         var pts = [];
                         var seen = new Set();
-                        mapObj.eachLayer(function (l) { collectPointLatLngs(l, pts, seen); });
-                        var n = 0;
+                        mapObj.eachLayer(function (l) { collectPoints(l, pts, seen); });
+
+                        var count = 0;
+                        // per alias: array of raw values pulled from matching points
+                        var buckets = {};
+                        aggAliases.forEach(function (alias) { buckets[alias] = []; });
+
                         for (var i = 0; i < pts.length; i++) {
-                            if (haversineMeters(center.lat, center.lng, pts[i].lat, pts[i].lng) <= radius) n++;
+                            if (haversineMeters(center.lat, center.lng,
+                                                pts[i].latlng.lat, pts[i].latlng.lng) <= radius) {
+                                count++;
+                                aggAliases.forEach(function (alias) {
+                                    var field = aggDict[alias][0];
+                                    buckets[alias].push(pts[i].props[field]);
+                                });
+                            }
                         }
-                        return n;
+
+                        var results = {};
+                        aggAliases.forEach(function (alias) {
+                            results[alias] = aggregateOne(buckets[alias], aggDict[alias][1]);
+                        });
+                        return { count: count, results: results };
                     }
 
                     // Circle radius in screen pixels, derived from its bounds.
@@ -318,8 +479,8 @@ class Karta:
                         return Math.abs(dist - pr) < tolerance;
                     }
 
-                    // Refresh the badge (text + position) and keep the centre
-                    // dot glued to the circle's centre.
+                    // Refresh the badge (count + aggregations + position) and
+                    // keep the centre dot glued to the circle's centre.
                     function updateBadge() {
                         if (!circleOverlay) return;
                         var c = circleOverlay.getLatLng();
@@ -327,7 +488,7 @@ class Karta:
                         if (centerDot) centerDot.setLatLng(c);
 
                         if (!badge) return;
-                        var n = countPointsInCircle(c, radiusM);
+                        var summary = summarizeCircle(c, radiusM);
                         var pt = mapObj.latLngToContainerPoint(c);
                         var pr = getPixelRadius();
 
@@ -335,7 +496,13 @@ class Karta:
                         // so the badge clears the stroke).
                         badge.style.left = pt.x + "px";
                         badge.style.top  = (pt.y - pr - 8) + "px";
-                        badge.textContent = n + (n === 1 ? " point" : " points");
+
+                        var lines = [summary.count + (summary.count === 1 ? " point" : " points")];
+                        aggAliases.forEach(function (alias) {
+                            var v = summary.results[alias];
+                            lines.push(alias + ": " + formatNumber(v));
+                        });
+                        badge.innerHTML = lines.join("<br>");
                     }
 
                     function showRadiusLabel(containerPoint) {
@@ -403,7 +570,7 @@ class Karta:
                         badge.style.cssText =
                             "position:absolute; z-index:1000; background:rgba(255,255,255,0.95);" +
                             "padding:3px 8px; border-radius:4px; font-family:sans-serif;" +
-                            "font-size:12px; font-weight:bold; color:#c53030;" +
+                            "font-size:12px; font-weight:bold; color:#c53030; line-height:1.4;" +
                             "pointer-events:none; white-space:nowrap;" +
                             "box-shadow:0 1px 4px rgba(0,0,0,0.25);" +
                             "transform:translate(-50%,-100%); border:1px solid #e53e3e;";
@@ -506,6 +673,7 @@ class Karta:
                 """.replace("__UID__", uid)
                 .replace("__DEFAULT_RADIUS_PX__", str(default_radius_px))
                 .replace("__MAX_RADIUS__", str(max_radius_km))
+                .replace("__AGG_DICT_JSON__", json.dumps(norm_agg))
             )
             karta.get_root().add_child(circle_tool_macro)
 
@@ -969,6 +1137,9 @@ class Karta:
         speed_field: str = "speed",
         speed_limit_field: str = "speed_limit",
         popup_dict: dict = None,
+        # Draggable circle tool: {alias: [field, func]} where func is one of
+        # "sum", "mean"/"avg", "max", "min", "count", "unique".
+        aggregation_dict: dict = None,
         main_layer_max_records: int = 50_000,  # Maximum records to display in main layer to avoid performance degradation
         add_measurement_tools: bool = True,
     ) -> folium.Map:
@@ -1054,8 +1225,11 @@ class Karta:
                     print("  2. Use SnabbKarta.plp() for faster rendering.")
                     print("  3. Increase `main_layer_max_records` parameter (may cause slowdown).")
 
-        # Instantiate base map and render all generated layers
-        karta = Karta._base_map()
+        # Instantiate base map and render all generated layers.
+        # `aggregation_dict` drives the draggable circle tool only; it is
+        # independent of `popup_dict`, which continues to control tooltips
+        # and popups on the main layer.
+        karta = Karta._base_map(aggregation_dict=aggregation_dict)
 
         if point_color == speed_field:
             speeding_legend_html = Karta._create_speeding_legend()
