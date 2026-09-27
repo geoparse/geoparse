@@ -9,6 +9,7 @@ from collections import deque
 from io import BytesIO
 from math import atan2, cos, radians, sin, sqrt
 from multiprocessing import Pool, cpu_count
+from pathlib import Path
 from time import sleep, time
 
 import folium  # Folium is a Python library used for visualizing geospatial data. Actually, it's a Python wrapper for Leaflet which is a leading open-source JavaScript library for plotting interactive maps.
@@ -47,48 +48,20 @@ from shapely.geometry.base import BaseGeometry
 from shapely.ops import transform, unary_union
 from shapely.prepared import prep
 
+# ... existing imports (folium, plugins, etc.) ...
+
+# Loaded once at import time; adjust the path if you keep the .js file
+# somewhere other than next to this module.
+_CIRCLE_TOOL_JS_PATH = Path(__file__).with_name("karta_tools.js")
+_CIRCLE_TOOL_JS = _CIRCLE_TOOL_JS_PATH.read_text(encoding="utf-8")
+
 
 class Karta:
     @staticmethod
-    def _base_map(
-        circle_tool: bool = True,
-        default_radius_km: float = 1.0,
-        max_radius_km: float = 50.0,
-    ) -> folium.Map:
-        """
-        Creates a base map with multiple tile layers and fits the map to the specified bounding box.
-
-        This function initializes a Folium map object with multiple tile layers, including:
-        - `Bright Mode` (CartoDB Positron)
-        - `Dark Mode` (CartoDB Dark Matter)
-        - `Satellite` (Esri World Imagery)
-        - `OpenStreetMap` (OSM)
-
-        It also adds an optional draggable "count points in circle" tool: a red handle
-        you can drag anywhere on the map, with a slider to control its radius, and a
-        live label showing how many point markers currently fall inside it.
-
-        Parameters
-        ----------
-        circle_tool : bool, default=True
-            Whether to add the draggable radius-selection / point-count tool.
-        default_radius_km : float, default=1.0
-            Initial radius of the tool's circle, in kilometres.
-        max_radius_km : float, default=50.0
-            Maximum value on the radius slider, in kilometres.
-
-        Returns
-        -------
-        folium.Map
-            A Folium map object with multiple tile layers and optional measurement tools.
-        """
-        # Initialize the base map without any default tiles
-        karta = folium.Map(tiles=None, control_scale=True)
-
-        # Add OpenStreetMap (OSM) tile layer
+    def _add_tile_layers(karta: folium.Map) -> None:
+        """Add the OSM / Satellite / Outdoors / Dark / Light tile layers."""
         folium.TileLayer("openstreetmap", name="OSM", max_zoom=19).add_to(karta)
 
-        # Add a satellite tile layer (Esri World Imagery)
         folium.TileLayer(
             name="Satellite",
             tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -98,14 +71,12 @@ class Karta:
             max_zoom=19,
         ).add_to(karta)
 
-        # Add OpenTopoMap as a tile layer
         folium.TileLayer(
             name="Outdoors",
             tiles="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
             attr='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://opentopomap.org/">OpenTopoMap</a>',
         ).add_to(karta)
 
-        # Add Carto Dark Matter (dark tile layer)
         folium.TileLayer(
             name="Dark",
             tiles="https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?key=cb1_26zs_1_f808f122c46ed8d67d4db10c",
@@ -113,7 +84,6 @@ class Karta:
             max_zoom=21,
         ).add_to(karta)
 
-        # Add Carto Positron (light tile layer)
         folium.TileLayer(
             name="Light",
             tiles="https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png?key=cb1_26zs_1_f808f122c46ed8d67d4db10c",
@@ -121,173 +91,154 @@ class Karta:
             max_zoom=21,
         ).add_to(karta)
 
-        # Display coordinates
+    @staticmethod
+    def _add_controls(karta: folium.Map) -> None:
+        """Add coordinate readout, fullscreen, and measurement controls."""
         plugins.MousePosition().add_to(karta)
-
-        # Add fullscreen button
         plugins.Fullscreen().add_to(karta)
-
-        # Add measurement tools
         plugins.MeasureControl(position="topleft").add_to(karta)
 
-        # Add GeoParse legend
-        attribution = folium.Element("""
-        <div style="
-            position: fixed;
-            bottom: 0px;
-            left: 120px;
-            z-index: 9999;
-            background: rgba(255,255,255,0.8);
-            padding: 4px 8px;
-            font-size: 11px;
-            border-radius: 4px;
-        ">
-            Created by <b>GeoParse</b>:
-            <a href="https://github.com/geoparse/geoparse" target="_blank">
-                https://github.com/geoparse/geoparse
-            </a>
-        </div>
-        """)
-        karta.get_root().html.add_child(attribution)
+    @staticmethod
+    def _add_attribution(karta: folium.Map) -> None:
+        """Add the small GeoParse attribution badge in the bottom-left corner."""
+        karta.get_root().html.add_child(
+            folium.Element("""
+            <div style="
+                position: fixed;
+                bottom: 0px;
+                left: 120px;
+                z-index: 9999;
+                background: rgba(255,255,255,0.8);
+                padding: 4px 8px;
+                font-size: 11px;
+                border-radius: 4px;
+            ">
+                Created by <b>GeoParse</b>:
+                <a href="https://github.com/geoparse/geoparse" target="_blank">
+                    https://github.com/geoparse/geoparse
+                </a>
+            </div>
+            """)
+        )
 
-        # ── Draggable "count points in circle" tool ─────────────────────
-        # Implemented as a MacroElement (not a plain Element) so its
-        # `script` macro lands in Folium's script bucket alongside the
-        # map's own creation script, guaranteeing `mapObj` already exists
-        # by the time our code runs.
+    @staticmethod
+    def _normalize_aggregation_dict(aggregation_dict: dict | None) -> dict:
+        """
+        Normalise ``{alias: [field, func]}`` (or the shorthand ``{alias: field}``,
+        which defaults to ``"sum"``) into ``{alias: [field, lowercased_func]}``,
+        ready to embed as JSON in the circle tool's JS.
+        """
+        if not aggregation_dict:
+            return {}
+
+        normalized = {}
+        for alias, spec in aggregation_dict.items():
+            if isinstance(spec, (list, tuple)) and len(spec) >= 2:
+                field, func = spec[0], spec[1]
+            else:
+                field, func = spec, "sum"
+            normalized[str(alias)] = [str(field), str(func).lower()]
+        return normalized
+
+    @staticmethod
+    def _add_circle_tool(
+        karta: folium.Map,
+        default_radius_px: float,
+        max_radius_km: float,
+        aggregation_dict: dict | None,
+    ) -> None:
+        """
+        Add the draggable / resizable "aggregate points in circle" tool.
+
+        Implemented as a MacroElement (not a plain Element) so its `script`
+        macro lands in Folium's script bucket alongside the map's own
+        creation script, guaranteeing the map object already exists by the
+        time our code runs. The JS body itself lives in
+        karta_circle_tool.js; `uid`/`default_radius_px`/`max_radius_km`/
+        `agg_dict_json` are read inside it via `{{ this.xxx }}`, which Jinja2
+        resolves against the attributes set on this MacroElement below.
+        """
+        macro = MacroElement()
+        macro._template = Template("{% macro script(this, kwargs) %}\n" + _CIRCLE_TOOL_JS + "\n{% endmacro %}")
+        macro.uid = karta.get_name()  # this map's JS variable name; also
+        # namespaces DOM ids so multiple Karta maps on one page don't clash.
+        macro.default_radius_px = default_radius_px
+        macro.max_radius_km = max_radius_km
+        macro.agg_dict_json = json.dumps(Karta._normalize_aggregation_dict(aggregation_dict))
+
+        karta.get_root().add_child(macro)
+
+    @staticmethod
+    def _base_map(
+        circle_tool: bool = True,
+        default_radius_px: float = 25,
+        max_radius_km: float = 5000.0,
+        aggregation_dict: dict = None,
+    ) -> folium.Map:
+        """
+        Creates a base map with multiple tile layers and fits the map to the specified bounding box.
+
+        It also adds an optional draggable "aggregate points in circle" tool: a red
+        circle you can drag to move, whose border you can drag in/out to resize
+        (with a live radius readout following the cursor), with a rectangular badge
+        hovering just above the circle showing the number of point markers inside it
+        and, for every entry in `aggregation_dict`, the aggregated value of a chosen
+        field over those same points.
+
+        The circle starts in the top-left corner of the map, tucked just below the
+        measurement control (with enough clearance that the badge never covers it),
+        instead of at the map's centre.
+
+        The radius snaps to a step that scales with the current radius:
+            10 m   below 100 m
+            50 m   below 1 km
+            500 m  below 10 km
+            5 km   below 100 km
+            50 km  below 1000 km
+
+        Parameters
+        ----------
+        circle_tool : bool, default=True
+            Whether to add the draggable radius-selection / aggregation tool.
+        default_radius_px : float, default=25.0
+            Initial radius of the tool's circle, in screen pixels. Converted to
+            metres at the map's current zoom / latitude when the tool is created.
+        max_radius_km : float, default=5000.0
+            Maximum radius the circle can be resized to, in kilometres.
+        aggregation_dict : dict, optional
+            Mapping of ``{alias: [field_name, func]}`` describing what to
+            aggregate over the points inside the circle. ``func`` is a
+            case-insensitive string, one of:
+
+                * ``"sum"``    -- sum of numeric values
+                * ``"mean"`` / ``"avg"`` -- arithmetic mean of numeric values
+                * ``"max"``    -- maximum numeric value
+                * ``"min"``    -- minimum numeric value
+                * ``"count"``  -- number of points that have a non-empty value
+                * ``"unique"`` -- number of distinct values
+
+            Example::
+
+                aggregation_dict = {
+                    "Total Casualties": ["casualty", "sum"],
+                    "Max speed": ["speedlimit", "max"],
+                }
+
+            If ``None``, the badge shows only the point count.
+
+        Returns
+        -------
+        folium.Map
+            A folium Map object with multiple tile layers and optional measurement tools.
+        """
+        karta = folium.Map(tiles=None, control_scale=True)
+
+        Karta._add_tile_layers(karta)
+        Karta._add_controls(karta)
+        Karta._add_attribution(karta)
+
         if circle_tool:
-            uid = karta.get_name()  # this map's JS variable name, e.g. "map_1a2b3c"; also used to
-            # namespace the DOM ids so multiple Karta maps on one page don't clash.
-
-            circle_tool_macro = MacroElement()
-            circle_tool_macro._template = Template(
-                """
-                {% macro html(this, kwargs) %}
-                <div id="circle-panel-__UID__" style="
-                    position: absolute; z-index: 9999; bottom: 90px; left: 12px;
-                    background: rgba(255,255,255,0.95); padding: 8px 12px; border-radius: 8px;
-                    font-family: sans-serif; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                ">
-                    <div id="circle-count-__UID__" style="margin-bottom: 4px; font-weight: bold;">
-                        0 points in circle
-                    </div>
-                    Radius: <span id="circle-radius-val-__UID__">__DEFAULT_RADIUS__</span> km
-                    <br>
-                    <input type="range" id="circle-radius-slider-__UID__"
-                        min="0.05" max="__MAX_RADIUS__" step="0.05" value="__DEFAULT_RADIUS__"
-                        style="width: 140px;">
-                </div>
-                {% endmacro %}
-
-                {% macro script(this, kwargs) %}
-                (function () {
-                    var mapObj = __UID__;
-                    var radiusM = __DEFAULT_RADIUS__ * 1000;
-                    var circleHandle, circleOverlay, initialized = false;
-
-                    function haversineMeters(lat1, lon1, lat2, lon2) {
-                        var R = 6371000;
-                        function toRad(d) { return d * Math.PI / 180; }
-                        var dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
-                        var a = Math.sin(dLat / 2) ** 2 +
-                                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-                        return 2 * R * Math.asin(Math.sqrt(a));
-                    }
-
-                    // Recursively walk every layer on the map (through
-                    // FeatureGroups / GeoJson / MarkerCluster) collecting
-                    // point-like markers. Polygons/lines never match the
-                    // CircleMarker/Marker checks, so buffers, chorop-
-                    // leths, etc. are correctly left out of the count.
-
-                    function collectPointLatLngs(layer, out, seen) {
-                        var id = L.Util.stamp(layer);
-                        if (seen.has(id)) return;  // already visited this exact layer via another
-                                                    // parent path -- this is what was tripling the count
-                        seen.add(id);
-
-                        if ((layer instanceof L.CircleMarker || layer instanceof L.Marker) &&
-                            layer !== circleHandle && layer !== circleOverlay) {
-                            out.push(layer.getLatLng());
-                        }
-                        if (typeof layer.getAllChildMarkers === "function") {
-                            layer.getAllChildMarkers().forEach(function (m) {
-                                var mid = L.Util.stamp(m);
-                                if (!seen.has(mid)) { seen.add(mid); out.push(m.getLatLng()); }
-                            });
-                            return;
-                        }
-                        if (typeof layer.eachLayer === "function") {
-                            layer.eachLayer(function (child) { collectPointLatLngs(child, out, seen); });
-                        }
-                    }
-
-                    function countPointsInCircle(center, radius) {
-                        var pts = [];
-                        var seen = new Set();
-                        mapObj.eachLayer(function (l) { collectPointLatLngs(l, pts, seen); });
-                        var n = 0;
-                        for (var i = 0; i < pts.length; i++) {
-                            if (haversineMeters(center.lat, center.lng, pts[i].lat, pts[i].lng) <= radius) n++;
-                        }
-                        return n;
-                    }
-                    var countLabel = document.getElementById("circle-count-__UID__");
-                    var slider = document.getElementById("circle-radius-slider-__UID__");
-                    var radiusVal = document.getElementById("circle-radius-val-__UID__");
-
-                    function render(center) {
-                        var n = countPointsInCircle(center, radiusM);
-                        countLabel.textContent = n + (n === 1 ? " point" : " points") + " in circle";
-                    }
-
-                    function initCircleTool(center) {
-                        if (initialized) return;
-                        initialized = true;
-
-                        var circleIcon = L.divIcon({
-                            className: "",
-                            html: '<div style="width:16px;height:16px;border-radius:50%;background:#e53e3e;' +
-                                  'border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,0.45);"></div>',
-                            iconSize: [16, 16], iconAnchor: [8, 8]
-                        });
-                        circleHandle = L.marker(center, { icon: circleIcon, draggable: true })
-                            .addTo(mapObj).bindTooltip("Drag to move");
-                        circleOverlay = L.circle(center, {
-                            radius: radiusM, color: "#e53e3e", weight: 2,
-                            fillColor: "#feb2b2", fillOpacity: 0.2
-                        }).addTo(mapObj);
-
-                        circleHandle.on("drag", function (e) {
-                            var latlng = e.target.getLatLng();
-                            circleOverlay.setLatLng(latlng);
-                            render(latlng);
-                        });
-
-                        slider.addEventListener("input", function () {
-                            radiusM = parseFloat(slider.value) * 1000;
-                            radiusVal.textContent = slider.value;
-                            circleOverlay.setRadius(radiusM);
-                            render(circleHandle.getLatLng());
-                        });
-
-                        render(center);
-                    }
-
-                    // Defer placing the circle until the map's initial
-                    // fit_bounds (called later, after _base_map returns,
-                    // once layers/data are added) has settled -- otherwise
-                    // we'd grab Leaflet's pre-fit default center. Falls
-                    // back to a timeout for maps with nothing to fit.
-                    mapObj.once("moveend", function () { initCircleTool(mapObj.getCenter()); });
-                    setTimeout(function () { initCircleTool(mapObj.getCenter()); }, 800);
-                })();
-                {% endmacro %}
-                """.replace("__UID__", uid)
-                .replace("__DEFAULT_RADIUS__", str(default_radius_km))
-                .replace("__MAX_RADIUS__", str(max_radius_km))
-            )
-            karta.get_root().add_child(circle_tool_macro)
+            Karta._add_circle_tool(karta, default_radius_px, max_radius_km, aggregation_dict)
 
         return karta
 
@@ -749,6 +700,9 @@ class Karta:
         speed_field: str = "speed",
         speed_limit_field: str = "speed_limit",
         popup_dict: dict = None,
+        # Draggable circle tool: {alias: [field, func]} where func is one of
+        # "sum", "mean"/"avg", "max", "min", "count", "unique".
+        aggregation_dict: dict = None,
         main_layer_max_records: int = 50_000,  # Maximum records to display in main layer to avoid performance degradation
         add_measurement_tools: bool = True,
     ) -> folium.Map:
@@ -834,8 +788,11 @@ class Karta:
                     print("  2. Use SnabbKarta.plp() for faster rendering.")
                     print("  3. Increase `main_layer_max_records` parameter (may cause slowdown).")
 
-        # Instantiate base map and render all generated layers
-        karta = Karta._base_map()
+        # Instantiate base map and render all generated layers.
+        # `aggregation_dict` drives the draggable circle tool only; it is
+        # independent of `popup_dict`, which continues to control tooltips
+        # and popups on the main layer.
+        karta = Karta._base_map(aggregation_dict=aggregation_dict)
 
         if point_color == speed_field:
             speeding_legend_html = Karta._create_speeding_legend()
