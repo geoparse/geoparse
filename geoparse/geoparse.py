@@ -25,7 +25,6 @@ import pygeohash
 import pyproj
 import rasterio
 import requests
-import shapely
 from branca.element import MacroElement
 from folium import plugins
 from jinja2 import Template
@@ -1027,6 +1026,8 @@ class Karta:
                 else:  # Point or MultiPoin
                     cells = SpatialIndex.point_cell(gdf.geometry.y, gdf.geometry.x, cell_type, res)
 
+                cells = list(set(cells))
+
                 geoms, res_values = SpatialIndex.cell_poly(cells, cell_type=cell_type)
                 gdf = gpd.GeoDataFrame({"id": cells, "res": res_values, "geometry": geoms}, crs="EPSG:4326")
                 layer = Karta._create_plp_layer(gdf, popup_dict={"Cell ID": "id", "Resolution": "res"})
@@ -1800,23 +1801,23 @@ class SnabbKarta:
 
         # Clean indices for filtered selections e.g. gdf[gdf.city=='London']
         gdf = gdf.reset_index(drop=True)
+
         for cell_type, res, condition in cell_configs:
             if condition(res):
-                # Create polygon for bounding box if input is not a polygon
                 if gdf.geometry.type[0] in ("Polygon", "MultiPolygon"):
-                    cdf = gdf[["geometry"]]
-                else:  # Create convex hull polygon for points and lines
-                    # Apply tiny buffer to avoid degenerate geometries from collinear points
-                    tight_polygon = shapely.convex_hull(gdf.geometry.unary_union).buffer(0.0000001)
-                    cdf = gpd.GeoDataFrame(geometry=[tight_polygon], crs=gdf.crs)
-                cells, _ = SpatialIndex.ppoly_cell(cdf, cell_type, res, force_full_cover, compact)
+                    cells, _ = SpatialIndex.ppoly_cell(gdf[["geometry"]], cell_type, res, force_full_cover, compact)
+                elif gdf.geometry.type[0] in ("LineString", "MultiLineString"):
+                    gdf["geometry"] = gdf.geometry.buffer(0.0001)
+                    cells, _ = SpatialIndex.ppoly_cell(gdf[["geometry"]], cell_type, res, force_full_cover, compact)
+                else:  # Point or MultiPoin
+                    cells = SpatialIndex.point_cell(gdf.geometry.y, gdf.geometry.x, cell_type, res)
+
+                cells = list(set(cells))
+
                 geoms, res_values = SpatialIndex.cell_poly(cells, cell_type=cell_type)
-
                 cdf = gpd.GeoDataFrame({"id": cells, "res": res_values, "geometry": geoms}, crs="EPSG:4326")
-
-                cell_layer = SnabbKarta._create_poly_layer(cdf, fill_color="green")
+                cell_layer = SnabbKarta._create_poly_layer(cdf, fill_color="red")
                 cell_layers.append(cell_layer)
-
         return cell_layers
 
     @staticmethod
