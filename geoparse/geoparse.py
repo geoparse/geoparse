@@ -1026,6 +1026,8 @@ class Karta:
                 else:  # Point or MultiPoin
                     cells = SpatialIndex.point_cell(gdf.geometry.y, gdf.geometry.x, cell_type, res)
 
+                cells = list(set(cells))
+
                 geoms, res_values = SpatialIndex.cell_poly(cells, cell_type=cell_type)
                 gdf = gpd.GeoDataFrame({"id": cells, "res": res_values, "geometry": geoms}, crs="EPSG:4326")
                 layer = Karta._create_plp_layer(gdf, popup_dict={"Cell ID": "id", "Resolution": "res"})
