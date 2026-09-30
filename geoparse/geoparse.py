@@ -1528,7 +1528,7 @@ class SnabbKarta:
         height_col=None,
         elevation_scale=100,
         color_map: str = "RdYlGn",
-        opacity: float = 0.5,
+        opacity: float = 0.25,
         poly_highlight=True,
         pickable=True,
     ) -> lb.PolygonLayer:
@@ -1563,7 +1563,7 @@ class SnabbKarta:
         common_args = {
             "get_fill_color": get_fill_color,
             "auto_highlight": poly_highlight,
-            "highlight_color": [0, 255, 0, 255],
+            "highlight_color": [0, 255, 0, 128],
             "get_line_color": [0, 0, 0, 255],
             "line_width_min_pixels": 1,
             "line_width_max_pixels": 1,
