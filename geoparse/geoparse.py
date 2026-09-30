@@ -27,7 +27,6 @@ import rasterio
 import requests
 from branca.element import MacroElement
 from folium import plugins
-from geoparse_assets import CIRCLE_TOOL_TEMPLATE, SPEEDING_LEGEND_HTML
 from jinja2 import Template
 from lonboard.basemap import CartoStyle
 from matplotlib.colors import Normalize
@@ -46,6 +45,8 @@ from shapely.geometry import (
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import transform, unary_union
 from shapely.prepared import prep
+
+from geoparse.geoparse_assets import CIRCLE_TOOL_TEMPLATE, SPEEDING_LEGEND_HTML
 
 
 class Karta:
