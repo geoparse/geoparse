@@ -1954,6 +1954,12 @@ class GeomUtils:
             return [n_shells, n_holes, n_shell_points, area / 1_000_000, perimeter / 1000, projection]
 
     @staticmethod
+    def bbox_area_m2(gdf: gpd.GeoDataFrame) -> float:
+        """Return the bounding-box approximate area of a GeoDataFrame in square metres."""
+        b = gdf.total_bounds
+        return (b[2] - b[0]) * (b[3] - b[1]) * (111_000**2) * math.cos(math.radians((b[1] + b[3]) / 2))
+
+    @staticmethod
     def flatten_3d(geoms: gpd.GeoSeries) -> gpd.GeoSeries:
         """
         Flattens a GeoSeries of 3D geometries into 2D geometries.
