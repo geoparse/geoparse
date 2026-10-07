@@ -2341,7 +2341,7 @@ class CellUtils:
         return len(cells), area
 
     @staticmethod
-    def cell_area_m2(index_name: str, res: int) -> float:
+    def cell_area_m2(cell_type: str, res: int) -> float:
         """Approximate average cell area (m²) for a spatial index at ``res``.
 
         Formulas
@@ -2353,20 +2353,21 @@ class CellUtils:
                   degrees at the equator.
         """
 
-        if index_name == "H3":
+        cell_type = cell_type.str.lower()
+        if cell_type == "h3":
             return CellUtils._EARTH_SURFACE_M2 / (2 + 120 * 7**res)
-        if index_name == "S2":
+        if cell_type == "s2":
             return CellUtils._EARTH_SURFACE_M2 / (6 * 4**res)
-        if index_name == "Geohash":
+        if cell_type == "geohash":
             lon_bits = math.ceil(5 * res / 2)
             lat_bits = 5 * res - lon_bits
             w = (360.0 / 2**lon_bits) * CellUtils._DEG_LON_KM * 1000
             h = (180.0 / 2**lat_bits) * CellUtils._DEG_LAT_KM * 1000
             return w * h
-        raise ValueError(f"Unknown spatial index: {index_name}")
+        raise ValueError(f"Unknown spatial index: {cell_type}")
 
     @staticmethod
-    def avg_edge_m(index_name: str, res: int) -> float:
+    def avg_edge_m(cell_type: str, res: int) -> float:
         """Approximate average cell edge length (m) for a spatial index at ``res``.
 
         Formulas
@@ -2375,17 +2376,17 @@ class CellUtils:
         S2      : cells are near-square, so ``edge ≈ sqrt(area)``.
         Geohash : mean of the two side lengths (i.e. ``(w + h) / 2``).
         """
-        if index_name == "H3":
+        if cell_type == "H3":
             return CellUtils._H3_EDGE_RES0_M * 7 ** (-res / 2)
-        if index_name == "S2":
-            return math.sqrt(CellUtils.cell_area_m2(index_name, res))
-        if index_name == "Geohash":
+        if cell_type == "S2":
+            return math.sqrt(CellUtils.cell_area_m2(cell_type, res))
+        if cell_type == "Geohash":
             lon_bits = math.ceil(5 * res / 2)
             lat_bits = 5 * res - lon_bits
             w = (360.0 / 2**lon_bits) * CellUtils._DEG_LON_KM * 1000
             h = (180.0 / 2**lat_bits) * CellUtils._DEG_LAT_KM * 1000
             return (w + h) / 2
-        raise ValueError(f"Unknown spatial index: {index_name}")
+        raise ValueError(f"Unknown spatial index: {cell_type}")
 
 
 class OSMUtils:
