@@ -2169,10 +2169,6 @@ class CellUtils:
     _DEG_LON_KM = 111.32
     _DEG_LAT_KM = 110.574
 
-    # H3 resolution 0 average edge length (metres). Subsequent resolutions scale
-    # the edge by 7^(-1/2) per step, matching the H3 spec.
-    _H3_EDGE_RES0_M = 1_281_256.011  # https://h3geo.org/docs/core-library/restable/
-
     @staticmethod
     def compact_cells(cells: list, cell_type: str) -> list:
         """
@@ -2341,53 +2337,42 @@ class CellUtils:
         return len(cells), area
 
     @staticmethod
-    def cell_area_m2(cell_type: str, res: int) -> float:
-        """Approximate average cell area (m²) for a spatial index at ``res``.
+    def cell_metrics_m(cell_type: str, res: int) -> tuple[float, float]:
+        """Approximate average cell area (m²) and edge length (m) at ``res``.
 
         Formulas
         --------
-        H3      : sphere tiled by ``2 + 120 · 7^res`` roughly-equal cells.
-        S2      : sphere tiled by ``6 · 4^res`` roughly-equal cells.
-        Geohash : ``5 · res`` bits, alternating longitude / latitude (lon first),
-                  so the rectangle is ``360 / 2^lon_bits`` × ``180 / 2^lat_bits``
-                  degrees at the equator.
+        H3      : sphere tiled by ``2 + 120 · 7^res`` roughly-equal hexagons;
+                  edge from inverting ``A = (3√3 / 2) · s²``.
+        S2      : sphere tiled by ``6 · 4^res`` roughly-equal, near-square cells;
+                  edge ≈ ``sqrt(area)``.
+        Geohash : ``5 · res`` bits, longitude first; cell is
+                  ``360 / 2^lon_bits`` × ``180 / 2^lat_bits`` degrees at the
+                  equator. Edge is the mean of the two side lengths.
         """
+        if res < 0:
+            raise ValueError(f"res must be non-negative, got {res!r}.")
 
-        cell_type = cell_type.lower()
+        cell_type = cell_type.strip().lower()
+
         if cell_type == "h3":
-            return CellUtils._EARTH_SURFACE_M2 / (2 + 120 * 7**res)
+            area = CellUtils._EARTH_SURFACE_M2 / (2 + 120 * 7**res)
+            edge = math.sqrt(2.0 * area / (3.0 * math.sqrt(3.0)))
+            return area, edge
+
         if cell_type == "s2":
-            return CellUtils._EARTH_SURFACE_M2 / (6 * 4**res)
+            area = CellUtils._EARTH_SURFACE_M2 / (6 * 4**res)
+            return area, math.sqrt(area)
+
         if cell_type == "geohash":
             lon_bits = math.ceil(5 * res / 2)
             lat_bits = 5 * res - lon_bits
             w = (360.0 / 2**lon_bits) * CellUtils._DEG_LON_KM * 1000
             h = (180.0 / 2**lat_bits) * CellUtils._DEG_LAT_KM * 1000
-            return w * h
-        raise ValueError(f"Unknown spatial index: {cell_type}")
+            area = w * h
+            return area, math.sqrt(area)
 
-    @staticmethod
-    def avg_edge_m(cell_type: str, res: int) -> float:
-        """Approximate average cell edge length (m) for a spatial index at ``res``.
-
-        Formulas
-        --------
-        H3      : ``1 107 712 · 7^(-res/2)`` — matches the H3 spec edge table.
-        S2      : cells are near-square, so ``edge ≈ sqrt(area)``.
-        Geohash : mean of the two side lengths (i.e. ``(w + h) / 2``).
-        """
-        cell_type = cell_type.lower()
-        if cell_type == "h3":
-            return CellUtils._H3_EDGE_RES0_M * 7 ** (-res / 2)
-        if cell_type == "s2":
-            return math.sqrt(CellUtils.cell_area_m2(cell_type, res))
-        if cell_type == "geohash":
-            lon_bits = math.ceil(5 * res / 2)
-            lat_bits = 5 * res - lon_bits
-            w = (360.0 / 2**lon_bits) * CellUtils._DEG_LON_KM * 1000
-            h = (180.0 / 2**lat_bits) * CellUtils._DEG_LAT_KM * 1000
-            return (w + h) / 2
-        raise ValueError(f"Unknown spatial index: {cell_type}")
+        raise ValueError(f"Unknown cell type: {cell_type!r}")
 
 
 class OSMUtils:
