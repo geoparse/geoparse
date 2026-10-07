@@ -2376,11 +2376,12 @@ class CellUtils:
         S2      : cells are near-square, so ``edge ≈ sqrt(area)``.
         Geohash : mean of the two side lengths (i.e. ``(w + h) / 2``).
         """
-        if cell_type == "H3":
+        cell_type = cell_type.lower()
+        if cell_type == "h3":
             return CellUtils._H3_EDGE_RES0_M * 7 ** (-res / 2)
-        if cell_type == "S2":
+        if cell_type == "s2":
             return math.sqrt(CellUtils.cell_area_m2(cell_type, res))
-        if cell_type == "Geohash":
+        if cell_type == "geohash":
             lon_bits = math.ceil(5 * res / 2)
             lat_bits = 5 * res - lon_bits
             w = (360.0 / 2**lon_bits) * CellUtils._DEG_LON_KM * 1000
