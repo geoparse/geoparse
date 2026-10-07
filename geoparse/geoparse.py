@@ -2353,7 +2353,7 @@ class CellUtils:
                   degrees at the equator.
         """
 
-        cell_type = cell_type.str.lower()
+        cell_type = cell_type.lower()
         if cell_type == "h3":
             return CellUtils._EARTH_SURFACE_M2 / (2 + 120 * 7**res)
         if cell_type == "s2":
