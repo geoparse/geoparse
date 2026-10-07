@@ -2157,6 +2157,22 @@ class CellUtils:
     - H3 cell statistics are useful for understanding the spatial distribution and coverage of a geometry.
     """
 
+    # ── Analytic resolution stats ────────────────────────────────────────────────
+    # Earth model used for every area / edge estimate. The values are approximate
+    # — good to a few percent of the published H3 / S2 / Geohash tables — which is
+    # more than enough for auto-picking a display resolution.
+    _EARTH_RADIUS_KM = 6371.0
+    _EARTH_SURFACE_KM2 = 4 * math.pi * _EARTH_RADIUS_KM**2
+    _EARTH_SURFACE_M2 = _EARTH_SURFACE_KM2 * 1e6
+
+    # km per degree at the equator — used for the Geohash rectangle dimensions.
+    _DEG_LON_KM = 111.32
+    _DEG_LAT_KM = 110.574
+
+    # H3 resolution 0 average edge length (metres). Subsequent resolutions scale
+    # the edge by 7^(-1/2) per step, matching the H3 spec.
+    _H3_EDGE_RES0_M = 1_281_256.011  # https://h3geo.org/docs/core-library/restable/
+
     @staticmethod
     def compact_cells(cells: list, cell_type: str) -> list:
         """
@@ -2323,6 +2339,53 @@ class CellUtils:
         if compact:
             cells = h3.compact(cells)
         return len(cells), area
+
+    @staticmethod
+    def cell_area_m2(index_name: str, res: int) -> float:
+        """Approximate average cell area (m²) for a spatial index at ``res``.
+
+        Formulas
+        --------
+        H3      : sphere tiled by ``2 + 120 · 7^res`` roughly-equal cells.
+        S2      : sphere tiled by ``6 · 4^res`` roughly-equal cells.
+        Geohash : ``5 · res`` bits, alternating longitude / latitude (lon first),
+                  so the rectangle is ``360 / 2^lon_bits`` × ``180 / 2^lat_bits``
+                  degrees at the equator.
+        """
+
+        if index_name == "H3":
+            return CellUtils._EARTH_SURFACE_M2 / (2 + 120 * 7**res)
+        if index_name == "S2":
+            return CellUtils._EARTH_SURFACE_M2 / (6 * 4**res)
+        if index_name == "Geohash":
+            lon_bits = math.ceil(5 * res / 2)
+            lat_bits = 5 * res - lon_bits
+            w = (360.0 / 2**lon_bits) * CellUtils._DEG_LON_KM * 1000
+            h = (180.0 / 2**lat_bits) * CellUtils._DEG_LAT_KM * 1000
+            return w * h
+        raise ValueError(f"Unknown spatial index: {index_name}")
+
+    @staticmethod
+    def avg_edge_m(index_name: str, res: int) -> float:
+        """Approximate average cell edge length (m) for a spatial index at ``res``.
+
+        Formulas
+        --------
+        H3      : ``1 107 712 · 7^(-res/2)`` — matches the H3 spec edge table.
+        S2      : cells are near-square, so ``edge ≈ sqrt(area)``.
+        Geohash : mean of the two side lengths (i.e. ``(w + h) / 2``).
+        """
+        if index_name == "H3":
+            return CellUtils._H3_EDGE_RES0_M * 7 ** (-res / 2)
+        if index_name == "S2":
+            return math.sqrt(CellUtils.cell_area_m2(index_name, res))
+        if index_name == "Geohash":
+            lon_bits = math.ceil(5 * res / 2)
+            lat_bits = 5 * res - lon_bits
+            w = (360.0 / 2**lon_bits) * CellUtils._DEG_LON_KM * 1000
+            h = (180.0 / 2**lat_bits) * CellUtils._DEG_LAT_KM * 1000
+            return (w + h) / 2
+        raise ValueError(f"Unknown spatial index: {index_name}")
 
 
 class OSMUtils:
