@@ -10,6 +10,7 @@ from io import BytesIO
 from math import atan2, cos, radians, sin, sqrt
 from multiprocessing import Pool, cpu_count
 from time import sleep, time
+from typing import Optional
 
 import folium  # Folium is a Python library used for visualizing geospatial data. Actually, it's a Python wrapper for Leaflet which is a leading open-source JavaScript library for plotting interactive maps.
 import geopandas as gpd
@@ -1954,6 +1955,12 @@ class GeomUtils:
             return [n_shells, n_holes, n_shell_points, area / 1_000_000, perimeter / 1000, projection]
 
     @staticmethod
+    def bbox_area_m2(gdf: gpd.GeoDataFrame) -> float:
+        """Return the bounding-box approximate area of a GeoDataFrame in square metres."""
+        b = gdf.total_bounds
+        return (b[2] - b[0]) * (b[3] - b[1]) * (111_000**2) * math.cos(math.radians((b[1] + b[3]) / 2))
+
+    @staticmethod
     def flatten_3d(geoms: gpd.GeoSeries) -> gpd.GeoSeries:
         """
         Flattens a GeoSeries of 3D geometries into 2D geometries.
@@ -2151,6 +2158,25 @@ class CellUtils:
     - H3 cell statistics are useful for understanding the spatial distribution and coverage of a geometry.
     """
 
+    # ── Analytic resolution stats ────────────────────────────────────────────────
+    # Earth model used for every area / edge estimate. The values are approximate
+    # — good to a few percent of the published H3 / S2 / Geohash tables — which is
+    # more than enough for auto-picking a display resolution.
+    _EARTH_RADIUS_KM = 6371.0
+    _EARTH_SURFACE_KM2 = 4 * math.pi * _EARTH_RADIUS_KM**2
+    _EARTH_SURFACE_M2 = _EARTH_SURFACE_KM2 * 1e6
+
+    # km per degree at the equator — used for the Geohash rectangle dimensions.
+    _DEG_LON_KM = 111.32
+    _DEG_LAT_KM = 110.574
+
+    # Spatial index config: {label: (plp_kwarg, min_res, max_res, fallback_default_res)}
+    CELL_CONFIG = {
+        "H3": ("h3_res", 1, 15, 7),
+        "S2": ("s2_res", 2, 30, 11),
+        "Geohash": ("geohash_res", 1, 10, 5),
+    }
+
     @staticmethod
     def compact_cells(cells: list, cell_type: str) -> list:
         """
@@ -2317,6 +2343,126 @@ class CellUtils:
         if compact:
             cells = h3.compact(cells)
         return len(cells), area
+
+    @staticmethod
+    def cell_metrics_m(cell_type: str, res: int) -> tuple[float, float]:
+        """Approximate average cell area (m²) and edge length (m) at ``res``.
+
+        Formulas
+        --------
+        H3      : sphere tiled by ``2 + 120 · 7^res`` roughly-equal hexagons;
+                  edge from inverting ``A = (3√3 / 2) · s²``.
+        S2      : sphere tiled by ``6 · 4^res`` roughly-equal, near-square cells;
+                  edge ≈ ``sqrt(area)``.
+        Geohash : ``5 · res`` bits, longitude first; cell is
+                  ``360 / 2^lon_bits`` × ``180 / 2^lat_bits`` degrees at the
+                  equator. Edge is the mean of the two side lengths.
+        """
+        if res < 0:
+            raise ValueError(f"res must be non-negative, got {res!r}.")
+
+        cell_type = cell_type.strip().lower()
+
+        if cell_type == "h3":
+            area = CellUtils._EARTH_SURFACE_M2 / (2 + 120 * 7**res)
+            edge = math.sqrt(2.0 * area / (3.0 * math.sqrt(3.0)))
+            return area, edge
+
+        if cell_type == "s2":
+            area = CellUtils._EARTH_SURFACE_M2 / (6 * 4**res)
+            return area, math.sqrt(area)
+
+        if cell_type == "geohash":
+            lon_bits = math.ceil(5 * res / 2)
+            lat_bits = 5 * res - lon_bits
+            w = (360.0 / 2**lon_bits) * CellUtils._DEG_LON_KM * 1000
+            h = (180.0 / 2**lat_bits) * CellUtils._DEG_LAT_KM * 1000
+            area = w * h
+            return area, math.sqrt(area)
+
+        raise ValueError(f"Unknown cell type: {cell_type!r}")
+
+    @staticmethod
+    def cell_res_range(
+        gdf: gpd.GeoDataFrame,
+        cell_type: str,
+        min_cells: int = 100,  #    bbox must contain at least this many cells
+        max_cells: int = 100_000,
+        max_res_override: Optional[int] = None,
+    ) -> tuple[int, int]:
+        """
+        Determine the valid range of grid resolutions for a given cell type.
+
+        The bounding box of ``gdf`` is used to estimate how many cells of a
+        given resolution would fit inside it. A resolution is considered valid
+        when the estimated cell count falls within ``[min_cells, max_cells]``.
+        The function returns the smallest and largest valid resolutions found.
+
+        Parameters
+        ----------
+        gdf : geopandas.GeoDataFrame
+            GeoDataFrame whose total bounding box area (in square meters) is
+            used to estimate the number of cells per resolution. The geometry
+            of the individual rows is not otherwise inspected.
+        cell_type : str
+            Identifier of the cell type. Must be a key in ``CELL_CONFIG``,
+            which supplies the minimum resolution, the configured maximum
+            resolution, and a fallback resolution for this cell type.
+        min_cells : int, optional
+            Minimum number of cells that must fit inside the bounding box for a
+            resolution to be considered valid. By default 100.
+        max_cells : int, optional
+            Maximum number of cells that may fit inside the bounding box for a
+            resolution to be considered valid. By default 100_000.
+        max_res_override : int or None, optional
+            If provided, overrides the maximum resolution from
+            ``CELL_CONFIG``. By default None, in which case the configured
+            maximum resolution is used.
+
+        Returns
+        -------
+        tuple of int
+            A ``(min_res, max_res)`` pair giving the lowest and highest valid
+            resolutions. If no resolution satisfies the cell-count constraint,
+            ``(fallback, fallback)`` is returned, where ``fallback`` comes from
+            ``CELL_CONFIG`` for the given ``cell_type``.
+
+        Raises
+        ------
+        KeyError
+            If ``cell_type`` is not present in ``CELL_CONFIG``.
+
+        Notes
+        -----
+        The cell count for a resolution ``res`` is estimated as::
+
+            n_cells = bbox_area_m2 / cell_area_m2(cell_type, res)
+
+        where ``cell_area_m2`` is the first element returned by
+        ``CellUtils.cell_metrics_m``. The bounding box area is computed with
+        ``GeomUtils.bbox_area_m2``.
+
+        Examples
+        --------
+        >>> cell_res_range(gdf, "hex", min_cells=50, max_cells=10_000)
+        (7, 9)
+
+        >>> cell_res_range(gdf, "square", max_res_override=12)
+        (5, 12)
+
+        >>> cell_res_range(gdf, "hex", min_cells=10**9)
+        (11, 11)  # fallback used when no resolution qualifies
+        """
+        _, min_res, config_max_res, fallback = CellUtils.CELL_CONFIG[cell_type]
+        max_res = config_max_res if max_res_override is None else max_res_override
+        area_m2 = GeomUtils.bbox_area_m2(gdf)
+
+        res_range = [
+            res
+            for res in range(min_res, max_res + 1)
+            if min_cells <= area_m2 / CellUtils.cell_metrics_m(cell_type, res)[0] <= max_cells
+        ]
+        return (res_range[0], res_range[-1]) if res_range else (fallback, fallback)
 
 
 class OSMUtils:
