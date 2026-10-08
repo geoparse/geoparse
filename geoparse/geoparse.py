@@ -10,6 +10,7 @@ from io import BytesIO
 from math import atan2, cos, radians, sin, sqrt
 from multiprocessing import Pool, cpu_count
 from time import sleep, time
+from typing import Optional
 
 import folium  # Folium is a Python library used for visualizing geospatial data. Actually, it's a Python wrapper for Leaflet which is a leading open-source JavaScript library for plotting interactive maps.
 import geopandas as gpd
@@ -2169,6 +2170,13 @@ class CellUtils:
     _DEG_LON_KM = 111.32
     _DEG_LAT_KM = 110.574
 
+    # Spatial index config: {label: (plp_kwarg, min_res, max_res, fallback_default_res)}
+    CELL_CONFIG = {
+        "H3": ("h3_res", 1, 15, 7),
+        "S2": ("s2_res", 2, 30, 11),
+        "Geohash": ("geohash_res", 1, 10, 5),
+    }
+
     @staticmethod
     def compact_cells(cells: list, cell_type: str) -> list:
         """
@@ -2373,6 +2381,88 @@ class CellUtils:
             return area, math.sqrt(area)
 
         raise ValueError(f"Unknown cell type: {cell_type!r}")
+
+    @staticmethod
+    def cell_res_range(
+        gdf: gpd.GeoDataFrame,
+        cell_type: str,
+        min_cells: int = 100,  #    bbox must contain at least this many cells
+        max_cells: int = 100_000,
+        max_res_override: Optional[int] = None,
+    ) -> tuple[int, int]:
+        """
+        Determine the valid range of grid resolutions for a given cell type.
+
+        The bounding box of ``gdf`` is used to estimate how many cells of a
+        given resolution would fit inside it. A resolution is considered valid
+        when the estimated cell count falls within ``[min_cells, max_cells]``.
+        The function returns the smallest and largest valid resolutions found.
+
+        Parameters
+        ----------
+        gdf : geopandas.GeoDataFrame
+            GeoDataFrame whose total bounding box area (in square meters) is
+            used to estimate the number of cells per resolution. The geometry
+            of the individual rows is not otherwise inspected.
+        cell_type : str
+            Identifier of the cell type. Must be a key in ``CELL_CONFIG``,
+            which supplies the minimum resolution, the configured maximum
+            resolution, and a fallback resolution for this cell type.
+        min_cells : int, optional
+            Minimum number of cells that must fit inside the bounding box for a
+            resolution to be considered valid. By default 100.
+        max_cells : int, optional
+            Maximum number of cells that may fit inside the bounding box for a
+            resolution to be considered valid. By default 100_000.
+        max_res_override : int or None, optional
+            If provided, overrides the maximum resolution from
+            ``CELL_CONFIG``. By default None, in which case the configured
+            maximum resolution is used.
+
+        Returns
+        -------
+        tuple of int
+            A ``(min_res, max_res)`` pair giving the lowest and highest valid
+            resolutions. If no resolution satisfies the cell-count constraint,
+            ``(fallback, fallback)`` is returned, where ``fallback`` comes from
+            ``CELL_CONFIG`` for the given ``cell_type``.
+
+        Raises
+        ------
+        KeyError
+            If ``cell_type`` is not present in ``CELL_CONFIG``.
+
+        Notes
+        -----
+        The cell count for a resolution ``res`` is estimated as::
+
+            n_cells = bbox_area_m2 / cell_area_m2(cell_type, res)
+
+        where ``cell_area_m2`` is the first element returned by
+        ``CellUtils.cell_metrics_m``. The bounding box area is computed with
+        ``GeomUtils.bbox_area_m2``.
+
+        Examples
+        --------
+        >>> cell_res_range(gdf, "hex", min_cells=50, max_cells=10_000)
+        (7, 9)
+
+        >>> cell_res_range(gdf, "square", max_res_override=12)
+        (5, 12)
+
+        >>> cell_res_range(gdf, "hex", min_cells=10**9)
+        (11, 11)  # fallback used when no resolution qualifies
+        """
+        _, min_res, config_max_res, fallback = CellUtils.CELL_CONFIG[cell_type]
+        max_res = config_max_res if max_res_override is None else max_res_override
+        area_m2 = GeomUtils.bbox_area_m2(gdf)
+
+        res_range = [
+            res
+            for res in range(min_res, max_res + 1)
+            if min_cells <= area_m2 / CellUtils.cell_metrics_m(cell_type, res)[0] <= max_cells
+        ]
+        return (res_range[0], res_range[-1]) if res_range else (fallback, fallback)
 
 
 class OSMUtils:
