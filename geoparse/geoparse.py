@@ -597,11 +597,11 @@ class Karta:
         speed_field: str = "speed",
         speed_limit_field: str = "speed_limit",
         popup_dict: dict = None,
-        # Draggable circle tool: {alias: [field, func]} where func is one of
+        circle_tool: bool = True,
+        # Used in draggable circle tool when circle_tool=True: {alias: [field, func]} where func is one of
         # "sum", "mean"/"avg", "max", "min", "count", "unique".
         aggregation_dict: dict = None,
         main_layer_max_records: int = 50_000,  # Maximum records to display in main layer to avoid performance degradation
-        add_measurement_tools: bool = True,
     ) -> folium.Map:
         # Ensure `data_list` is always a list (of gpd.GeoDataFrames, df.DataFrames or set)
         data_list = data_list if isinstance(data_list, list) else [data_list]
@@ -689,7 +689,7 @@ class Karta:
         # `aggregation_dict` drives the draggable circle tool only; it is
         # independent of `popup_dict`, which continues to control tooltips
         # and popups on the main layer.
-        karta = Karta._base_map(aggregation_dict=aggregation_dict)
+        karta = Karta._base_map(circle_tool=circle_tool, aggregation_dict=aggregation_dict)
 
         if point_color == speed_field:
             speeding_legend_html = Karta._create_speeding_legend()
