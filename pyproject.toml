@@ -30,12 +30,15 @@ dependencies = [
     "rasterio>=1.4.4",
     "polars>=1.38.1",
     "duckdb>=1.4.4",
-    "tornado>=6.5.5",   # fix security issues
     "requests>=2.33.0",
     "pygments>=2.20.0",
-    "nbconvert>=7.17.1",
-    "pillow>=12.2.0",
     "jupyter-server>=2.18.0",
+    "tornado>=6.5.5",   # Fix security issues
+    "pillow>=13.0.0",
+    "nbconvert>=7.17.2",
+    "anyio>=4.14.2",
+    "certifi>=2026.10.18",
+    "urllib3>=2.8.0",
 ]
 
 [dependency-groups]
@@ -50,5 +53,5 @@ dev = [
 ]
 
 [tool.uv]
-exclude-newer = "2026-09-30T00:00:00Z"
+exclude-newer = "2026-11-10T00:00:00Z"
 
