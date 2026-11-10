@@ -26,7 +26,7 @@ dependencies = [
     "pygeohash>=1.2.0",
     "s2>=0.1.9",
     "h3>=4.3.0",
-    "jupyterlab>=4.5.7",
+    "jupyterlab>=4.6.4",
     "rasterio>=1.4.4",
     "polars>=1.38.1",
     "duckdb>=1.4.4",
@@ -39,6 +39,8 @@ dependencies = [
     "anyio>=4.14.2",
     "certifi>=2026.10.18",
     "urllib3>=2.8.0",
+    "virtualenv>=21.14.9",
+    "filelock>=4.2.1",
 ]
 
 [dependency-groups]
