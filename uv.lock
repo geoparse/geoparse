@@ -1112,42 +1112,31 @@ wheels = [
 [[package]]
 name = "geoparse"
 version = "0.7.2"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
-    { name = "anyio" },
-    { name = "certifi" },
     { name = "duckdb" },
-    { name = "filelock" },
     { name = "folium" },
     { name = "fsspec" },
     { name = "geopandas" },
     { name = "h3" },
-    { name = "jupyter-server" },
-    { name = "jupyterlab" },
     { name = "lonboard" },
     { name = "matplotlib" },
-    { name = "nbconvert" },
-    { name = "pillow" },
     { name = "polars" },
     { name = "pyarrow" },
     { name = "pygeohash" },
-    { name = "pygments" },
     { name = "rasterio", version = "1.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "rasterio", version = "1.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "requests" },
     { name = "s2" },
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "soupsieve", version = "2.10", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11.5'" },
-    { name = "soupsieve", version = "4.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11.5'" },
-    { name = "tornado" },
-    { name = "urllib3" },
-    { name = "virtualenv" },
 ]
 
 [package.dev-dependencies]
 dev = [
     { name = "coverage", extra = ["toml"] },
+    { name = "jupyterlab" },
+    { name = "nbconvert" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -1156,46 +1145,57 @@ dev = [
     { name = "sphinx", version = "9.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "sphinx-rtd-theme" },
 ]
+security = [
+    { name = "anyio" },
+    { name = "certifi" },
+    { name = "filelock" },
+    { name = "jupyter-server" },
+    { name = "soupsieve", version = "2.10", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11.5'" },
+    { name = "soupsieve", version = "4.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11.5'" },
+    { name = "tornado" },
+    { name = "urllib3" },
+    { name = "virtualenv" },
+]
 
 [package.metadata]
 requires-dist = [
-    { name = "anyio", specifier = ">=4.14.2" },
-    { name = "certifi", specifier = ">=2026.10.18" },
     { name = "duckdb", specifier = ">=1.4.4" },
-    { name = "filelock", specifier = ">=4.2.1" },
     { name = "folium", specifier = ">=0.20.0" },
     { name = "fsspec", specifier = ">=2025.12.0" },
     { name = "geopandas", specifier = ">=1.1.0" },
     { name = "h3", specifier = ">=4.3.0" },
-    { name = "jupyter-server", specifier = ">=2.18.0" },
-    { name = "jupyterlab", specifier = ">=4.6.4" },
     { name = "lonboard", specifier = ">=0.16.0" },
-    { name = "matplotlib", specifier = "==3.10.0" },
-    { name = "nbconvert", specifier = ">=7.17.2" },
-    { name = "pillow", specifier = ">=13.0.0" },
+    { name = "matplotlib", specifier = ">=3.10,<4" },
     { name = "polars", specifier = ">=1.38.1" },
     { name = "pyarrow", specifier = ">=22.0.0" },
     { name = "pygeohash", specifier = ">=1.2.0" },
-    { name = "pygments", specifier = ">=2.20.0" },
     { name = "rasterio", specifier = ">=1.4.4" },
     { name = "requests", specifier = ">=2.33.0" },
     { name = "s2", specifier = ">=0.1.9" },
     { name = "scipy", specifier = ">=1.16.0" },
-    { name = "soupsieve", specifier = ">=2.9.0" },
-    { name = "tornado", specifier = ">=6.6" },
-    { name = "urllib3", specifier = ">=2.8.0" },
-    { name = "virtualenv", specifier = ">=21.14.9" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "coverage", extras = ["toml"], specifier = ">=7.6.1" },
+    { name = "jupyterlab", specifier = ">=4.6.4" },
+    { name = "nbconvert", specifier = ">=7.17.2" },
     { name = "pre-commit", specifier = ">=4.0.0" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-cov", specifier = ">=5.0.0" },
     { name = "ruff", specifier = ">=0.6.9" },
     { name = "sphinx", specifier = ">=7.4.7" },
     { name = "sphinx-rtd-theme", specifier = ">=3.0.1" },
+]
+security = [
+    { name = "anyio", specifier = ">=4.14.2" },
+    { name = "certifi", specifier = ">=2026.10.18" },
+    { name = "filelock", specifier = ">=4.2.1" },
+    { name = "jupyter-server", specifier = ">=2.18.0" },
+    { name = "soupsieve", specifier = ">=2.9.0" },
+    { name = "tornado", specifier = ">=6.6" },
+    { name = "urllib3", specifier = ">=2.8.0" },
+    { name = "virtualenv", specifier = ">=21.14.9" },
 ]
 
 [[package]]
