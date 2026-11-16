@@ -27,6 +27,8 @@ keywords = [
 requires-python = ">=3.11,<4.0"
 
 # Runtime dependencies only: what `import geoparse` needs.
+# Jupyter is NOT here: it is only needed to run the tutorials, so it lives in
+# the `dev` group below and `pip install geoparse` stays lightweight.
 # Before removing any of these, check they are not imported inside the package:
 #   uvx deptry .
 dependencies = [
@@ -47,7 +49,10 @@ dependencies = [
 ]
 
 [dependency-groups]
-# Tools for working on the library (not installed for pip users).
+# Tools for working on the library and running the tutorials (jupyterlab,
+# nbconvert). Not part of the published package, so pip users don't get them
+# from `pip install geoparse`; they can add Jupyter themselves, or use
+# `pip install --group dev` (needs pip 25.1+).
 dev = [
     "jupyterlab>=4.6.4",
     "nbconvert>=7.17.2",
@@ -75,6 +80,8 @@ security = [
 
 [tool.uv]
 exclude-newer = "2026-11-10T00:00:00Z"
-# A plain `uv sync` installs these groups. Add the notebooks extra with:
-#   uv sync --extra notebooks
+# A plain `uv sync` installs the groups below, which includes Jupyter (via
+# `dev`). Then start the tutorials from the repo root with:
+#   uv run jupyter lab
+# Use `uv sync --no-dev` for a runtime-only environment.
 default-groups = ["dev", "security"]
