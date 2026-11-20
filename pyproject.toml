@@ -31,7 +31,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: GIS",
     "Topic :: Scientific/Engineering :: Visualization",
 ]
-requires-python = ">=3.11,<4.0"
+requires-python = ">=3.11.5,<4.0"
 
 # Runtime dependencies only: what `import geoparse` requires.
 # Jupyter is intentionally excluded (see the `dev` group), so a plain
@@ -86,7 +86,7 @@ security = [
     "certifi>=2026.10.18",
     "virtualenv>=21.14.9",
     "filelock>=4.2.1",
-    "soupsieve>=2.9.0",
+    "soupsieve>=4.0.0",
 ]
 
 [tool.uv]
