@@ -87,6 +87,7 @@ security = [
     "virtualenv>=21.14.9",
     "filelock>=4.2.1",
     "soupsieve>=4.0.0",
+    "mistune>=3.3.4",
 ]
 
 [tool.uv]
